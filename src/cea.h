@@ -104,4 +104,25 @@ typedef enum {
 } fieldModifier;
 
 
+struct PACKED field { // 81 bytes
+    bool touched : 1;
+    bool merge : 1;
+    uint64_t mask : 64;
+    uint32_t id : 32;
+    uint32_t len: 32;
+    uint32_t ofset : 32;
+    fieldModifier modifier : 32;
+    uint64_t value: 64;
+    uint32_t start: 32;
+    uint32_t stop: 32;
+    uint32_t step: 32;
+    uint32_t repeat: 32;
+    char name[32];
+    char pad[47];
+};
+
+struct PACKED stream {
+    field fields[64];
+};
+
 }
