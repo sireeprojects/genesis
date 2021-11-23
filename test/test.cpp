@@ -1,12 +1,9 @@
-#include "cdn_eth_proxy.h"
-using namespace cdn_eth_avip;
+#include "cea.h"
+using namespace cea;
 
 
 int main() {
-    cdn_eth_stream s;
-
-    // set field values
-    s.set(CEA_MAC_Preamble,10);
-    cdn_eth_logger << s.describe();
+    ceaLog << "Size of Single Field: " << dec << sizeof(field) << " bytes" << endl;
+    ceaLog << "Size of Single Stream: " << dec << sizeof(stream) << " bytes" << endl;
     return 0;
 }

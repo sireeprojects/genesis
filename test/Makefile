@@ -1,3 +1,4 @@
+PROJECT_ROOT = /root/genesis
 DBG ?= "off"
 ifeq "$(DBG)" "on"
 LIBPARAMS = -DCEA_DEBUG
@@ -8,11 +9,17 @@ endif
 default:sim
 
 sim:makelib
-	@g++ test.cpp -o sim.x -lcdn_eth_proxy -L${PWD}
+	@g++ -O3 \
+		${PROJECT_ROOT}/test/test.cpp \
+		-I${PROJECT_ROOT}/src \
+		-o sim.x \
+		-lcea \
+		-L${PWD}
 	@./sim.x
 
 makelib:clean
-	@g++ cdn_eth_proxy.cpp -s -fPIC -shared -o libcdn_eth_proxy.so -Wall -Wno-unused -lpthread
+	@g++ -O3 ${PROJECT_ROOT}/src/cea.cpp -I${PROJECT_ROOT}/src \
+		-s -fPIC -shared -o libcea.so -Wall -Wno-unused -lpthread
 
 clean:
 	@rm -rf *.x *.log *.so *.o
