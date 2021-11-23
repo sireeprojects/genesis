@@ -1,4 +1,4 @@
 #!/bin/sh
 git add -A
 git commit -m "initial setup"
-git push https://github.com/sireeprojects/genesis.git
+git push https://sireeprojects:sa%40981111@github.com/sireeprojects/genesis.git --all
