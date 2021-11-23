@@ -1,0 +1,4 @@
+#!/bin/sh
+git add -A
+git commit -m "initial setup"
+git push https://github.com/sireeprojects/genesis.git
