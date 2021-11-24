@@ -6,7 +6,13 @@ else
 LIBPARAMS =
 endif
 
-default:sim
+default:
+	@g++ -O3 \
+		${PROJECT_ROOT}/test/test.cpp \
+		-I${PROJECT_ROOT}/src \
+		-o sim.x \
+		-L${PWD}
+	@./sim.x
 
 sim:makelib
 	@g++ -O3 \

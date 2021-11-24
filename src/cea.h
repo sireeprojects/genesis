@@ -104,7 +104,7 @@ typedef enum {
 } fieldModifier;
 
 
-struct PACKED field { // 81 bytes
+struct PACKED ceaField { // 81 bytes
     bool touched : 1;
     bool merge : 1;
     uint64_t mask : 64;
@@ -121,8 +121,57 @@ struct PACKED field { // 81 bytes
     char pad[47];
 };
 
-struct PACKED stream {
-    field fields[64];
+
+class ceaStream {
+public:
+    void set(uint32_t id, uint64_t value);
+    void set(uint32_t id, fieldModifier spec);
+    string describe() const;
+    ceaStream();
+    friend ostream& operator << (ostream& os, const ceaStream& cmd);
+private:
+    ceaField fld[64];
+    void consolidate();
+    string name;
 };
 
+
+} // namespace
+
+
+//---{ Definitions }--------------------------------------------------------
+
+namespace cea {
+
+ofstream logfile;
+msgVerbosityLevel global_verbosity;
+
+int outbuf::overflow(int_type c) {
+    if (c != EOF) {
+	c = static_cast<char>(c);
+        logfile << static_cast<char>(c);
+        if (putchar(c) == EOF) {
+           return EOF;
+        }
+    }
+    return c;
 }
+
+
+class initLib {
+public:
+    initLib() {
+        logfile.open("run.log", ofstream::out);
+        if (!logfile.is_open()) {
+            cout << "Error creating logfile. Aborting..." << endl;
+            exit(1);
+        }
+    }
+    ~initLib() { logfile.close(); }
+};
+
+
+initLib init_lib;
+
+
+} // namespace
