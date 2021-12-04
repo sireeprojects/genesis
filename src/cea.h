@@ -10,9 +10,7 @@
 #define PACKED __attribute__((packed))
 using namespace std;
 
-
 namespace cea {
-
 
 class outbuf : public streambuf {
 protected:
@@ -21,59 +19,55 @@ protected:
 outbuf ob;
 ostream ceaLog(&ob);
 
-
 typedef enum {
-    ceaLow,
-    ceaFull,
+    Low,
+    Full,
 } msgVerbosityLevel;
 
-
 typedef enum {
-    ceaV2,
-    ceaRaw
+    V2,
+    Raw
 } frameType;
 
-
 typedef enum {
-    ceaMacPreamble,
-    ceaMacDestAddr,
-    ceaMacSrcAddr,
-    ceaMacLen,
-    ceaMacEtherType,
-    ceaMacFcs,
-    ceaIpv4Version,
-    ceaIpv4IHL,
-    ceaIpv4Tos,
-    ceaIpv4totalLen,
-    ceaIpv4Id,
-    ceaIpv4Flags,
-    ceaIpv4FragOffset,
-    ceaIpv4TTL,
-    ceaIpv4Protocol,
-    ceaIpv4HdrCsum,
-    ceaIpv4SrcAddr,
-    ceaIpv4DestAddr,
-    ceaIpv4Opts,
-    ceaIpv4Pad,
-    ceaUDPSrcPort,
-    ceaUDPDestPort,
-    ceaUDPlen,
-    ceaUDPCsum,
-    ceaStreamType,
-    ceaStreamPktsPerBurst,
-    ceaStreamBurstPerStream,
-    ceaStreamInterBurstGap,
-    ceaStreamInterStreamGap,
-    ceaStreamStartDelay,
-    ceaStreamRateType,
-    ceaStreamIpg,
-    ceaStreamPercentage,
-    ceaStreamPktsPerSec,
-    ceaStreamBitRate,
-    ceaPayloadType,
-    ceaFieldsSize
+    MacPreamble,
+    MacDestAddr,
+    MacSrcAddr,
+    MacLen,
+    MacEtherType,
+    MacFcs,
+    Ipv4Version,
+    Ipv4IHL,
+    Ipv4Tos,
+    Ipv4totalLen,
+    Ipv4Id,
+    Ipv4Flags,
+    Ipv4FragOffset,
+    Ipv4TTL,
+    Ipv4Protocol,
+    Ipv4HdrCsum,
+    Ipv4SrcAddr,
+    Ipv4DestAddr,
+    Ipv4Opts,
+    Ipv4Pad,
+    UDPSrcPort,
+    UDPDestPort,
+    UDPlen,
+    UDPCsum,
+    StreamType,
+    StreamPktsPerBurst,
+    StreamBurstPerStream,
+    StreamInterBurstGap,
+    StreamInterStreamGap,
+    StreamStartDelay,
+    StreamRateType,
+    StreamIpg,
+    StreamPercentage,
+    StreamPktsPerSec,
+    StreamBitRate,
+    PayloadType,
+    FieldsSize
 } fieldId;
-
 
 typedef enum {
     // value modifiers
@@ -103,7 +97,6 @@ typedef enum {
     bitRate
 } fieldModifier;
 
-
 struct PACKED ceaField { // 81 bytes
     bool touched : 1;
     bool merge : 1;
@@ -121,7 +114,6 @@ struct PACKED ceaField { // 81 bytes
     char pad[47];
 };
 
-
 class ceaStream {
 public:
     void set(uint32_t id, uint64_t value);
@@ -135,9 +127,7 @@ private:
     string name;
 };
 
-
 } // namespace
-
 
 //---{ Definitions }--------------------------------------------------------
 
