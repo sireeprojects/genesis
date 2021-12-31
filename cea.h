@@ -21,10 +21,10 @@ outbuf ob;
 ostream cealog(&ob);
 
 typedef enum {
-    NONE,
-    LOW,
-    FULL,
-} msg_verbosity;
+    NONE, // default
+    LOW,  // NONE + pkt details w/o payload bytes
+    FULL, // LOW + pkt payload bytes
+} cea_msg_verbosity;
 
 typedef enum {
     INFO,
@@ -32,107 +32,96 @@ typedef enum {
     WARNING,
     SCBD_ERROR,
     PKT
-} msg_type;
+} cea_msg_type;
 
 typedef enum {
-    CEA_SHORT,
-    CEA_LONG
-} desc_type;
-
-// typedef enum {
-//     UNDEF,
-//     TEST,
-//     CFG,
-//     CMD,
-//     ERR,
-//     WARN,
-//     EVENT,
-//     TXN
-// } msg_type;
+    SHORT,
+    LONG
+} cea_pkt_print_type;
 
 typedef enum {
-    CEA_V2,
-    CEA_RAW
-} frame_type;
+    V2,
+    RAW
+} cea_pkt_type;
 
 typedef enum {
-    CEA_MAC_Preamble,
-    CEA_MAC_Dest_Addr,
-    CEA_MAC_Src_Addr,
-    CEA_MAC_Len,
-    CEA_MAC_Ether_Type,
-    CEA_MAC_Fcs,
-    CEA_IPv4_Version,
-    CEA_IPv4_IHL,
-    CEA_IPv4_Tos,
-    CEA_IPv4_Total_Len,
-    CEA_IPv4_Id,
-    CEA_IPv4_Flags,
-    CEA_IPv4_Frag_Offset,
-    CEA_IPv4_TTL,
-    CEA_IPv4_Protocol,
-    CEA_IPv4_Hdr_Csum,
-    CEA_IPv4_Src_Addr,
-    CEA_IPv4_Dest_Addr,
-    CEA_IPv4_Opts,
-    CEA_IPv4_Pad,
-    CEA_UDP_Src_Port,
-    CEA_UDP_Dest_Port,
-    CEA_UDP_len,
-    CEA_UDP_Csum,
-    CEA_STREAM_Type,
-    CEA_STREAM_Pkts_Per_Burst,
-    CEA_STREAM_Burst_Per_Stream,
-    CEA_STREAM_Inter_Burst_Gap,
-    CEA_STREAM_Inter_Stream_Gap,
-    CEA_STREAM_Start_Delay,
-    CEA_STREAM_Rate_Type,
-    CEA_STREAM_rate,
-    CEA_STREAM_Ipg,
-    CEA_STREAM_Percentage,
-    CEA_STREAM_PktsPerSec,
-    CEA_STREAM_BitRate,
-    CEA_PAYLOAD_Type,
-    CEA_NumFields
-} field_id;
+    MAC_Preamble,
+    MAC_Dest_Addr,
+    MAC_Src_Addr,
+    MAC_Len,
+    MAC_Ether_Type,
+    MAC_Fcs,
+    IPv4_Version,
+    IPv4_IHL,
+    IPv4_Tos,
+    IPv4_Total_Len,
+    IPv4_Id,
+    IPv4_Flags,
+    IPv4_Frag_Offset,
+    IPv4_TTL,
+    IPv4_Protocol,
+    IPv4_Hdr_Csum,
+    IPv4_Src_Addr,
+    IPv4_Dest_Addr,
+    IPv4_Opts,
+    IPv4_Pad,
+    UDP_Src_Port,
+    UDP_Dest_Port,
+    UDP_len,
+    UDP_Csum,
+    STREAM_Type,
+    STREAM_Pkts_Per_Burst,
+    STREAM_Burst_Per_Stream,
+    STREAM_Inter_Burst_Gap,
+    STREAM_Inter_Stream_Gap,
+    STREAM_Start_Delay,
+    STREAM_Rate_Type,
+    STREAM_rate,
+    STREAM_Ipg,
+    STREAM_Percentage,
+    STREAM_PktsPerSec,
+    STREAM_BitRate,
+    PAYLOAD_Type,
+    NumFields
+} cea_field_id;
 
 typedef enum {
-    CEA_Fixed,            
-    CEA_Random,           
-    CEA_Random_in_Range,  
-    CEA_Increment,        
-    CEA_Decrement,        
-    CEA_Increment_Cycle,  
-    CEA_Decrement_Cycle, 
-    CEA_Incr_Byte,        
-    CEA_Incr_Word,          
-    CEA_Decr_Byte,           
-    CEA_Decr_Word,            
-    CEA_Repeat_Pattern,        
-    CEA_Fixed_Pattern,          
-    CEA_Continuous_Pkts,
-    CEA_Continuous_Burst,
-    CEA_Stop_After_Stream,
-    CEA_Goto_Next_Stream,
-    CEA_Ipg,
-    CEA_Percentage,
-    CEA_Pkts_Per_Sec,
-    CEA_Bit_Rate
-} field_modifier;
+    Fixed,            
+    Random,           
+    Random_in_Range,  
+    Increment,        
+    Decrement,        
+    Increment_Cycle,  
+    Decrement_Cycle, 
+    Incr_Byte,        
+    Incr_Word,          
+    Decr_Byte,           
+    Decr_Word,            
+    Repeat_Pattern,        
+    Fixed_Pattern,          
+    Continuous_Pkts,
+    Continuous_Burst,
+    Stop_After_Stream,
+    Goto_Next_Stream,
+    Ipg,
+    Percentage,
+    Pkts_Per_Sec,
+    Bit_Rate
+} cea_field_modifier;
 
 struct stream_control_specifications {
-    field_modifier stream_type;
+    cea_field_modifier stream_type;
     uint32_t pkts_per_burst;
     uint32_t burst_per_stream;
     uint32_t inter_burst_gap;
     uint32_t inter_stream_gap;
     uint32_t start_delay;
-    field_modifier rate_type;
+    cea_field_modifier rate_type;
     uint32_t rate;
 };
 
-struct value_spec {
-    field_modifier type;
+struct cea_value_spec {
+    cea_field_modifier type;
     uint64_t value;
     uint32_t range_start;
     uint32_t range_stop;
@@ -141,8 +130,8 @@ struct value_spec {
     uint32_t step;
 };
 
-struct data_specifications {
-    field_modifier size;
+struct cea_data_specifications {
+    cea_field_modifier size;
     uint32_t inc_min;
     uint32_t inc_max;
     uint32_t inc_step;
@@ -150,7 +139,7 @@ struct data_specifications {
     uint32_t dec_max;
     uint32_t dec_step;
     uint32_t repeat_after;
-    field_modifier data;
+    cea_field_modifier data;
     uint32_t increment_word_size;
     uint32_t decrement_word_size;
     string pattern;
@@ -164,7 +153,7 @@ struct CEA_PACKED cea_field {
     uint32_t id : 32;
     uint32_t len: 32;
     uint32_t ofset : 32;
-    field_modifier modifier : 32;
+    cea_field_modifier modifier : 32;
     uint64_t value: 64;
     uint32_t start: 32;
     uint32_t stop: 32;
@@ -178,7 +167,7 @@ typedef enum {
     HEX,
     DEC,
     STR
-} display_type;
+} cea_field_print_type;
 
 // forward declaration
 class cea_stream;
@@ -250,7 +239,7 @@ public:
 
     cea_field fields[64];
     void set(uint32_t id, uint64_t value);
-    void set(uint32_t id, field_modifier spec);
+    void set(uint32_t id, cea_field_modifier spec);
 };
 
 class cea_field_future {
@@ -258,13 +247,13 @@ public:
     uint32_t id;
     // used in printing
     string name;
-    display_type display;
-    string describe(desc_type t=CEA_SHORT) const;
+    cea_field_print_type display;
+    string describe(cea_pkt_print_type t=SHORT) const;
     // standard length of the protocol field
     uint32_t len;
     // staandard offset of the protocol field
     uint32_t offset;
-    value_spec spec;
+    cea_value_spec spec;
     cea_field_future();
     friend ostream& operator << (ostream& os, const cea_field_future& cmd);
     void set_defaults();

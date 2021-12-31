@@ -2,6 +2,7 @@
 using namespace cea;
 
 int main() {
+
     cea_manager *mgr = new cea_manager;
 
     cea_proxy *s0 = new cea_proxy;

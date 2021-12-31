@@ -45,33 +45,33 @@ public:
 };
 cea_init init;
 
-string rtrim(string s) {
+string cea_rtrim(string s) {
     s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
     return s;
 }
 
-string ltrim(string s) {
+string cea_ltrim(string s) {
     s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));
     return s;
 }
 
-string trim(string s) {
-    return ltrim(rtrim(s));
+string cea_trim(string s) {
+    return cea_ltrim(cea_rtrim(s));
 }
 
-string wordwrap(string msg) {
+string cea_wordwrap(string msg) {
     stringstream wrapped_msg;
     uint32_t line_width = 100;
     string leading_spaces = "    ";
     for (uint32_t pos=0; pos<msg.length(); pos=pos+line_width) {
         wrapped_msg << leading_spaces
-        << ltrim(msg.substr(pos, line_width)) << endl;
+        << cea_ltrim(msg.substr(pos, line_width)) << endl;
     }
     return wrapped_msg.str();
 }
 
 #define CEA_FORMATTED_HDR_LEN 80
-string formatted_hdr(string s) {
+string cea_formatted_hdr(string s) {
     stringstream ss;
     ss.setf(ios_base::left);
     ss << string(3,'-') << "{ ";
@@ -79,16 +79,31 @@ string formatted_hdr(string s) {
     return ss.str();
 }
 
-string getEnvVar(string const& key) {
-    char const* val = getenv(key.c_str());
-    return val == NULL ? string() : string(val);
+string cea_getenv(string &key) {
+    char *val = getenv(key.c_str());
+    return (val==NULL) ? string() : string(val);
 }
 
-string name() {
-    return "CEA";
+typedef enum {
+    KIS1024 = 1024,
+    KIS1000 = 1000
+} cea_readable_type;
+
+string cea_readable_fs(double size, cea_readable_type type) {
+    int i = 0;
+    ostringstream buf("");
+    const char *units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+    int divider = type;
+
+    while (size > (divider-1)) {
+      size /= divider;
+      i++;
+    }
+    buf << fixed << setprecision(2) << size << " " << units[i] << endl; 
+    return buf.str();
 }
 
-string to_str(display_type t) {
+string to_str(cea_field_print_type t) {
     string name;
     switch(t) {
         case HEX : { name = "HEX      "; break; }
@@ -96,106 +111,91 @@ string to_str(display_type t) {
         case STR : { name = "STRING   "; break; }
         default  : { name = "UNDEFINED"; break; }
     }
-    return trim(name);
+    return cea_trim(name);
 }
 
-string to_str(msg_verbosity t) {
+string to_str(cea_msg_verbosity t) {
     string name;
     switch(t) {
         case LOW  : { name = "LOW  "; break; }
         case FULL : { name = "FULL "; break; }
         default   : { name = "UNSET"; break; }
     }
-    return trim(name);
+    return cea_trim(name);
 }
 
-// string to_str(msg_type t) {
-//     string name;
-//     switch(t) {
-//         case TEST  : { name = "TEST     "; break; }          
-//         case CFG   : { name = "CFG      "; break; }        
-//         case CMD   : { name = "CMD      "; break; }        
-//         case ERR   : { name = "ERR      "; break; }        
-//         case WARN  : { name = "WARN     "; break; }          
-//         case EVENT : { name = "EVENT    "; break; }          
-//         case TXN   : { name = "TXN      "; break; }        
-//         default    : { name = "UNDEFINED"; break; }
-//     }
-//     return trim(name);
-// }
-
-string to_str(field_modifier t) {
+string to_str(cea_field_modifier t) {
     string name;
     switch(t) {
-        case CEA_Fixed             : { name = "Fixed            "; break; }                                    
-        case CEA_Random            : { name = "Random           "; break; }                                    
-        case CEA_Random_in_Range   : { name = "Random_in_Range  "; break; }                                    
-        case CEA_Increment         : { name = "Increment        "; break; }                                    
-        case CEA_Decrement         : { name = "Decrement        "; break; }                                    
-        case CEA_Increment_Cycle   : { name = "Increment_Cycle  "; break; }                                    
-        case CEA_Decrement_Cycle   : { name = "Decrement_Cycle  "; break; }                                   
-        case CEA_Incr_Byte         : { name = "Incr_Byte        "; break; }                                    
-        case CEA_Incr_Word         : { name = "Incr_Word        "; break; }                                      
-        case CEA_Decr_Byte         : { name = "Decr_Byte        "; break; }                                       
-        case CEA_Decr_Word         : { name = "Decr_Word        "; break; }                                        
-        case CEA_Repeat_Pattern    : { name = "Repeat_Pattern   "; break; }                                         
-        case CEA_Fixed_Pattern     : { name = "Fixed_Pattern    "; break; }                                          
-        case CEA_Continuous_Pkts   : { name = "Continuous_Pkts  "; break; }                                  
-        case CEA_Continuous_Burst  : { name = "Continuous_Burst "; break; }                                   
-        case CEA_Stop_After_Stream : { name = "Stop_After_Stream"; break; }                                    
-        case CEA_Goto_Next_Stream  : { name = "Goto_Next_Stream "; break; }                                   
-        case CEA_Ipg               : { name = "Ipg              "; break; }                      
-        case CEA_Percentage        : { name = "Percentage       "; break; }                             
-        case CEA_Pkts_Per_Sec      : { name = "Pkts_Per_Sec     "; break; }                               
-        case CEA_Bit_Rate          : { name = "Bit_Rate         "; break; }                           
+        case Fixed             : { name = "Fixed            "; break; }                                    
+        case Random            : { name = "Random           "; break; }                                    
+        case Random_in_Range   : { name = "Random_in_Range  "; break; }                                    
+        case Increment         : { name = "Increment        "; break; }                                    
+        case Decrement         : { name = "Decrement        "; break; }                                    
+        case Increment_Cycle   : { name = "Increment_Cycle  "; break; }                                    
+        case Decrement_Cycle   : { name = "Decrement_Cycle  "; break; }                                   
+        case Incr_Byte         : { name = "Incr_Byte        "; break; }                                    
+        case Incr_Word         : { name = "Incr_Word        "; break; }                                      
+        case Decr_Byte         : { name = "Decr_Byte        "; break; }                                       
+        case Decr_Word         : { name = "Decr_Word        "; break; }                                        
+        case Repeat_Pattern    : { name = "Repeat_Pattern   "; break; }                                         
+        case Fixed_Pattern     : { name = "Fixed_Pattern    "; break; }                                          
+        case Continuous_Pkts   : { name = "Continuous_Pkts  "; break; }                                  
+        case Continuous_Burst  : { name = "Continuous_Burst "; break; }                                   
+        case Stop_After_Stream : { name = "Stop_After_Stream"; break; }                                    
+        case Goto_Next_Stream  : { name = "Goto_Next_Stream "; break; }                                   
+        case Ipg               : { name = "Ipg              "; break; }                      
+        case Percentage        : { name = "Percentage       "; break; }                             
+        case Pkts_Per_Sec      : { name = "Pkts_Per_Sec     "; break; }                               
+        case Bit_Rate          : { name = "Bit_Rate         "; break; }                           
         default                : { name = "UNDEFINED        "; break; }
     }
-    return trim(name);
+    return cea_trim(name);
 }
 
-string to_str(field_id t) {
+string to_str(cea_field_id t) {
     string name;
     switch(t) {
-        case CEA_MAC_Preamble            : { name = "MAC_Preamble           "; break; }                         
-        case CEA_MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }                          
-        case CEA_MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }                         
-        case CEA_MAC_Len                 : { name = "MAC_Len                "; break; }                    
-        case CEA_MAC_Ether_Type          : { name = "MAC_Ether_Type         "; break; }                           
-        case CEA_MAC_Fcs                 : { name = "MAC_Fcs                "; break; }                    
-        case CEA_IPv4_Version            : { name = "IPv4_Version           "; break; }                         
-        case CEA_IPv4_IHL                : { name = "IPv4_IHL               "; break; }                     
-        case CEA_IPv4_Tos                : { name = "IPv4_Tos               "; break; }                     
-        case CEA_IPv4_Total_Len          : { name = "IPv4_Total_Len         "; break; }                           
-        case CEA_IPv4_Id                 : { name = "IPv4_Id                "; break; }                    
-        case CEA_IPv4_Flags              : { name = "IPv4_Flags             "; break; }                       
-        case CEA_IPv4_Frag_Offset        : { name = "IPv4_Frag_Offset       "; break; }                             
-        case CEA_IPv4_TTL                : { name = "IPv4_TTL               "; break; }                     
-        case CEA_IPv4_Protocol           : { name = "IPv4_Protocol          "; break; }                          
-        case CEA_IPv4_Hdr_Csum           : { name = "IPv4_Hdr_Csum          "; break; }                          
-        case CEA_IPv4_Src_Addr           : { name = "IPv4_Src_Addr          "; break; }                          
-        case CEA_IPv4_Dest_Addr          : { name = "IPv4_Dest_Addr         "; break; }                           
-        case CEA_IPv4_Opts               : { name = "IPv4_Opts              "; break; }                      
-        case CEA_IPv4_Pad                : { name = "IPv4_Pad               "; break; }                     
-        case CEA_UDP_Src_Port            : { name = "UDP_Src_Port           "; break; }                         
-        case CEA_UDP_Dest_Port           : { name = "UDP_Dest_Port          "; break; }                          
-        case CEA_UDP_len                 : { name = "UDP_len                "; break; }                    
-        case CEA_UDP_Csum                : { name = "UDP_Csum               "; break; }                     
-        case CEA_STREAM_Type             : { name = "STREAM_Type            "; break; }                        
-        case CEA_STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }                                  
-        case CEA_STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }                                    
-        case CEA_STREAM_Inter_Burst_Gap  : { name = "STREAM_Inter_Burst_Gap "; break; }                                   
-        case CEA_STREAM_Inter_Stream_Gap : { name = "STREAM_Inter_Stream_Gap"; break; }                                    
-        case CEA_STREAM_Start_Delay      : { name = "STREAM_Start_Delay     "; break; }                               
-        case CEA_STREAM_Rate_Type        : { name = "STREAM_Rate_Type       "; break; }                             
-        case CEA_STREAM_rate             : { name = "STREAM_rate            "; break; }                        
-        case CEA_STREAM_Ipg              : { name = "STREAM_Ipg             "; break; }                       
-        case CEA_STREAM_Percentage       : { name = "STREAM_Percentage      "; break; }                              
-        case CEA_STREAM_PktsPerSec       : { name = "STREAM_PktsPerSec      "; break; }                              
-        case CEA_STREAM_BitRate          : { name = "STREAM_BitRate         "; break; }                           
-        case CEA_PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }                         
+        case MAC_Preamble            : { name = "MAC_Preamble           "; break; }                         
+        case MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }                          
+        case MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }                         
+        case MAC_Len                 : { name = "MAC_Len                "; break; }                    
+        case MAC_Ether_Type          : { name = "MAC_Ether_Type         "; break; }                           
+        case MAC_Fcs                 : { name = "MAC_Fcs                "; break; }                    
+        case IPv4_Version            : { name = "IPv4_Version           "; break; }                         
+        case IPv4_IHL                : { name = "IPv4_IHL               "; break; }                     
+        case IPv4_Tos                : { name = "IPv4_Tos               "; break; }                     
+        case IPv4_Total_Len          : { name = "IPv4_Total_Len         "; break; }                           
+        case IPv4_Id                 : { name = "IPv4_Id                "; break; }                    
+        case IPv4_Flags              : { name = "IPv4_Flags             "; break; }                       
+        case IPv4_Frag_Offset        : { name = "IPv4_Frag_Offset       "; break; }                             
+        case IPv4_TTL                : { name = "IPv4_TTL               "; break; }                     
+        case IPv4_Protocol           : { name = "IPv4_Protocol          "; break; }                          
+        case IPv4_Hdr_Csum           : { name = "IPv4_Hdr_Csum          "; break; }                          
+        case IPv4_Src_Addr           : { name = "IPv4_Src_Addr          "; break; }                          
+        case IPv4_Dest_Addr          : { name = "IPv4_Dest_Addr         "; break; }                           
+        case IPv4_Opts               : { name = "IPv4_Opts              "; break; }                      
+        case IPv4_Pad                : { name = "IPv4_Pad               "; break; }                     
+        case UDP_Src_Port            : { name = "UDP_Src_Port           "; break; }                         
+        case UDP_Dest_Port           : { name = "UDP_Dest_Port          "; break; }                          
+        case UDP_len                 : { name = "UDP_len                "; break; }                    
+        case UDP_Csum                : { name = "UDP_Csum               "; break; }                     
+        case STREAM_Type             : { name = "STREAM_Type            "; break; }                        
+        case STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }                                  
+        case STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }                                    
+        case STREAM_Inter_Burst_Gap  : { name = "STREAM_Inter_Burst_Gap "; break; }                                   
+        case STREAM_Inter_Stream_Gap : { name = "STREAM_Inter_Stream_Gap"; break; }                                    
+        case STREAM_Start_Delay      : { name = "STREAM_Start_Delay     "; break; }                               
+        case STREAM_Rate_Type        : { name = "STREAM_Rate_Type       "; break; }                             
+        case STREAM_rate             : { name = "STREAM_rate            "; break; }                        
+        case STREAM_Ipg              : { name = "STREAM_Ipg             "; break; }                       
+        case STREAM_Percentage       : { name = "STREAM_Percentage      "; break; }                              
+        case STREAM_PktsPerSec       : { name = "STREAM_PktsPerSec      "; break; }                              
+        case STREAM_BitRate          : { name = "STREAM_BitRate         "; break; }                           
+        case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }                         
         default : { name = "UNDEFINED"; break; }
     }
-    return trim(name);
+    return cea_trim(name);
 }
 
 cea_manager::cea_manager() {
