@@ -1,3 +1,12 @@
+/*
+TODO:
+Implementation:
+--combine fields that are not a multiple of a byte
+--reimplement reset to carry valid default values
+
+Test:
+*/
+
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -7,6 +16,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cstring>
 #define CEA_PACKED __attribute__((packed))
 
 using namespace std;
@@ -224,40 +234,23 @@ uint32_t pid = 0;
 //--------
 // Stream
 //--------
-// notes:
-// stream should only be copied into queues
 class cea_stream {
 public:    
     cea_stream();
+    cea_stream (const cea_stream& rhs);
+    cea_stream& operator = (cea_stream& rhs);
+    friend ostream& operator << (ostream& os, const cea_stream& cmd);
+    void set(uint32_t id, uint64_t value);
+    void set(uint32_t id, cea_field_modifier spec);
+    void testfn();
+    string name;
+private:
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);
-    friend ostream& operator << (ostream& os, const cea_stream& cmd);
     string describe() const;
-    cea_stream (const cea_stream& rhs);
-    cea_stream& operator = (cea_stream& rhs);
-
-    cea_field fields[64];
-    void set(uint32_t id, uint64_t value);
-    void set(uint32_t id, cea_field_modifier spec);
-};
-
-class cea_field_future {
-public:
-    uint32_t id;
-    // used in printing
-    string name;
-    cea_field_print_type display;
-    string describe(cea_pkt_print_type t=SHORT) const;
-    // standard length of the protocol field
-    uint32_t len;
-    // staandard offset of the protocol field
-    uint32_t offset;
-    cea_value_spec spec;
-    cea_field_future();
-    friend ostream& operator << (ostream& os, const cea_field_future& cmd);
-    void set_defaults();
-    bool touched;
+    cea_field fields[cea::NumFields];
+    void reset();
 };
 
 template<typename ... Args>

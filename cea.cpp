@@ -76,6 +76,7 @@ string cea_formatted_hdr(string s) {
     ss.setf(ios_base::left);
     ss << string(3,'-') << "{ ";
     ss << s << " }" << string((CEA_FORMATTED_HDR_LEN-(7+s.length())),'-');
+    ss << endl;
     return ss.str();
 }
 
@@ -310,17 +311,21 @@ void cea_proxy::release_frm_buffer() {
     }
 }
 
-void cea_stream::do_copy (const cea_stream* rhs) {
-    CEA_DBG("Stream CC Called");
+//--------
+// Stream
+//--------
+
+// constructor
+cea_stream::cea_stream() {
+    reset();
 }
 
-cea_stream::cea_stream () {
-}
-
+// copy constructor
 cea_stream::cea_stream (const cea_stream& rhs) {
     cea_stream::do_copy(&rhs);
 }
 
+// assign operator overload
 cea_stream& cea_stream::operator = (cea_stream& rhs) {
    if (this != &rhs) {
       do_copy(&rhs);
@@ -328,13 +333,94 @@ cea_stream& cea_stream::operator = (cea_stream& rhs) {
    return *this;
 }
 
+// print operator overload
 ostream& operator << (ostream& os, const cea_stream& f) {
     os << f.describe();
     return os;
 }
 
+// user api to set fields of the stream
+void cea_stream::set(uint32_t id, uint64_t value) {
+    fields[id].value = value;
+    fields[id].touched = true;
+}
+
+// user api to set fields of the stream
+void cea_stream::set(uint32_t id, cea_field_modifier spec) {
+    fields[id].touched = true;
+}
+
+char* cea_stream::pack() {
+    return NULL;
+}
+
+void cea_stream::unpack(char *data) {
+}
+
+void cea_stream::do_copy (const cea_stream* rhs) {
+    CEA_DBG("Stream CC Called");
+}
+
+void cea_stream::testfn() {
+}
+
+void cea_stream::reset() {
+    for (uint32_t id = 0; id <cea::NumFields; id++) {
+        fields[id].touched  = 0;
+        fields[id].merge    = 0;
+        fields[id].mask     = 0;
+        fields[id].id       = id;
+        fields[id].len      = 0;
+        fields[id].ofset    = 0;
+        fields[id].modifier = Fixed;
+        fields[id].value    = 0;
+        fields[id].start    = 0;
+        fields[id].stop     = 0;
+        fields[id].step     = 0;
+        fields[id].repeat   = 0;
+        strcpy(fields[id].name, to_str(cea_field_id(id)).c_str());
+        memset(fields[id].pad, '0', 47);
+    }
+}
+
+#define CEA_FLDWIDTH 8
 string cea_stream::describe() const {
-    return "";
+    ostringstream buf("");
+    buf.setf(ios::hex, ios::basefield);
+    buf.setf(ios_base::left);
+    buf << cea_formatted_hdr("Stream Definition");
+
+    buf << setw(CEA_FLDWIDTH)   << "Touch" 
+        << setw(CEA_FLDWIDTH)   << "Merge"  
+        << setw(CEA_FLDWIDTH)   << "Mask "  
+        << setw(CEA_FLDWIDTH)   << "Id   "  
+        << setw(CEA_FLDWIDTH)   << "Len  "  
+        << setw(CEA_FLDWIDTH)   << "Offset"  
+        << setw(CEA_FLDWIDTH+2)   << "Modifier" 
+        << setw(CEA_FLDWIDTH+6) << "Value"  
+        << setw(CEA_FLDWIDTH)   << "Start"  
+        << setw(CEA_FLDWIDTH)   << "Stop "  
+        << setw(CEA_FLDWIDTH)   << "Step "  
+        << setw(CEA_FLDWIDTH)   << "Repeat"
+        << "Name" << endl;
+
+    for (uint32_t id = 0; id <cea::NumFields; id++) {
+        buf << setw(CEA_FLDWIDTH) << fields[id].touched 
+            << setw(CEA_FLDWIDTH) << fields[id].merge    
+            << setw(CEA_FLDWIDTH) << fields[id].mask     
+            << setw(CEA_FLDWIDTH) << fields[id].id       
+            << setw(CEA_FLDWIDTH) << fields[id].len      
+            << setw(CEA_FLDWIDTH) << fields[id].ofset    
+            << setw(CEA_FLDWIDTH+2) << fields[id].modifier 
+            << setw(CEA_FLDWIDTH+6) << fields[id].value    
+            << setw(CEA_FLDWIDTH) << fields[id].start    
+            << setw(CEA_FLDWIDTH) << fields[id].stop     
+            << setw(CEA_FLDWIDTH) << fields[id].step     
+            << setw(CEA_FLDWIDTH) << fields[id].repeat
+            << fields[id].name;
+            buf << endl;
+    }
+    return buf.str();
 }
 
 } // namesapce
