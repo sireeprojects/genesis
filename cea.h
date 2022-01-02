@@ -2,6 +2,7 @@
 TODO:
 Implementation:
 --combine fields that are not a multiple of a byte
+    * might complicate set api, merge fields under consolidate fn
 --reimplement reset to carry valid default values
 
 Test:
@@ -53,6 +54,13 @@ typedef enum {
     V2,
     RAW
 } cea_pkt_type;
+
+typedef enum {
+    MAC,
+    IPv4,
+    TCP,
+    UDP
+} cea_pkt_hdr_type;
 
 typedef enum {
     MAC_Preamble,
@@ -171,6 +179,12 @@ struct CEA_PACKED cea_field {
     uint32_t repeat: 32;
     char name[32];
     char pad[47];
+};
+
+struct CEA_PACKED cea_protocol_sequence {
+    cea_pkt_hdr_type id : 32;
+    uint32_t len : 32;
+    uint32_t seq[32];
 };
 
 typedef enum {

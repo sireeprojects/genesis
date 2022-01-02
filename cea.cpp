@@ -19,6 +19,47 @@
 
 namespace cea {
 
+cea_field flds[] = {
+// Toc Mrg Mask Id                      Len Offset Modifier Val Start Stop Step Rpt Name
+{  0,  0,  0,   MAC_Preamble           ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Preamble           "},
+{  0,  0,  0,   MAC_Dest_Addr          ,6,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Dest_Addr          "},
+{  0,  0,  0,   MAC_Src_Addr           ,6,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Src_Addr           "},
+{  0,  0,  0,   MAC_Len                ,2,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Len                "},
+{  0,  0,  0,   MAC_Ether_Type         ,2,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Ether_Type         "},
+{  0,  0,  0,   MAC_Fcs                ,4,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Fcs                "},
+{  0,  0,  0,   IPv4_Version           ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Version           "},
+{  0,  0,  0,   IPv4_IHL               ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_IHL               "},
+{  0,  0,  0,   IPv4_Tos               ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Tos               "},
+{  0,  0,  0,   IPv4_Total_Len         ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Total_Len         "},
+{  0,  0,  0,   IPv4_Id                ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Id                "},
+{  0,  0,  0,   IPv4_Flags             ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Flags             "},
+{  0,  0,  0,   IPv4_Frag_Offset       ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Frag_Offset       "},
+{  0,  0,  0,   IPv4_TTL               ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_TTL               "},
+{  0,  0,  0,   IPv4_Protocol          ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Protocol          "},
+{  0,  0,  0,   IPv4_Hdr_Csum          ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
+{  0,  0,  0,   IPv4_Src_Addr          ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Src_Addr          "},
+{  0,  0,  0,   IPv4_Dest_Addr         ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Dest_Addr         "},
+{  0,  0,  0,   IPv4_Opts              ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Opts              "},
+{  0,  0,  0,   IPv4_Pad               ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "IPv4_Pad               "},
+{  0,  0,  0,   UDP_Src_Port           ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "UDP_Src_Port           "},
+{  0,  0,  0,   UDP_Dest_Port          ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "UDP_Dest_Port          "},
+{  0,  0,  0,   UDP_len                ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "UDP_len                "},
+{  0,  0,  0,   UDP_Csum               ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "UDP_Csum               "},
+{  0,  0,  0,   STREAM_Type            ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Type            "},
+{  0,  0,  0,   STREAM_Pkts_Per_Burst  ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Pkts_Per_Burst  "},
+{  0,  0,  0,   STREAM_Burst_Per_Stream,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Burst_Per_Stream"},
+{  0,  0,  0,   STREAM_Inter_Burst_Gap ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Inter_Burst_Gap "},
+{  0,  0,  0,   STREAM_Inter_Stream_Gap,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Inter_Stream_Gap"},
+{  0,  0,  0,   STREAM_Start_Delay     ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Start_Delay     "},
+{  0,  0,  0,   STREAM_Rate_Type       ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Rate_Type       "},
+{  0,  0,  0,   STREAM_rate            ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_rate            "},
+{  0,  0,  0,   STREAM_Ipg             ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Ipg             "},
+{  0,  0,  0,   STREAM_Percentage      ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_Percentage      "},
+{  0,  0,  0,   STREAM_PktsPerSec      ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_PktsPerSec      "},
+{  0,  0,  0,   STREAM_BitRate         ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "STREAM_BitRate         "},
+{  0,  0,  0,   PAYLOAD_Type           ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "PAYLOAD_Type           "}
+};
+
 ofstream logfile;
 
 int outbuf::overflow(int_type c) {
@@ -365,22 +406,7 @@ void cea_stream::testfn() {
 }
 
 void cea_stream::reset() {
-    for (uint32_t id = 0; id <cea::NumFields; id++) {
-        fields[id].touched  = 0;
-        fields[id].merge    = 0;
-        fields[id].mask     = 0;
-        fields[id].id       = id;
-        fields[id].len      = 0;
-        fields[id].ofset    = 0;
-        fields[id].modifier = Fixed;
-        fields[id].value    = 0;
-        fields[id].start    = 0;
-        fields[id].stop     = 0;
-        fields[id].step     = 0;
-        fields[id].repeat   = 0;
-        strcpy(fields[id].name, to_str(cea_field_id(id)).c_str());
-        memset(fields[id].pad, '0', 47);
-    }
+    memcpy(&fields, &flds, sizeof(cea_field)*cea::NumFields);
 }
 
 #define CEA_FLDWIDTH 8
