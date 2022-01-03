@@ -60,6 +60,44 @@ cea_field flds[] = {
 {  0,  0,  0,   PAYLOAD_Type           ,0,  0,     Fixed,   0,  0,    0,   0,   0,  "PAYLOAD_Type           "}
 };
 
+map<cea_pkt_hdr_type, vector<cea_field_id> >htof = {
+    {MAC, { MAC_Preamble,
+            MAC_Dest_Addr,
+            MAC_Src_Addr
+            }},
+    {VLAN,  {
+            }},
+    {MPLS,  {
+            }},
+    {LLC,   {
+            }},
+    {SNAP,  {
+            }},
+    {IPv4,{ IPv4_Version,
+            IPv4_IHL,
+            IPv4_Tos,
+            IPv4_Total_Len,
+            IPv4_Id,
+            IPv4_Flags,
+            IPv4_Frag_Offset,
+            IPv4_TTL,
+            IPv4_Protocol,
+            IPv4_Hdr_Csum,
+            IPv4_Src_Addr,
+            IPv4_Dest_Addr,
+            IPv4_Opts,
+            IPv4_Pad
+            }},
+    {IPv6,  {}},
+    {ARP,   {}},
+    {TCP,   {}},
+    {UDP, { UDP_Src_Port,
+            UDP_Dest_Port,
+            UDP_len,
+            UDP_Csum,
+            }}
+};
+
 ofstream logfile;
 
 int outbuf::overflow(int_type c) {

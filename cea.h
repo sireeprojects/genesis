@@ -18,6 +18,7 @@ Test:
 #include <iomanip>
 #include <algorithm>
 #include <cstring>
+#include <map>
 #define CEA_PACKED __attribute__((packed))
 
 using namespace std;
@@ -57,7 +58,13 @@ typedef enum {
 
 typedef enum {
     MAC,
+    VLAN,
+    MPLS,
+    LLC,
+    SNAP,
     IPv4,
+    IPv6,
+    ARP,
     TCP,
     UDP
 } cea_pkt_hdr_type;
