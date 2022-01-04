@@ -21,6 +21,11 @@ namespace cea {
 
 cea_field flds[] = {
 // Toc Mrg Mask Id                        Len Offset Modifier Val Start Stop Step Rpt Name
+{  0,  0,  0,   PKT_Type                 ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "PKT_Type               "},                                     
+{  0,  0,  0,   PKT_Network_Hdr          ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "PKT_Network_Hdr        "},
+{  0,  0,  0,   PKT_Transport_Hdr        ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "PKT_Transport_Hdr      "},
+{  0,  0,  0,   PKT_VLAN_Tags            ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "PKT_VLAN_Tags          "},
+{  0,  0,  0,   PKT_MPLS_Labels          ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "PKT_MPLS_Labels        "},
 {  0,  0,  0,   MAC_Preamble             ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Preamble           "},
 {  0,  0,  0,   MAC_Dest_Addr            ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Dest_Addr          "},
 {  0,  0,  0,   MAC_Src_Addr             ,8,  0,     Fixed,   0,  0,    0,   0,   0,  "MAC_Src_Addr           "},
@@ -528,6 +533,14 @@ void cea_stream::set(uint32_t id, cea_field_modifier spec) {
     fields[id].touched = true;
 }
 
+void cea_stream::set(uint32_t id, cea_field_modifier mspec, cea_value_spec vspec) {
+    fields[id].touched = true;
+}
+
+void cea_stream::add(uint32_t id) {
+    fields[id].touched = true;
+}
+
 char* cea_stream::pack() {
     return NULL;
 }
@@ -573,7 +586,7 @@ string cea_stream::describe() const {
             << setw(CEA_FLDWIDTH) << fields[id].mask     
             << setw(CEA_FLDWIDTH) << fields[id].id       
             << setw(CEA_FLDWIDTH) << fields[id].len      
-            << setw(CEA_FLDWIDTH) << fields[id].ofset    
+            << setw(CEA_FLDWIDTH) << fields[id].offset    
             << setw(CEA_FLDWIDTH+2) << fields[id].modifier 
             << setw(CEA_FLDWIDTH+6) << fields[id].value    
             << setw(CEA_FLDWIDTH) << fields[id].start    

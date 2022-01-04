@@ -52,8 +52,9 @@ typedef enum {
 } cea_pkt_print_type;
 
 typedef enum {
-    V2,
-    RAW
+    Ethernet_V2,
+    Ethernet_LLC,
+    Ethernet_SNAP
 } cea_pkt_type;
 
 typedef enum {
@@ -70,6 +71,11 @@ typedef enum {
 } cea_pkt_hdr_type;
 
 typedef enum {
+    PKT_Type,
+    PKT_Network_Hdr,
+    PKT_Transport_Hdr,
+    PKT_VLAN_Tags,
+    PKT_MPLS_Labels,
     MAC_Preamble,
     MAC_Dest_Addr,
     MAC_Src_Addr,
@@ -181,17 +187,6 @@ typedef enum {
     Bit_Rate
 } cea_field_modifier;
 
-struct stream_control_specifications {
-    cea_field_modifier stream_type;
-    uint32_t pkts_per_burst;
-    uint32_t burst_per_stream;
-    uint32_t inter_burst_gap;
-    uint32_t inter_stream_gap;
-    uint32_t start_delay;
-    cea_field_modifier rate_type;
-    uint32_t rate;
-};
-
 struct cea_value_spec {
     cea_field_modifier type;
     uint64_t value;
@@ -202,29 +197,13 @@ struct cea_value_spec {
     uint32_t step;
 };
 
-struct cea_data_specifications {
-    cea_field_modifier size;
-    uint32_t inc_min;
-    uint32_t inc_max;
-    uint32_t inc_step;
-    uint32_t dec_min;
-    uint32_t dec_max;
-    uint32_t dec_step;
-    uint32_t repeat_after;
-    cea_field_modifier data;
-    uint32_t increment_word_size;
-    uint32_t decrement_word_size;
-    string pattern;
-    uint32_t repeat_count;
-};
-
 struct CEA_PACKED cea_field {
     bool touched : 1;
     bool merge : 1;
     uint64_t mask : 64;
     uint32_t id : 32;
     uint32_t len: 32;
-    uint32_t ofset : 32;
+    uint32_t offset : 32;
     cea_field_modifier modifier : 32;
     uint64_t value: 64;
     uint32_t start: 32;
@@ -310,6 +289,9 @@ public:
     friend ostream& operator << (ostream& os, const cea_stream& cmd);
     void set(uint32_t id, uint64_t value);
     void set(uint32_t id, cea_field_modifier spec);
+    void set(uint32_t id, cea_field_modifier mspec, cea_value_spec vspec);
+    void add(uint32_t id); // adding tags
+
     void testfn();
     string name;
 private:
