@@ -253,45 +253,67 @@ private:
 //-------
 class cea_proxy {
 public:
+// User interface functions
+
+    // constructor
     cea_proxy(string name);
+
+    // add stream to proxy queue
     void add_stream(cea_stream *stm);
+
+    // add a command(cea_stream) to proxy queue
     void add_cmd(cea_stream *stm);
+
+    // execute a command immediately does not add to proxy queue
     void exec_cmd(cea_stream *stm);
-    void testfn();
-    uint32_t pid;
+
+    // start stream processing and generate frames
     void start();
-    string name();
+
+    // utility functions
+    string port_name();
+    uint32_t port_num();
 
 private:
-    uint32_t port_num;
-    vector<cea_stream*> streamq;
-    cea_stream *cur_stream;
-    vector<uint32_t> fseq; // output of generate_field_sequence
-    vector<uint32_t> consolidated_fseq; // output of consolidate_fields
-    thread w;
+    // port identifiers
+    uint32_t pnum;
     string pname;
 
-    void worker(); // main thread
-    void start_worker(); // on stream start
+    // input stream queue
+    vector<cea_stream*> streamq;
+
+    // handle to the stream being processed
+    cea_stream *cur_stream;
+
+    // main thread
+    thread worker_tid;
+    void worker();
+
+    // start woker thread on stream start
+    void start_worker();
+
+    // worker thread modules
     void read();
-    void generate_field_sequence();
-    void consolidate_fields();
     void set_gen_vars();
     void generate();
     void join_threads();
+
+    // frame buffer
     void *fbuf;
     void create_frm_buffer();
     void release_frm_buffer();
 };
 
-uint32_t pid = 0;
+// global variable to assign port numbers to proxy objects
+// TODO why static is not used 
+uint32_t port_num = 0;
 
 //--------
 // Stream
 //--------
 class cea_stream {
 public:    
-    cea_stream();
+    cea_stream(string name="");
     cea_stream (const cea_stream& rhs);
     cea_stream& operator = (cea_stream& rhs);
     friend ostream& operator << (ostream& os, const cea_stream& cmd);
@@ -299,12 +321,18 @@ public:
     void set(uint32_t id, cea_field_modifier spec);
     void set(uint32_t id, cea_field_modifier mspec, cea_value_spec vspec);
     void add(uint32_t id); // adding tags
-
     void testfn();
+
+    string stream_name();
+private:
+    string sname;
+    vector<uint32_t> fseq; // output of generate_field_sequence
+    vector<uint32_t> consolidated_fseq; // output of consolidate_fields
     bool is_touched(cea_field_id fid);
     uint32_t value_of(cea_field_id fid);
     cea_field fields[cea::NumFields];
-private:
+    void generate_field_sequence();
+    void consolidate_fields();
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);

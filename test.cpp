@@ -20,7 +20,7 @@ int main() {
     p.add_stream(&s);
 
     // invoke debug function
-    p.testfn();
+    p.start();
 
     return 0;
 }

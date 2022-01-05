@@ -17,7 +17,8 @@
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 #endif
 
-#define CEA_DBG_CALL_SIGNATURE CEA_DBG("(%s) Fn:%s: Invoked", name().c_str(), __FUNCTION__);
+#define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG("(%s) Fn:%s: Invoked", port_name().c_str(), __FUNCTION__);
+#define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG("(%s) Fn:%s: Invoked", stream_name().c_str(), __FUNCTION__);
 
 namespace cea {
 
@@ -275,6 +276,19 @@ void write_pcap(char *pkt, uint32_t len) {
     pcapfile.close();
 }
 
+// TODO ipv4 checksum 
+void calc_ipv4_csum(char *hdr) {
+}
+
+// TODO tcp checksum 
+void calc_tcp_csum(char *hdr) {
+}
+
+// TODO udp checksum 
+void calc_udp_csum(char *hdr) {
+}
+
+
 string cea_rtrim(string s) {
     s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
     return s;
@@ -530,7 +544,7 @@ void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
     if (pxy != NULL) {
         vector<cea_proxy*>::iterator it;
         for (it = proxies.begin(); it != proxies.end(); it++) {
-            if ((*it)->pid == pxy->pid) {
+            if ((*it)->port_num() == pxy->port_num()) {
                 uint32_t idx = distance(proxies.begin(), it);
                 proxies[idx]->add_stream(stm);
             }
@@ -556,10 +570,10 @@ void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
 
 // ctor
 cea_proxy::cea_proxy(string name) {
-    this->pid = cea::pid;
-    cea::pid++;
+    this->pnum = cea::port_num;
+    cea::port_num++;
     this->pname = name;
-    CEA_DBG("(%s) Fn:%s: ProxyID: %d", name.c_str(), __FUNCTION__, pid);
+    CEA_DBG("(%s) Fn:%s: ProxyID: %d", name.c_str(), __FUNCTION__, port_num());
 }
 
 void cea_proxy::add_stream(cea_stream *stm) {
@@ -573,36 +587,40 @@ void cea_proxy::add_cmd(cea_stream *stm) {
 void cea_proxy::exec_cmd(cea_stream *stm) {
 }
 
-void cea_proxy::testfn() {
+void cea_proxy::start() {
     start_worker();
     join_threads();
 }
 
 void cea_proxy::join_threads() {
-    w.join();
+    worker_tid.join();
 }
 
-string cea_proxy::name() {
+string cea_proxy::port_name() {
     return pname;
 }
 
+uint32_t cea_proxy::port_num() {
+    return pnum;
+}
+
 void cea_proxy::start_worker() {
-    w = thread (&cea_proxy::worker, this);
+    worker_tid = thread (&cea_proxy::worker, this);
     char name[16];
-    sprintf(name, "worker_%d", port_num);
-    pthread_setname_np(w.native_handle(), name);
+    sprintf(name, "worker_%d", port_num());
+    pthread_setname_np(worker_tid.native_handle(), name);
 }
 
 void cea_proxy::read() {
-    CEA_DBG_CALL_SIGNATURE;
+    CEA_PXY_DBG_CALL_SIGNATURE;
     cur_stream = streamq[0];
     // cealog << *cur_stream;
 }
 
 void cea_proxy::worker() {
     read();
-    generate_field_sequence();
-    consolidate_fields();
+    // generate_field_sequence();
+    // consolidate_fields();
     set_gen_vars();
     generate();
 }
@@ -616,68 +634,70 @@ uint32_t cea_stream::value_of(cea_field_id fid) {
 }
 
 // algorithm to organize the pkt fields
-void cea_proxy::generate_field_sequence() {
-    CEA_DBG_CALL_SIGNATURE;
+void cea_stream::generate_field_sequence() {
+    CEA_STREAM_DBG_CALL_SIGNATURE;
 
     fseq.insert(fseq.begin(), htof[MAC].begin(), htof[MAC].end());
 
     // TODO multiple vlan tags
-    if (cur_stream->is_touched(PKT_VLAN_Tags)) {
+    if (is_touched(PKT_VLAN_Tags)) {
         fseq.insert(fseq.end(), htof[VLAN].begin(), htof[VLAN].end());
     }
 
-    if (cur_stream->value_of(PKT_Type) == (cea_pkt_type) Ethernet_V2) {
+    if (value_of(PKT_Type) == (cea_pkt_type) Ethernet_V2) {
         fseq.push_back((cea_field_id) MAC_Ether_Type);
     } else {
         fseq.push_back((cea_field_id) MAC_Len);
     }
 
-    if (cur_stream->value_of(PKT_Type) == (cea_pkt_type) Ethernet_LLC) {
+    if (value_of(PKT_Type) == (cea_pkt_type) Ethernet_LLC) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
     }
 
-    if (cur_stream->value_of(PKT_Type) == (cea_pkt_type) Ethernet_SNAP) {
+    if (value_of(PKT_Type) == (cea_pkt_type) Ethernet_SNAP) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
         fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
     }
 
     // TODO multiple mpls labels
-    if (cur_stream->is_touched(PKT_MPLS_Labels)) {
+    if (is_touched(PKT_MPLS_Labels)) {
         fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
     }
 
     fseq.insert(fseq.end(), 
-        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].begin(), 
-        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].end());
+        htof[(cea_pkt_hdr_type)value_of(PKT_Network_Hdr)].begin(), 
+        htof[(cea_pkt_hdr_type)value_of(PKT_Network_Hdr)].end());
 
     fseq.insert(fseq.end(), 
-        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].begin(), 
-        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].end());
+        htof[(cea_pkt_hdr_type)value_of(PKT_Transport_Hdr)].begin(), 
+        htof[(cea_pkt_hdr_type)value_of(PKT_Transport_Hdr)].end());
+
+    // TODO add paddings if any
 
     for (auto i : fseq) {
-        CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", name().c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str(), i);
+        // CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", name().c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str(), i);
     }
 
 }
 
-void cea_proxy::consolidate_fields() {
-    CEA_DBG_CALL_SIGNATURE;
-    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", name().c_str(), __FUNCTION__, fseq.size());
+void cea_stream::consolidate_fields() {
+    CEA_STREAM_DBG_CALL_SIGNATURE;
+    // CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", name().c_str(), __FUNCTION__, fseq.size());
 
     for(auto i: fseq) {
-        if (cur_stream->is_touched((cea_field_id)i)) {
+        if (is_touched((cea_field_id)i)) {
             consolidated_fseq.push_back(i);
         }
     }
-    CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", name().c_str(), __FUNCTION__, consolidated_fseq.size());
+    // CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", name().c_str(), __FUNCTION__, consolidated_fseq.size());
 }
 
 void cea_proxy::set_gen_vars() {
-    CEA_DBG_CALL_SIGNATURE;
+    CEA_PXY_DBG_CALL_SIGNATURE;
 }
 
 void cea_proxy::generate() {
-    CEA_DBG_CALL_SIGNATURE;
+    CEA_PXY_DBG_CALL_SIGNATURE;
     // write to fbuf
     // *(addr + i) = (char)i;
     // read from fbuf
@@ -704,7 +724,8 @@ void cea_proxy::release_frm_buffer() {
 //--------
 
 // constructor
-cea_stream::cea_stream() {
+cea_stream::cea_stream(string name) {
+    sname = name;
     reset();
 }
 
@@ -758,6 +779,11 @@ void cea_stream::do_copy (const cea_stream* rhs) {
 }
 
 void cea_stream::testfn() {
+
+}
+
+string cea_stream::stream_name() {
+    return sname;
 }
 
 void cea_stream::reset() {
