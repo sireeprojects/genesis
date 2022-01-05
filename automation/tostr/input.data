@@ -1,0 +1,7 @@
+type:cea_field_id
+default:undefined
+PKT_Type
+PKT_Network_Hdr
+PKT_Transport_Hdr
+PKT_VLAN_Tags
+PKT_MPLS_Labels
