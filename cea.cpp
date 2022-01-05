@@ -230,6 +230,51 @@ public:
 };
 cea_init init;
 
+struct CEA_PACKED pcap_file_hdr {
+    unsigned int magic           : 32;
+    unsigned short version_major : 16;
+    unsigned short version_minor : 16;
+    unsigned int thiszone        : 32;
+    unsigned int sigfigs         : 32;
+    unsigned int snaplen         : 32;
+    unsigned int linktype        : 32;
+};
+
+struct CEA_PACKED pcap_pkt_hdr {
+    unsigned int tv_sec  : 32;
+    unsigned int tv_usec : 32;
+    unsigned int caplen  : 32;
+    unsigned int len     : 32;
+};
+
+void write_pcap(char *pkt, uint32_t len) {
+    pcap_file_hdr fh;
+    pcap_pkt_hdr ph;
+
+    fh.magic= 0xa1b2c3d4;
+    fh.version_major = 2;  
+    fh.version_minor = 4;  
+    fh.thiszone = 0;       
+    fh.sigfigs = 0;        
+    fh.snaplen = 4194304;
+    fh.linktype = 1;     
+
+    ph.tv_sec  = 0;
+    ph.tv_usec = 0;
+    ph.caplen = 64;
+    ph.len = len;
+
+    char buf[16384];
+    memcpy(buf, (char*)&fh, sizeof(pcap_file_hdr));
+    memcpy(buf+sizeof(pcap_file_hdr), (char*)&ph, sizeof(pcap_pkt_hdr));
+    memcpy(buf+(sizeof(pcap_file_hdr)+sizeof(pcap_file_hdr)), pkt, len);
+
+    ofstream pcapfile;
+    pcapfile.open("run.pcap", ofstream::app);
+    pcapfile << buf;
+    pcapfile.close();
+}
+
 string cea_rtrim(string s) {
     s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
     return s;
