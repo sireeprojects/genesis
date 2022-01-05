@@ -267,6 +267,7 @@ private:
     vector<cea_stream*> streamq;
     cea_stream *cur_stream;
     vector<uint32_t> fseq; // output of generate_field_sequence
+    vector<uint32_t> consolidated_fseq; // output of consolidate_fields
     thread w;
     string pname;
 
@@ -302,12 +303,12 @@ public:
     void testfn();
     bool is_touched(cea_field_id fid);
     uint32_t value_of(cea_field_id fid);
+    cea_field fields[cea::NumFields];
 private:
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);
     string describe() const;
-    cea_field fields[cea::NumFields];
     void reset();
     string name;
 };

@@ -14,6 +14,7 @@ int main() {
     s.set(PKT_Transport_Hdr, UDP);
     s.add(PKT_VLAN_Tags);
     s.add(PKT_MPLS_Labels);
+    s.set(MAC_Dest_Addr, 0x112233445566UL);
 
     // add stream to proxy queue
     p.add_stream(&s);

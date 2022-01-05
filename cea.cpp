@@ -602,24 +602,29 @@ void cea_proxy::generate_field_sequence() {
     }
 
     fseq.insert(fseq.end(), 
-                htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].begin(), 
-                htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].end());
+        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].begin(), 
+        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Network_Hdr)].end());
 
     fseq.insert(fseq.end(), 
-                htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].begin(), 
-                htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].end());
-
-
-
+        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].begin(), 
+        htof[(cea_pkt_hdr_type)cur_stream->value_of(PKT_Transport_Hdr)].end());
 
     for (auto i : fseq) {
-        CEA_DBG("(%s) Fn:%s: fseq: %s", name().c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str());
+        CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", name().c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str(), i);
     }
 
 }
 
 void cea_proxy::consolidate_fields() {
     CEA_DBG_CALL_SIGNATURE;
+    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", name().c_str(), __FUNCTION__, fseq.size());
+
+    for(auto i: fseq) {
+        if (cur_stream->is_touched((cea_field_id)i)) {
+            consolidated_fseq.push_back(i);
+        }
+    }
+    CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", name().c_str(), __FUNCTION__, consolidated_fseq.size());
 }
 
 void cea_proxy::set_gen_vars() {
