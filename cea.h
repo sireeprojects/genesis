@@ -19,6 +19,7 @@ Test:
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <unistd.h>
 #define CEA_PACKED __attribute__((packed))
 
 using namespace std;
@@ -252,25 +253,31 @@ private:
 //-------
 class cea_proxy {
 public:
-    cea_proxy();
+    cea_proxy(string name);
     void add_stream(cea_stream *stm);
     void add_cmd(cea_stream *stm);
     void exec_cmd(cea_stream *stm);
-    void testfn(cea_stream *s);
+    void testfn();
     uint32_t pid;
     void start();
+    string name();
 
 private:
     uint32_t port_num;
     vector<cea_stream*> streamq;
+    cea_stream *cur_stream;
+    vector<uint32_t> fseq; // output of generate_field_sequence
     thread w;
+    string pname;
 
     void worker(); // main thread
     void start_worker(); // on stream start
     void read();
-    void consolidate();
+    void generate_field_sequence();
+    void consolidate_fields();
     void set_gen_vars();
     void generate();
+    void join_threads();
     void *fbuf;
     void create_frm_buffer();
     void release_frm_buffer();
@@ -293,7 +300,8 @@ public:
     void add(uint32_t id); // adding tags
 
     void testfn();
-    string name;
+    bool is_touched(cea_field_id fid);
+    uint32_t value_of(cea_field_id fid);
 private:
     char* pack();
     void unpack(char *data);
@@ -301,6 +309,7 @@ private:
     string describe() const;
     cea_field fields[cea::NumFields];
     void reset();
+    string name;
 };
 
 template<typename ... Args>
