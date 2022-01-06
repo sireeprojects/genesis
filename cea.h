@@ -1,12 +1,7 @@
-/*
-TODO:
-Implementation:
---combine fields that are not a multiple of a byte
-    * might complicate set api, merge fields under consolidate fn
---reimplement reset to carry valid default values
-
-Test:
-*/
+// TODO: Implementation:
+// * combine fields that are not a multiple of a byte
+//     - might complicate set api, merge fields under consolidate fn
+// * reimplement reset to carry valid default values
 
 #include <iostream>
 #include <vector>
@@ -33,32 +28,32 @@ protected:
 outbuf ob;
 ostream cealog(&ob);
 
-typedef enum {
+enum cea_msg_verbosity {
     NONE, // default
     LOW,  // NONE + pkt details w/o payload bytes
     FULL, // LOW + pkt payload bytes
-} cea_msg_verbosity;
+};
 
-typedef enum {
+enum cea_msg_type {
     INFO,
     ERROR,
     WARNING,
     SCBD_ERROR,
     PKT
-} cea_msg_type;
+};
 
-typedef enum {
+enum cea_pkt_print_type {
     SHORT,
     LONG
-} cea_pkt_print_type;
+};
 
-typedef enum {
+enum cea_pkt_type{
     Ethernet_V2,
     Ethernet_LLC,
     Ethernet_SNAP
-} cea_pkt_type;
+};
 
-typedef enum {
+enum cea_pkt_hdr_type {
     MAC,
     VLAN,
     MPLS,
@@ -69,9 +64,9 @@ typedef enum {
     ARP,
     TCP,
     UDP
-} cea_pkt_hdr_type;
+};
 
-typedef enum {
+enum cea_field_id {
     PKT_Type,
     PKT_Network_Hdr,
     PKT_Transport_Hdr,
@@ -162,9 +157,9 @@ typedef enum {
     STREAM_BitRate,
     PAYLOAD_Type,
     NumFields
-} cea_field_id;
+};
 
-typedef enum {
+enum cea_field_modifier {
     Fixed,            
     Random,           
     Random_in_Range,  
@@ -186,7 +181,7 @@ typedef enum {
     Percentage,
     Pkts_Per_Sec,
     Bit_Rate
-} cea_field_modifier;
+};
 
 struct cea_value_spec {
     cea_field_modifier type;
@@ -221,11 +216,11 @@ struct CEA_PACKED cea_protocol_sequence {
     uint32_t seq[32];
 };
 
-typedef enum {
+enum cea_field_print_type {
     HEX,
     DEC,
     STR
-} cea_field_print_type;
+};
 
 // forward declaration
 class cea_stream;
@@ -270,11 +265,12 @@ public:
     // start stream processing and generate frames
     void start();
 
+private:
+
     // utility functions
     string port_name();
     uint32_t port_num();
 
-private:
     // port identifiers
     uint32_t pnum;
     string pname;
@@ -302,6 +298,8 @@ private:
     void *fbuf;
     void create_frm_buffer();
     void release_frm_buffer();
+
+    friend class cea_manager;
 };
 
 // global variable to assign port numbers to proxy objects
@@ -323,22 +321,26 @@ public:
     void add(uint32_t id); // adding tags
     void testfn();
 
-    string stream_name();
 private:
     string sname;
-    vector<uint32_t> fseq; // output of generate_field_sequence
+    string stream_name();
+    vector<cea_field_id> fseq; // output of generate_field_sequence
     vector<uint32_t> consolidated_fseq; // output of consolidate_fields
     bool is_touched(cea_field_id fid);
     uint32_t value_of(cea_field_id fid);
     cea_field fields[cea::NumFields];
     void generate_field_sequence();
     void consolidate_fields();
+    void consolidate();
+    void gen_base_pkt();
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);
     string describe() const;
     void reset();
     string name;
+    friend class cea_proxy;
+    char *base_pkt;
 };
 
 template<typename ... Args>

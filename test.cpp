@@ -6,7 +6,7 @@ int main() {
     cea_proxy p("testproxy");
 
     // stream
-    cea_stream s;
+    cea_stream s("teststream");
 
     // set stream properties
     s.set(PKT_Type, Ethernet_V2);
