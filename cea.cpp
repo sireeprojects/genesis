@@ -55,12 +55,12 @@ cea_field flds[] = {
 {  0,  1,  0,   IPv4_Version             ,4,   0,     Fixed,   4,                   0,    0,   0,   0,  "IPv4_Version           "},
 {  0,  1,  0,   IPv4_IHL                 ,4,   0,     Fixed,   5,                   0,    0,   0,   0,  "IPv4_IHL               "},
 {  0,  0,  0,   IPv4_Tos                 ,1,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Tos               "},
-{  0,  0,  0,   IPv4_Total_Len           ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Total_Len         "},
+{  0,  0,  0,   IPv4_Total_Len           ,2,   0,     Fixed,   0x3300,              0,    0,   0,   0,  "IPv4_Total_Len         "},
 {  0,  0,  0,   IPv4_Id                  ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Id                "},
 {  0,  1,  0,   IPv4_Flags               ,3,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             "},
 {  0,  1,  0,   IPv4_Frag_Offset         ,13,  0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       "},
-{  0,  0,  0,   IPv4_TTL                 ,1,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_TTL               "},
-{  0,  0,  0,   IPv4_Protocol            ,1,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Protocol          "},
+{  0,  0,  0,   IPv4_TTL                 ,1,   0,     Fixed,   10,                 0,    0,   0,   0,  "IPv4_TTL               "},
+{  0,  0,  0,   IPv4_Protocol            ,1,   0,     Fixed,   17,                   0,    0,   0,   0,  "IPv4_Protocol          "},
 {  0,  0,  0,   IPv4_Hdr_Csum            ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
 {  0,  0,  0,   IPv4_Src_Addr            ,4,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Src_Addr          "},
 {  0,  0,  0,   IPv4_Dest_Addr           ,4,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Dest_Addr         "},
@@ -93,7 +93,7 @@ cea_field flds[] = {
 {  0,  0,  0,   TCP_Pad                  ,0,   0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                "},
 {  0,  0,  0,   UDP_Src_Port             ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           "},
 {  0,  0,  0,   UDP_Dest_Port            ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          "},
-{  0,  0,  0,   UDP_len                  ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_len                "},
+{  0,  0,  0,   UDP_len                  ,2,   0,     Fixed,   0x1f00,                   0,    0,   0,   0,  "UDP_len                "},
 {  0,  0,  0,   UDP_Csum                 ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               "},
 {  0,  0,  0,   ARP_Hw_Type              ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            "},
 {  0,  0,  0,   ARP_Proto_Type           ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         "},
@@ -754,12 +754,16 @@ void cea_stream::gen_base_pkt() {
             i += fields[fseq[i]].merge-1; // skip mergable entries
         } else {
             uint64_t tmp = fields[fseq[i]].value;
-            cout << "dbg: " << hex << tmp << endl;
             uint64_t len = fields[fseq[i]].len;
             memcpy(basePkt+offset, (char*)&tmp, len);
             offset += len;
+            mlen = 0; // TODO fix this
         }
     }
+
+    // EXPERIMENT: add ipv4 checksum
+    uint16_t ipcsum = calc_ipv4_csum((char*)basePkt+14, 16);
+    memcpy(basePkt+24, (char*)&ipcsum, 2);
 
 
     #ifdef CEA_DEBUG
