@@ -15,6 +15,9 @@
 #include <cstring>
 #include <map>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+
 #define CEA_PACKED __attribute__((packed))
 
 using namespace std;
@@ -327,6 +330,7 @@ private:
     vector<cea_field_id> fseq; // output of generate_field_sequence
     vector<uint32_t> consolidated_fseq; // output of consolidate_fields
     bool is_touched(cea_field_id fid);
+    uint32_t  is_merge(cea_field_id fid);
     uint32_t value_of(cea_field_id fid);
     cea_field fields[cea::NumFields];
     void generate_field_sequence();
@@ -340,7 +344,9 @@ private:
     void reset();
     string name;
     friend class cea_proxy;
-    char *base_pkt;
+    char *basePkt;
+    uint32_t basePktLen;
+    void printBasePkt();
 };
 
 template<typename ... Args>

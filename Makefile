@@ -1,8 +1,8 @@
 DBG ?= "off"
 ifeq "$(DBG)" "on"
-LIBPARAMS = -DCEA_DEBUG
+LIBPARAMS += -DCEA_DEBUG
 else
-LIBPARAMS =
+LIBPARAMS +=
 endif
 
 default:sim
