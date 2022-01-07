@@ -262,7 +262,7 @@ bool fileExists(const std::string& filename) {
 }
 
 // TODO make this thread-safe
-void write_pcap(char *pkt, uint32_t len) {
+void write_pcap(unsigned char *pkt, uint32_t len) {
     pcap_file_hdr fh;
     pcap_pkt_hdr ph;
 
@@ -735,40 +735,32 @@ void cea_stream::gen_base_pkt() {
 
     basePktLen = 65;
     uint32_t offset = 0;
+    bitset<32> merged;
+    uint64_t tmp =  0;
+    uint64_t len = 0;
+    uint64_t mlen = 0;
 
-    for (auto i : fseq) {
-        uint32_t nmerge = is_merge((cea_field_id)i);
-        if (nmerge == 0) {
-            uint64_t tmpValue = fields[i].value;
-            CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
-                stream_name().c_str(), __FUNCTION__, \
-                to_str((cea_field_id)i).c_str(), tmpValue);
-            memcpy(basePkt+offset, (char*)&tmpValue, fields[i].len);
-            offset += fields[i].len;
-        } else {
-            uint64_t mergedValue = 0;
-            uint64_t mergedlen = 0;
-
-            uint64_t tmpValue = fields[i].value;
-            mergedValue = tmpValue << fields[i].len;
-            mergedlen += fields[i].len;
-
-            CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
-                stream_name().c_str(), __FUNCTION__, \
-                to_str((cea_field_id)i).c_str(), tmpValue);
-
-            for (uint32_t x=0; x<nmerge; x++) {
-                tmpValue = fields[x].value;
-                mergedValue = tmpValue << fields[x].len;
-                mergedlen += fields[i].len;
-                CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
-                    stream_name().c_str(), __FUNCTION__, \
-                    to_str((cea_field_id)i).c_str(), tmpValue);
+    for (uint32_t i=0; i<fseq.size(); i++) {
+        if (fields[fseq[i]].merge != 0) {
+            for(uint32_t x=i; x<(i+fields[fseq[i]].merge); x++) {
+                len = fields[fseq[x]].len;
+                bitset<32>t = fields[fseq[x]].value;
+                merged = (merged << len) | t;
+                mlen += len;
             }
-            memcpy(basePkt+offset, (char*)&mergedValue, (mergedlen/8));
-            offset += (mergedlen/8);
+            tmp  = merged.to_ulong();
+            memcpy(basePkt+offset, (char*)&tmp, mlen/8);
+            offset += mlen/8;
+            i += fields[fseq[i]].merge-1; // skip mergable entries
+        } else {
+            uint64_t tmp = fields[fseq[i]].value;
+            cout << "dbg: " << hex << tmp << endl;
+            uint64_t len = fields[fseq[i]].len;
+            memcpy(basePkt+offset, (char*)&tmp, len);
+            offset += len;
         }
     }
+
 
     #ifdef CEA_DEBUG
     printBasePkt();
@@ -878,7 +870,7 @@ cea_stream::cea_stream(string name) {
     //       the size of the base pkt should be calculated by
     //       summming the length of all the fields and payload
     //       properties
-    basePkt = new char[1024];
+    basePkt = new unsigned char[1024];
 }
 
 // copy constructor
@@ -1115,4 +1107,55 @@ cea_field flds[] = {
 {  0,  0,  0,   STREAM_BitRate           ,0,   0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_BitRate         "},
 {  0,  0,  0,   PAYLOAD_Type             ,46,  0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "}
 };
+
+
+void cea_stream::gen_base_pkt() {
+    CEA_STREAM_DBG_CALL_SIGNATURE;
+
+    basePktLen = 65;
+    uint32_t offset = 0;
+
+    for (auto i : fseq) {
+        uint32_t nmerge = is_merge((cea_field_id)i);
+        if (nmerge == 0) {
+            uint64_t tmpValue = fields[i].value;
+            CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
+                stream_name().c_str(), __FUNCTION__, \
+                to_str((cea_field_id)i).c_str(), tmpValue);
+            memcpy(basePkt+offset, (char*)&tmpValue, fields[i].len);
+            offset += fields[i].len;
+        } else {
+            uint64_t mergedValue = 0;
+            uint64_t mergedlen = 0;
+
+            uint64_t tmpValue = fields[i].value;
+            mergedValue = tmpValue << fields[i].len;
+            mergedlen += fields[i].len;
+
+            CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
+                stream_name().c_str(), __FUNCTION__, \
+                to_str((cea_field_id)i).c_str(), tmpValue);
+
+            for (uint32_t x=0; x<nmerge; x++) {
+                tmpValue = fields[x].value;
+                mergedValue = tmpValue << fields[x].len;
+                mergedlen += fields[i].len;
+                CEA_DBG("(%s) Fn:%s: Field: %s : %lx", \
+                    stream_name().c_str(), __FUNCTION__, \
+                    to_str((cea_field_id)i).c_str(), tmpValue);
+            }
+            memcpy(basePkt+offset, (char*)&mergedValue, (mergedlen/8));
+            offset += (mergedlen/8);
+        }
+    }
+
+    #ifdef CEA_DEBUG
+    printBasePkt();
+    write_pcap(basePkt, basePktLen);
+    #endif
+}
+
+
+
+
 */

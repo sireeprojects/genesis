@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <bitset>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
@@ -344,7 +345,7 @@ private:
     void reset();
     string name;
     friend class cea_proxy;
-    char *basePkt;
+    unsigned char *basePkt;
     uint32_t basePktLen;
     void printBasePkt();
 };
