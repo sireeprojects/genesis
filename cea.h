@@ -199,7 +199,7 @@ struct cea_value_spec {
 
 struct CEA_PACKED cea_field {
     bool touched : 1;
-    bool merge : 1;
+    uint32_t merge : 8;
     uint64_t mask : 64;
     uint32_t id : 32;
     uint32_t len: 32;
