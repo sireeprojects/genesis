@@ -24,7 +24,7 @@ namespace cea {
 
 cea_field flds[] = {
 //----------------------------------------------------------------------------------------------------------------------------------
-// Toc Mrg Mask Id                        Len Offset Modifier Val                   Start Stop Step Rpt Name
+// Toc Mrg Mask Id                            Len Offset Modifier Val                   Start Stop Step Rpt Name
 //----------------------------------------------------------------------------------------------------------------------------------
 {  false,  0,  0,   PKT_Type                 ,0,   0,     Fixed,   Ethernet_V2,         0,    0,   0,   0,  "PKT_Type               "},                                     
 {  false,  0,  0,   PKT_Network_Hdr          ,0,   0,     Fixed,   IPv4,                0,    0,   0,   0,  "PKT_Network_Hdr        "},
@@ -57,8 +57,8 @@ cea_field flds[] = {
 {  false,  0,  0,   IPv4_Id                  ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Id                "},
 {  false,  1,  0,   IPv4_Flags               ,3,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             "},
 {  false,  1,  0,   IPv4_Frag_Offset         ,13,  0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       "},
-{  false,  0,  0,   IPv4_TTL                 ,1,   0,     Fixed,   10,                 0,    0,   0,   0,  "IPv4_TTL               "},
-{  false,  0,  0,   IPv4_Protocol            ,1,   0,     Fixed,   17,                   0,    0,   0,   0,  "IPv4_Protocol          "},
+{  false,  0,  0,   IPv4_TTL                 ,1,   0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
+{  false,  0,  0,   IPv4_Protocol            ,1,   0,     Fixed,   17,                  0,    0,   0,   0,  "IPv4_Protocol          "},
 {  false,  0,  0,   IPv4_Hdr_Csum            ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
 {  false,  0,  0,   IPv4_Src_Addr            ,4,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Src_Addr          "},
 {  false,  0,  0,   IPv4_Dest_Addr           ,4,   0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Dest_Addr         "},
@@ -91,7 +91,7 @@ cea_field flds[] = {
 {  false,  0,  0,   TCP_Pad                  ,0,   0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                "},
 {  false,  0,  0,   UDP_Src_Port             ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           "},
 {  false,  0,  0,   UDP_Dest_Port            ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          "},
-{  false,  0,  0,   UDP_len                  ,2,   0,     Fixed,   0x1f00,                   0,    0,   0,   0,  "UDP_len                "},
+{  false,  0,  0,   UDP_len                  ,2,   0,     Fixed,   0x1f00,              0,    0,   0,   0,  "UDP_len                "},
 {  false,  0,  0,   UDP_Csum                 ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               "},
 {  false,  0,  0,   ARP_Hw_Type              ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            "},
 {  false,  0,  0,   ARP_Proto_Type           ,2,   0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         "},
@@ -277,7 +277,7 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
     ph.caplen = len;
     ph.len = len;
 
-    char buf[16384];
+    char buf[16384]; // TODO fix this size
     uint32_t offset = 0;
 
     ofstream pcapfile;
