@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdint>
 #include <sstream>
+#include <unistd.h>
 #include <iomanip>
 using namespace std;
 
@@ -32,10 +33,27 @@ void printPkt(unsigned char *data, uint32_t len) {
     cout << buf.str();
 }
 
+void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
+    char *d = (char*)dest;
+    const char *s = (char*)src;
+    int i = 0;
+    if (len==0) return dest;
+    for (i=len; i>=0; i--) {
+        *d++ = s[i];
+    }
+    return dest;
+}
+
 int main() {
     unsigned char buf[8];
-    uint16_t x = 0x1234;
-    memcpy(buf, &x, 2);
-    printPkt(buf,8);
+    uint64_t x = 0x12345678aabbccdd;
+    // memcpy(buf, &x, 8);
+    // printPkt(buf,8);
+
+    for(uint32_t a=0; a<8; a++) {
+        bzero(buf,8);
+        cea_memcpy_rev(buf, &x, a);
+        printPkt(buf,8);
+    }
     return 0;
 }

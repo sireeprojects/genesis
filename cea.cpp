@@ -23,6 +23,11 @@
 namespace cea {
 
 cea_field flds[] = {
+// TODO
+// multiple VLAN tags
+// multiple mpls labels
+// ip/tcp/udp checksum
+// multiple UDF fields
 //----------------------------------------------------------------------------------------------------------------------------------
 // Toc Mrg Mask Id                            Len Offset Modifier Val                   Start Stop Step Rpt Name
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -249,6 +254,27 @@ struct CEA_PACKED pcap_pkt_hdr {
     unsigned int caplen  : 32;
     unsigned int len     : 32;
 };
+
+void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
+    char *d = (char*)dest;
+    const char *s = (char*)src;
+    int i = 0;
+    if (len==0) return dest;
+    for (i=len; i>=0; i--) {
+        *d++ = s[i];
+    }
+    return dest;
+}
+
+uint64_t byte_reverse (uint64_t original, uint32_t num) {
+   uint64_t reversed = 0;
+   uint32_t loopVar;
+   for (loopVar=0; loopVar<num; loopVar++) {
+      reversed = (reversed <<8) | (original & 0xFF);
+      original = original >> 8;
+   }
+   return reversed;
+}
 
 // true if the file exists, else false
 bool fileExists(const std::string& filename) {
@@ -753,6 +779,7 @@ void cea_stream::gen_base_pkt() {
         } else {
             uint64_t tmp = fields[fseq[i]].value;
             uint64_t len = fields[fseq[i]].len;
+            // memcpy(basePkt+offset, (char*)&tmp, len);
             memcpy(basePkt+offset, (char*)&tmp, len);
             offset += len;
             mlen = 0; // TODO fix this
@@ -762,7 +789,6 @@ void cea_stream::gen_base_pkt() {
     // EXPERIMENT: add ipv4 checksum
     uint16_t ipcsum = calc_ipv4_csum((char*)basePkt+14, 16);
     memcpy(basePkt+24, (char*)&ipcsum, 2);
-
 
     #ifdef CEA_DEBUG
     printBasePkt();
@@ -933,7 +959,7 @@ string cea_stream::stream_name() {
 }
 
 void cea_stream::reset() {
-    memcpy(&fields, &flds, sizeof(cea_field)*cea::NumFields);
+    memcpy(&fields, &flds, (sizeof(cea_field)*(cea::NumFields)));
 }
 
 #define CEA_FLDWIDTH 8
