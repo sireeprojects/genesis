@@ -27,7 +27,7 @@ void printPkt(unsigned char *data, uint32_t len) {
     buf << cea_formatted_hdr("Base Packet");
     
     for (uint32_t idx=0; idx<len; idx++) {
-        buf << setw(2) << setfill('0')<< hex << (uint16_t) data[idx] << " ";
+        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) data[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
     }
