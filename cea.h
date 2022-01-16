@@ -338,6 +338,7 @@ private:
     void consolidate_fields();
     void consolidate();
     void gen_base_pkt();
+    void gen_base_pkt_old();
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);

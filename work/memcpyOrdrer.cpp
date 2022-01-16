@@ -34,11 +34,11 @@ void printPkt(unsigned char *data, uint32_t len) {
 }
 
 void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
+    if (len==0) return dest;
     char *d = (char*)dest;
     const char *s = (char*)src;
     int i = 0;
-    if (len==0) return dest;
-    for (i=len; i>=0; i--) {
+    for (i=(len-1); i>=0; i--) {
         *d++ = s[i];
     }
     return dest;
@@ -46,14 +46,21 @@ void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
 
 int main() {
     unsigned char buf[8];
-    uint64_t x = 0x12345678aabbccdd;
-    // memcpy(buf, &x, 8);
-    // printPkt(buf,8);
+    bzero(buf,8);
 
-    for(uint32_t a=0; a<8; a++) {
-        bzero(buf,8);
-        cea_memcpy_rev(buf, &x, a);
-        printPkt(buf,8);
+    uint64_t x = 0x12345678aabbccdd;
+    // uint64_t x = 0x1234;
+
+    unsigned char *d = (unsigned char*)&x;
+
+    cout << "Value: " << hex << x << endl;
+    for(uint i=0; i<8; i++)
+    cout << "idx[" << i << "]: " << hex << +d[i] << " " << endl;
+
+
+    for(uint i=1; i<=8; i++) {
+    cea_memcpy_rev(buf, &x, i);
+    printPkt(buf,8);
     }
     return 0;
 }
