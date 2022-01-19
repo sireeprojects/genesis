@@ -65,8 +65,8 @@ cea_field flds[] = {
 {  false,  0,  0,   IPv4_TTL                 ,8*1,      0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
 {  false,  0,  0,   IPv4_Protocol            ,8*1,      0,     Fixed,   17,                  0,    0,   0,   0,  "IPv4_Protocol          "},
 {  false,  0,  0,   IPv4_Hdr_Csum            ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
-{  false,  0,  0,   IPv4_Src_Addr            ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Src_Addr          "},
-{  false,  0,  0,   IPv4_Dest_Addr           ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Dest_Addr         "},
+{  false,  0,  0,   IPv4_Src_Addr            ,8*4,      0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          "},
+{  false,  0,  0,   IPv4_Dest_Addr           ,8*4,      0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         "},
 {  false,  0,  0,   IPv4_Opts                ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Opts              "},
 {  false,  0,  0,   IPv4_Pad                 ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Pad               "},
 {  false,  2,  0,   IPv6_Version             ,4,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Version           "},
@@ -240,20 +240,20 @@ public:
 cea_init init;
 
 struct CEA_PACKED pcap_file_hdr {
-    unsigned int magic           : 32;
-    unsigned short version_major : 16;
-    unsigned short version_minor : 16;
-    unsigned int thiszone        : 32;
-    unsigned int sigfigs         : 32;
-    unsigned int snaplen         : 32;
-    unsigned int linktype        : 32;
+    uint32_t magic         : 32;
+    uint16_t version_major : 16;
+    uint16_t version_minor : 16;
+    uint32_t thiszone      : 32;
+    uint32_t sigfigs       : 32;
+    uint32_t snaplen       : 32;
+    uint32_t linktype      : 32;
 };
 
 struct CEA_PACKED pcap_pkt_hdr {
-    unsigned int tv_sec  : 32;
-    unsigned int tv_usec : 32;
-    unsigned int caplen  : 32;
-    unsigned int len     : 32;
+    uint32_t tv_sec  : 32;
+    uint32_t tv_usec : 32;
+    uint32_t caplen  : 32;
+    uint32_t len     : 32;
 };
 
 void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
@@ -788,8 +788,9 @@ void cea_stream::gen_base_pkt() {
     }
 
     // EXPERIMENT: add ipv4 checksum
-    uint16_t ipcsum = calc_ipv4_csum((char*)basePkt+14, 16);
+    uint16_t ipcsum = calc_ipv4_csum((char*)basePkt+14, 20);
     memcpy(basePkt+24, (char*)&ipcsum, 2);
+    // cea_memcpy_rev(basePkt+24, (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
     printBasePkt();
@@ -1039,4 +1040,4 @@ string cea_stream::describe() const {
     return buf.str();
 }
 
-} // namesapce
+} // namespace
