@@ -42,7 +42,7 @@ cea_field flds[] = {
 {  false,  0,  0,   MAC_Len                  ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                "},
 {  false,  0,  0,   MAC_Ether_Type           ,8*2,      0,     Fixed,   0x0800,              0,    0,   0,   0,  "MAC_Ether_Type         "},
 {  false,  0,  0,   MAC_Fcs                  ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Fcs                "},
-{  false,  0,  0,   VLAN_Tpi                 ,8*2,      0,     Fixed,   0x8100,                   0,    0,   0,   0,  "VLAN_Tpi               "},
+{  false,  0,  0,   VLAN_Tpi                 ,8*2,      0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_Tpi               "},
 {  false,  2,  0,   VLAN_Tci_Pcp             ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Pcp           "},
 {  false,  1,  0,   VLAN_Tci_Cfi             ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Cfi           "},
 {  false,  1,  0,   VLAN_Vid                 ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Vid               "},
