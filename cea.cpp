@@ -706,14 +706,14 @@ void cea_proxy::start_worker() {
 }
 
 void cea_proxy::worker() {
-    read_next_stream();
+    read_next_stream_from_stmq();
     set_gen_vars();
-    cur_stm->consolidate();
-    cur_stm->gen_base_pkt();
-    generate();
+    cur_stm->prune_stream();
+    cur_stm->build_baseline_pkt();
+    generate_traffic();
 }
 
-void cea_proxy::read_next_stream() {
+void cea_proxy::read_next_stream_from_stmq() {
     CEA_PXY_DBG_CALL_SIGNATURE;
     cur_stm = stmq[0];
     // cealog << *cur_stm;
@@ -723,7 +723,7 @@ void cea_proxy::set_gen_vars() {
     CEA_PXY_DBG_CALL_SIGNATURE;
 }
 
-void cea_proxy::generate() {
+void cea_proxy::generate_traffic() {
     CEA_PXY_DBG_CALL_SIGNATURE;
     // write to pbuf
     // *(addr + i) = (char)i;
@@ -749,12 +749,12 @@ void cea_proxy::release_pkt_buffer() {
 //--------
 // Stream
 //--------
-void cea_stream::consolidate() {
-    generate_fseq();
-    generate_cseq();
+void cea_stream::prune_stream() {
+    build_list_of_all_fields();
+    trim_static_fields();
 }
 
-void cea_stream::gen_base_pkt() {
+void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     basePktLen = 65;
@@ -830,7 +830,7 @@ uint32_t cea_stream::value_of(cea_field_id fid) {
 }
 
 // algorithm to organize the pkt fields
-void cea_stream::generate_fseq() {
+void cea_stream::build_list_of_all_fields() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     fseq.insert(fseq.begin(),
@@ -877,10 +877,9 @@ void cea_stream::generate_fseq() {
         CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", stream_name.c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
         cntr++;
     }
-
 }
 
-void cea_stream::generate_cseq() {
+void cea_stream::trim_static_fields() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
     CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
 

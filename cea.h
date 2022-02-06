@@ -275,9 +275,9 @@ private:
     void join_threads();
 
     // worker modules
-    void read_next_stream();
+    void read_next_stream_from_stmq();
     void set_gen_vars();
-    void generate();
+    void generate_traffic();
 
     // buffer to store the generated pkts
     void *pbuf;
@@ -333,15 +333,15 @@ private:
     // the value of the field is set from the global variable proxy_id
     uint32_t stream_id;
 
-    // output of generate_fseq (container2)
-    // a list of all the field ids (in sequence) of the selected frame type and headers
+    // (container2) a list of all the field ids (in sequence) of the 
+    // selected pkt type and headers output of build_list_of_all_fields
     vector<cea_field_id> fseq;
 
-    // output of generate_cseq (container3)
-    // a sequence of all the fields ids that needs generation of values
+    // (container3) a sequence of all the fields ids that needs 
+    // generation of values output of trim_static_fields
     vector<uint32_t> cseq;
 
-    // field matrix (container4)
+    // (container4) field matrix
     cea_field fields[cea::NumFields];
 
     // check if a field has been modified by user
@@ -353,10 +353,10 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
-    void generate_fseq();
-    void generate_cseq();
-    void consolidate();
-    void gen_base_pkt();
+    void build_list_of_all_fields();
+    void trim_static_fields();
+    void prune_stream();
+    void build_baseline_pkt();
 
     char* pack();
     void unpack(char *data);
