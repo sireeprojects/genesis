@@ -276,7 +276,7 @@ private:
 
     // worker modules
     void read_next_stream_from_stmq();
-    void set_gen_vars();
+    void extract_traffic_parameters();
     void generate_traffic();
 
     // buffer to store the generated pkts

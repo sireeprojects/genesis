@@ -6,12 +6,27 @@ THINGS TO DO:
 - Support for multiprocess
         proxy_id is taken from global variable. proxies created in other 
         machines will have duplicate proxy_id values
+
 - stream and proxy id should be 3 digits be default
+
 - add leading space when printing stream and proxy messages (optional/fancy)
+
 - new stream function get_field_property to replace the following
         is touched, is_merge and value_of
         uint64_t get_field_property(Property Name, field id)
         string get_field_property(Property Name, field id)
+
+- stream interleaving support        
+        stream: add context switch variables.
+                current generation context will be stored in stream
+        proxy: add funtions 
+               conext switch
+                    |- save_context
+                    |- restore_context
+        note: saving and restoring context incur performance penalty
+              try some other idea
+
+- 
 ------------------------------------------------------------------------------*/
 
 #include "cea.h"
@@ -47,6 +62,9 @@ THINGS TO DO:
 #define ADDR (void *)(0x0UL)
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 #endif
+
+// maximum pkt size from mac dest addr to mac crc (16KB)
+#define CEA_MAX_PKT_SIZE 16384
 
 template<typename ... Args>
 string string_format(const string& format, Args ... args) {
@@ -732,7 +750,7 @@ void cea_proxy::start_worker() {
 
 void cea_proxy::worker() {
     read_next_stream_from_stmq();
-    set_gen_vars();
+    extract_traffic_parameters();
     cur_stm->prune_stream();
     cur_stm->build_baseline_pkt();
     generate_traffic();
@@ -743,7 +761,7 @@ void cea_proxy::read_next_stream_from_stmq() {
     cur_stm = stmq[0];
 }
 
-void cea_proxy::set_gen_vars() {
+void cea_proxy::extract_traffic_parameters() {
     CEA_PXY_DBG_CALL_SIGNATURE;
 }
 
@@ -782,7 +800,7 @@ void cea_stream::prune_stream() {
 void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
-    // TODO: compute this correctly 65 is for test purpose only
+    // TODO: compute this correctly; 65 is for test purpose only
     baseline_pkt_len = 65;
     
     uint32_t offset = 0;
@@ -812,6 +830,8 @@ void cea_stream::build_baseline_pkt() {
             merged = 0; // TODO fix this
         }
     }
+
+    // baseline_pkt_len = offset; // TODO: fix this
 
     // EXPERIMENT: add ipv4 checksum
     uint16_t ipcsum = calc_ipv4_csum((char*)base_pkt+14, 20);
