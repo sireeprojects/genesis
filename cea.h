@@ -1,9 +1,3 @@
-//------------------------------------------------------------------------------
-// TODO:Implementation:
-//      - 
-//      -
-//------------------------------------------------------------------------------
-
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -245,7 +239,7 @@ private:
 class cea_proxy {
 public:
     // constructor
-    cea_proxy(string name);
+    cea_proxy(string name=string("pxy"));
 
     // add stream to proxy queue
     void add_stream(cea_stream *stm);
@@ -260,15 +254,19 @@ public:
     void start();
 
 private:
-    // proxy identifiers
-    uint32_t proxy_id;
+
+    // set when the proxy object is created
     string proxy_name;
 
-    // user's test streams will be pushed into this queue
-    vector<cea_stream*> streamq;
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t proxy_id;
+
+    // user's test streams will be pushed into this queue (container1)
+    vector<cea_stream*> stmq;
 
     // handle to the stream being processed
-    cea_stream *cur_stream;
+    cea_stream *cur_stm;
 
     // main thread
     thread worker_tid;
@@ -289,8 +287,9 @@ private:
     friend class cea_manager;
 };
 
-// global variable to track proxy id
+// global variable to track proxy and stream id
 uint32_t proxy_id = 0;
+uint32_t stream_id = 0;
 
 //------------------------------------------------------------------------------
 // Stream
@@ -298,15 +297,27 @@ uint32_t proxy_id = 0;
 class cea_stream {
 public:    
     // constructor
-    cea_stream(string name=string());
+    cea_stream(string name=string("stm"));
 
+    // fucntion to set the field to a fixed value
     void set(uint32_t id, uint64_t value);
+
+    // function to assign a field to an inbuilt value generator
+    // with default specifications
     void set(uint32_t id, cea_field_generation_type spec);
-    void set(uint32_t id, cea_field_generation_type mspec, cea_field_generation_spec vspec);
+
+    // function to assign a field to an inbuilt value generator
+    // with custom specifications
+    void set(uint32_t id, cea_field_generation_type mspec,
+        cea_field_generation_spec vspec);
+
+    // function to add auxillary headers like tags and labels
+    // following add(), the relevant fields of the auxillary headers 
+    // should also be set failing which default values will be used
     void add(uint32_t id);
 
     // copy constructor
-    cea_stream (const cea_stream& rhs);
+    cea_stream(const cea_stream& rhs);
 
     // overload =
     cea_stream& operator = (cea_stream& rhs);
@@ -315,18 +326,38 @@ public:
     friend ostream& operator << (ostream& os, const cea_stream& cmd);
 
 private:
-    string sname;
-    string stream_name();
-    vector<cea_field_id> fseq; // output of generate_field_sequence
-    vector<uint32_t> consolidated_fseq; // output of consolidate_fields
-    bool is_touched(cea_field_id fid);
-    uint32_t  is_merge(cea_field_id fid);
-    uint32_t value_of(cea_field_id fid);
+    // set when the proxy object is created
+    string stream_name;
+
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t stream_id;
+
+    // output of generate_fseq (container2)
+    // a list of all the field ids (in sequence) of the selected frame type and headers
+    vector<cea_field_id> fseq;
+
+    // output of generate_cseq (container3)
+    // a sequence of all the fields ids that needs generation of values
+    vector<uint32_t> cseq;
+
+    // field matrix (container4)
     cea_field fields[cea::NumFields];
-    void generate_field_sequence();
-    void consolidate_fields();
+
+    // check if a field has been modified by user
+    bool is_touched(cea_field_id fid);
+
+    // check if a field is not aligned to 8-bit boundary
+    uint32_t is_merge(cea_field_id fid);
+
+    // get the fixed or current value of the field
+    uint32_t value_of(cea_field_id fid);
+
+    void generate_fseq();
+    void generate_cseq();
     void consolidate();
     void gen_base_pkt();
+
     char* pack();
     void unpack(char *data);
     void do_copy (const cea_stream* rhs);
@@ -338,23 +369,5 @@ private:
     uint32_t basePktLen;
     void printBasePkt();
 };
-
-template<typename ... Args>
-string string_format(const string& format, Args ... args) {
-    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-    if(size <= 0){ throw runtime_error("Error during formatting."); }
-    unique_ptr<char[]> buf(new char[size]);
-    snprintf(buf.get(), size, format.c_str(), args ...);
-    return string(buf.get(), buf.get() + size - 1);
-}
-
-#define CEA_MSG(...) \
-    cealog << string_format(__VA_ARGS__) << endl; 
-
-#ifdef CEA_DEBUG
-#define CEA_DBG(...) { CEA_MSG(__VA_ARGS__) }
-#else
-#define CEA_DBG(...) {}
-#endif
 
 } // namespace

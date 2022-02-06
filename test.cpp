@@ -3,10 +3,12 @@ using namespace cea;
 
 int main() {
     // proxy instance
-    cea_proxy p("testproxy");
+    // cea_proxy p("test_proxy");
+    cea_proxy p;
 
     // stream
-    cea_stream s("teststream");
+    // cea_stream s("test_stream");
+    cea_stream s;
 
     // set stream properties
     s.set(PKT_Type, ETH_V2);

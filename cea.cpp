@@ -1,15 +1,44 @@
-//------------------------------------------------------------------------------
-// Notes:
-// CEA_DEBUG   - to include debug code and to generate debug library
-//------------------------------------------------------------------------------
+/*------------------------------------------------------------------------------
+NOTES:
+CEA_DEBUG - to include debug code and to generate debug library
+
+THINGS TO DO:
+- Support for multiprocess
+        proxy_id is taken from global variable. proxies created in other 
+        machines will have duplicate proxy_id values
+- stream and proxy id should be 3 digits be default
+- add leading space when printing stream and proxy messages (optional/fancy)
+- new stream function get_field_property to replace the following
+        is touched, is_merge and value_of
+        uint64_t get_field_property(Property Name, field id)
+        string get_field_property(Property Name, field id)
+------------------------------------------------------------------------------*/
 
 #include "cea.h"
 
 #define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG( \
-        "(%s) Fn:%s: Invoked", proxy_name.c_str(), __FUNCTION__);
+    "(%s) Fn:%s: Invoked", proxy_name.c_str(), __FUNCTION__);
 
 #define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG( \
-        "(%s) Fn:%s: Invoked", stream_name().c_str(), __FUNCTION__);
+    "(%s) Fn:%s: Invoked", stream_name.c_str(), __FUNCTION__);
+
+#define CEA_MSG(...) \
+    cealog << string_format(__VA_ARGS__) << endl; 
+
+#ifdef CEA_DEBUG
+    #define CEA_DBG(...) { CEA_MSG(__VA_ARGS__) }
+#else
+    #define CEA_DBG(...) {}
+#endif
+
+template<typename ... Args>
+string string_format(const string& format, Args ... args) {
+    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
+    if(size <= 0){ throw runtime_error("Error during formatting."); }
+    unique_ptr<char[]> buf(new char[size]);
+    snprintf(buf.get(), size, format.c_str(), args ...);
+    return string(buf.get(), buf.get() + size - 1);
+}
 
 namespace cea {
 
@@ -640,20 +669,20 @@ void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
     CEA_DBG("%s called", __FUNCTION__);
 }
 
-// ctor
+// constructor
 cea_proxy::cea_proxy(string name) {
-    this->proxy_id = cea::proxy_id;
+    proxy_id = cea::proxy_id;
     cea::proxy_id++;
-    this->proxy_name = name;
-    CEA_DBG("(%s) Fn:%s: ProxyID: %d", name.c_str(), __FUNCTION__, proxy_id);
+    proxy_name = name + ":" + to_string(proxy_id);
+    CEA_DBG("(%s) Fn:%s: ProxyID: %d", proxy_name.c_str(), __FUNCTION__, proxy_id);
 }
 
 void cea_proxy::add_stream(cea_stream *stm) {
-    streamq.push_back(stm);
+    stmq.push_back(stm);
 }
 
 void cea_proxy::add_cmd(cea_stream *stm) {
-    streamq.push_back(stm);
+    stmq.push_back(stm);
 }
 
 void cea_proxy::exec_cmd(cea_stream *stm) {
@@ -679,15 +708,15 @@ void cea_proxy::start_worker() {
 void cea_proxy::worker() {
     read_next_stream();
     set_gen_vars();
-    cur_stream->consolidate();
-    cur_stream->gen_base_pkt();
+    cur_stm->consolidate();
+    cur_stm->gen_base_pkt();
     generate();
 }
 
 void cea_proxy::read_next_stream() {
     CEA_PXY_DBG_CALL_SIGNATURE;
-    cur_stream = streamq[0];
-    // cealog << *cur_stream;
+    cur_stm = stmq[0];
+    // cealog << *cur_stm;
 }
 
 void cea_proxy::set_gen_vars() {
@@ -721,8 +750,8 @@ void cea_proxy::release_pkt_buffer() {
 // Stream
 //--------
 void cea_stream::consolidate() {
-    generate_field_sequence();
-    consolidate_fields();
+    generate_fseq();
+    generate_cseq();
 }
 
 void cea_stream::gen_base_pkt() {
@@ -801,7 +830,7 @@ uint32_t cea_stream::value_of(cea_field_id fid) {
 }
 
 // algorithm to organize the pkt fields
-void cea_stream::generate_field_sequence() {
+void cea_stream::generate_fseq() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     fseq.insert(fseq.begin(),
@@ -845,28 +874,29 @@ void cea_stream::generate_field_sequence() {
 
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", stream_name().c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
+        CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", stream_name.c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
         cntr++;
     }
 
 }
 
-void cea_stream::consolidate_fields() {
+void cea_stream::generate_cseq() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
-    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name().c_str(), __FUNCTION__, fseq.size());
+    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
 
     for(auto i: fseq) {
         if (is_touched(i)) {
-            consolidated_fseq.push_back(i);
+            cseq.push_back(i);
         }
     }
-    CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name().c_str(), __FUNCTION__, consolidated_fseq.size());
+    CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
 }
-
 
 // constructor
 cea_stream::cea_stream(string name) {
-    sname = name;
+    stream_id = cea::stream_id;
+    cea::stream_id++;
+    stream_name = name + ":" + to_string(stream_id);
     reset();
     // TODO: 1024 is just for testing
     //       the size of the base pkt should be calculated by
@@ -922,10 +952,6 @@ void cea_stream::unpack(char *data) {
 
 void cea_stream::do_copy (const cea_stream* rhs) {
     CEA_DBG("Stream CC Called");
-}
-
-string cea_stream::stream_name() {
-    return sname;
 }
 
 void cea_stream::reset() {

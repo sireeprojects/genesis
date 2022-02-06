@@ -7,7 +7,7 @@ LIBPARAMS +=
 endif
 
 sim:makelib
-	@g++ test.cpp -o sim.x -lcea -L${PWD} ${LIBPARAMS}
+	@clear; g++ test.cpp -o sim.x -lcea -L${PWD} ${LIBPARAMS}
 	@./sim.x;
 
 makelib:clean
