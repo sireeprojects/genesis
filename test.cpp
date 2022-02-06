@@ -9,11 +9,11 @@ int main() {
     cea_stream s("teststream");
 
     // set stream properties
-    s.set(PKT_Type, Ethernet_V2);
-    s.set(PKT_Network_Hdr, IPv4);
-    s.set(PKT_Transport_Hdr, UDP);
-    // s.add(PKT_VLAN_Tags);
-    // s.add(PKT_MPLS_Labels);
+    s.set(PKT_Type, ETH_V2);
+    s.set(Network_Hdr, IPv4);
+    s.set(Transport_Hdr, UDP);
+    // s.add(VLAN_Tags);
+    // s.add(MPLS_Labels);
     s.set(MAC_Dest_Addr, 0x112233445566UL);
     s.set(MAC_Src_Addr, 0xaabbccddeeffUL);
 

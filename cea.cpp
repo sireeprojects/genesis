@@ -1,24 +1,15 @@
+//------------------------------------------------------------------------------
+// Notes:
+// CEA_DEBUG   - to include debug code and to generate debug library
+//------------------------------------------------------------------------------
+
 #include "cea.h"
 
-// 1GB frame buffer with read and write capabilities
-#define LENGTH (1UL*1024*1024*1024)
-#define PROTECTION (PROT_READ | PROT_WRITE)
+#define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG( \
+        "(%s) Fn:%s: Invoked", proxy_name.c_str(), __FUNCTION__);
 
-#ifndef MAP_HUGETLB
-#define MAP_HUGETLB 0x40000 /* arch specific */
-#endif
-
-// Only ia64 requires this 
-#ifdef __ia64__
-#define ADDR (void *)(0x8000000000000000UL)
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_FIXED)
-#else
-#define ADDR (void *)(0x0UL)
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
-#endif
-
-#define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG("(%s) Fn:%s: Invoked", port_name().c_str(), __FUNCTION__);
-#define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG("(%s) Fn:%s: Invoked", stream_name().c_str(), __FUNCTION__);
+#define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG( \
+        "(%s) Fn:%s: Invoked", stream_name().c_str(), __FUNCTION__);
 
 namespace cea {
 
@@ -31,11 +22,11 @@ cea_field flds[] = {
 //------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //------------------------------------------------------------------------------------------------------------------------------------------
-{  false,  0,  0,   PKT_Type                 ,0,        0,     Fixed,   Ethernet_V2,         0,    0,   0,   0,  "PKT_Type               "},                                     
-{  false,  0,  0,   PKT_Network_Hdr          ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "PKT_Network_Hdr        "},
-{  false,  0,  0,   PKT_Transport_Hdr        ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "PKT_Transport_Hdr      "},
-{  false,  0,  0,   PKT_VLAN_Tags            ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "PKT_VLAN_Tags          "},
-{  false,  0,  0,   PKT_MPLS_Labels          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "PKT_MPLS_Labels        "},
+{  false,  0,  0,   PKT_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "PKT_Type               "},
+{  false,  0,  0,   Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
+{  false,  0,  0,   Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
+{  false,  0,  0,   VLAN_Tags                ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tags              "},
+{  false,  0,  0,   MPLS_Labels              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Labels            "},
 {  false,  0,  0,   MAC_Preamble             ,8*8,      0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
 {  false,  0,  0,   MAC_Dest_Addr            ,8*6,      0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
 {  false,  0,  0,   MAC_Src_Addr             ,8*6,      0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
@@ -83,20 +74,20 @@ cea_field flds[] = {
 {  false,  0,  0,   TCP_Ack_Num              ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            "},
 {  false,  7,  0,   TCP_Data_Offset          ,4,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Data_Offset        "},
 {  false,  1,  0,   TCP_Reserved             ,6,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Reserved           "},
-{  false,  1,  0,   TCP_URG                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_URG                "},
-{  false,  1,  0,   TCP_ACK                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_ACK                "},
-{  false,  1,  0,   TCP_PSH                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_PSH                "},
-{  false,  1,  0,   TCP_RST                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_RST                "},
-{  false,  1,  0,   TCP_SYN                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_SYN                "},
-{  false,  1,  0,   TCP_FIN                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_FIN                "},
+{  false,  1,  0,   TCP_Urg                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg                "},
+{  false,  1,  0,   TCP_Ack                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack                "},
+{  false,  1,  0,   TCP_Psh                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Psh                "},
+{  false,  1,  0,   TCP_Rst                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Rst                "},
+{  false,  1,  0,   TCP_Syn                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Syn                "},
+{  false,  1,  0,   TCP_Fin                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Fin                "},
 {  false,  0,  0,   TCP_Window               ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Window             "},
 {  false,  0,  0,   TCP_Csum                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Csum               "},
-{  false,  0,  0,   TCP_UrgPtr               ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_UrgPtr             "},
+{  false,  0,  0,   TCP_Urg_Ptr              ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg_Ptr            "},
 {  false,  0,  0,   TCP_Opts                 ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Opts               "},
 {  false,  0,  0,   TCP_Pad                  ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                "},
 {  false,  0,  0,   UDP_Src_Port             ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           "},
 {  false,  0,  0,   UDP_Dest_Port            ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          "},
-{  false,  0,  0,   UDP_len                  ,8*2,      0,     Fixed,   0x1f,                0,    0,   0,   0,  "UDP_len                "},
+{  false,  0,  0,   UDP_Len                  ,8*2,      0,     Fixed,   0x1f,                0,    0,   0,   0,  "UDP_Len                "},
 {  false,  0,  0,   UDP_Csum                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               "},
 {  false,  0,  0,   ARP_Hw_Type              ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            "},
 {  false,  0,  0,   ARP_Proto_Type           ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         "},
@@ -114,15 +105,15 @@ cea_field flds[] = {
 {  false,  0,  0,   STREAM_Inter_Stream_Gap  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Inter_Stream_Gap"},
 {  false,  0,  0,   STREAM_Start_Delay       ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Start_Delay     "},
 {  false,  0,  0,   STREAM_Rate_Type         ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Rate_Type       "},
-{  false,  0,  0,   STREAM_rate              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_rate            "},
+{  false,  0,  0,   STREAM_Rate              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Rate            "},
 {  false,  0,  0,   STREAM_Ipg               ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Ipg             "},
 {  false,  0,  0,   STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
-{  false,  0,  0,   STREAM_PktsPerSec        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_PktsPerSec      "},
-{  false,  0,  0,   STREAM_BitRate           ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_BitRate         "},
+{  false,  0,  0,   STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
+{  false,  0,  0,   STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
 {  false,  0,  0,   PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "}
 };
 
-map<cea_pkt_hdr_type, vector<cea_field_id> >htof = {
+map<cea_hdr_type, vector<cea_field_id> >htof = {
 // preamble, ether type and len will be added during the 
 // formation of fseq
     {MAC,   {
@@ -194,21 +185,21 @@ map<cea_pkt_hdr_type, vector<cea_field_id> >htof = {
             TCP_Ack_Num,
             TCP_Data_Offset,
             TCP_Reserved,
-            TCP_URG,
-            TCP_ACK,
-            TCP_PSH,
-            TCP_RST,
-            TCP_SYN,
-            TCP_FIN,
+            TCP_Urg,
+            TCP_Ack,
+            TCP_Psh,
+            TCP_Rst,
+            TCP_Syn,
+            TCP_Fin,
             TCP_Window,
             TCP_Csum,
-            TCP_UrgPtr,
+            TCP_Urg_Ptr,
             TCP_Opts,
             TCP_Pad
             }},
     {UDP, { UDP_Src_Port,
             UDP_Dest_Port,
-            UDP_len,
+            UDP_Len,
             UDP_Csum,
             }}
 };
@@ -446,15 +437,15 @@ string cea_readable_fs(double size, cea_readable_type type) {
 string to_str(cea_pkt_type t) {
     string name;
     switch(t) {
-        case Ethernet_V2   : { name = "Ethernet_V2  "; break; }
-        case Ethernet_LLC  : { name = "Ethernet_LLC "; break; }
-        case Ethernet_SNAP : { name = "Ethernet_SNAP"; break; }
+        case ETH_V2   : { name = "ETH_V2  "; break; }
+        case ETH_LLC  : { name = "ETH_LLC "; break; }
+        case ETH_SNAP : { name = "ETH_SNAP"; break; }
         default            : { name = "undefined    "; break; }
     }
     return cea_trim(name);
 }
 
-string to_str(cea_pkt_hdr_type t) {
+string to_str(cea_hdr_type t) {
     string name;
     switch(t) {
         case MAC    : { name = "MAC "; break; }
@@ -472,17 +463,6 @@ string to_str(cea_pkt_hdr_type t) {
     return cea_trim(name);
 }
 
-string to_str(cea_field_print_type t) {
-    string name;
-    switch(t) {
-        case HEX : { name = "HEX      "; break; }
-        case DEC : { name = "DEC      "; break; }
-        case STR : { name = "STRING   "; break; }
-        default  : { name = "UNDEFINED"; break; }
-    }
-    return cea_trim(name);
-}
-
 string to_str(cea_msg_verbosity t) {
     string name;
     switch(t) {
@@ -493,7 +473,7 @@ string to_str(cea_msg_verbosity t) {
     return cea_trim(name);
 }
 
-string to_str(cea_field_modifier t) {
+string to_str(cea_field_generation_type t) {
     string name;
     switch(t) {
         case Fixed             : { name = "Fixed            "; break; }                                    
@@ -526,10 +506,10 @@ string to_str(cea_field_id t) {
     string name;
     switch(t) {
         case PKT_Type                : { name = "PKT_Type               "; break; }
-        case PKT_Network_Hdr         : { name = "PKT_Network_Hdr        "; break; }
-        case PKT_Transport_Hdr       : { name = "PKT_Transport_Hdr      "; break; }
-        case PKT_VLAN_Tags           : { name = "PKT_VLAN_Tags          "; break; }
-        case PKT_MPLS_Labels         : { name = "PKT_MPLS_Labels        "; break; }
+        case Network_Hdr             : { name = "Network_Hdr            "; break; }
+        case Transport_Hdr           : { name = "Transport_Hdr          "; break; }
+        case VLAN_Tags               : { name = "VLAN_Tags              "; break; }
+        case MPLS_Labels             : { name = "MPLS_Labels            "; break; }
         case MAC_Preamble            : { name = "MAC_Preamble           "; break; }
         case MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }
         case MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }
@@ -577,20 +557,20 @@ string to_str(cea_field_id t) {
         case TCP_Ack_Num             : { name = "TCP_Ack_Num            "; break; }
         case TCP_Data_Offset         : { name = "TCP_Data_Offset        "; break; }
         case TCP_Reserved            : { name = "TCP_Reserved           "; break; }
-        case TCP_URG                 : { name = "TCP_URG                "; break; }
-        case TCP_ACK                 : { name = "TCP_ACK                "; break; }
-        case TCP_PSH                 : { name = "TCP_PSH                "; break; }
-        case TCP_RST                 : { name = "TCP_RST                "; break; }
-        case TCP_SYN                 : { name = "TCP_SYN                "; break; }
-        case TCP_FIN                 : { name = "TCP_FIN                "; break; }
+        case TCP_Urg                 : { name = "TCP_Urg                "; break; }
+        case TCP_Ack                 : { name = "TCP_Ack                "; break; }
+        case TCP_Psh                 : { name = "TCP_Psh                "; break; }
+        case TCP_Rst                 : { name = "TCP_Rst                "; break; }
+        case TCP_Syn                 : { name = "TCP_Syn                "; break; }
+        case TCP_Fin                 : { name = "TCP_Fin                "; break; }
         case TCP_Window              : { name = "TCP_Window             "; break; }
         case TCP_Csum                : { name = "TCP_Csum               "; break; }
-        case TCP_UrgPtr              : { name = "TCP_UrgPtr             "; break; }
+        case TCP_Urg_Ptr             : { name = "TCP_Urg_Ptr            "; break; }
         case TCP_Opts                : { name = "TCP_Opts               "; break; }
         case TCP_Pad                 : { name = "TCP_Pad                "; break; }
         case UDP_Src_Port            : { name = "UDP_Src_Port           "; break; }
         case UDP_Dest_Port           : { name = "UDP_Dest_Port          "; break; }
-        case UDP_len                 : { name = "UDP_len                "; break; }
+        case UDP_Len                 : { name = "UDP_Len                "; break; }
         case UDP_Csum                : { name = "UDP_Csum               "; break; }
         case ARP_Hw_Type             : { name = "ARP_Hw_Type            "; break; }
         case ARP_Proto_Type          : { name = "ARP_Proto_Type         "; break; }
@@ -608,11 +588,11 @@ string to_str(cea_field_id t) {
         case STREAM_Inter_Stream_Gap : { name = "STREAM_Inter_Stream_Gap"; break; }
         case STREAM_Start_Delay      : { name = "STREAM_Start_Delay     "; break; }
         case STREAM_Rate_Type        : { name = "STREAM_Rate_Type       "; break; }
-        case STREAM_rate             : { name = "STREAM_rate            "; break; }
+        case STREAM_Rate             : { name = "STREAM_Rate            "; break; }
         case STREAM_Ipg              : { name = "STREAM_Ipg             "; break; }
         case STREAM_Percentage       : { name = "STREAM_Percentage      "; break; }
-        case STREAM_PktsPerSec       : { name = "STREAM_PktsPerSec      "; break; }
-        case STREAM_BitRate          : { name = "STREAM_BitRate         "; break; }
+        case STREAM_Pkts_Per_Sec     : { name = "STREAM_Pkts_Per_Sec    "; break; }
+        case STREAM_Bit_Rate         : { name = "STREAM_Bit_Rate        "; break; }
         case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }
         default                      : { name = "undefined              "; break; }
     }
@@ -639,7 +619,7 @@ void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
     if (pxy != NULL) {
         vector<cea_proxy*>::iterator it;
         for (it = proxies.begin(); it != proxies.end(); it++) {
-            if ((*it)->port_num() == pxy->port_num()) {
+            if ((*it)->proxy_id == pxy->proxy_id) {
                 uint32_t idx = distance(proxies.begin(), it);
                 proxies[idx]->add_stream(stm);
             }
@@ -649,9 +629,6 @@ void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
             proxies[idx]->add_stream(stm);
         }
     }
-}
-
-void cea_manager::testfn(cea_proxy *p) {
 }
 
 void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
@@ -665,10 +642,10 @@ void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
 
 // ctor
 cea_proxy::cea_proxy(string name) {
-    this->pnum = cea::port_num;
-    cea::port_num++;
-    this->pname = name;
-    CEA_DBG("(%s) Fn:%s: ProxyID: %d", name.c_str(), __FUNCTION__, port_num());
+    this->proxy_id = cea::proxy_id;
+    cea::proxy_id++;
+    this->proxy_name = name;
+    CEA_DBG("(%s) Fn:%s: ProxyID: %d", name.c_str(), __FUNCTION__, proxy_id);
 }
 
 void cea_proxy::add_stream(cea_stream *stm) {
@@ -682,6 +659,7 @@ void cea_proxy::add_cmd(cea_stream *stm) {
 void cea_proxy::exec_cmd(cea_stream *stm) {
 }
 
+// start stream processing and generate frames
 void cea_proxy::start() {
     start_worker();
     join_threads();
@@ -691,33 +669,25 @@ void cea_proxy::join_threads() {
     worker_tid.join();
 }
 
-string cea_proxy::port_name() {
-    return pname;
-}
-
-uint32_t cea_proxy::port_num() {
-    return pnum;
-}
-
 void cea_proxy::start_worker() {
     worker_tid = thread (&cea_proxy::worker, this);
     char name[16];
-    sprintf(name, "worker_%d", port_num());
+    sprintf(name, "worker_%d", proxy_id);
     pthread_setname_np(worker_tid.native_handle(), name);
 }
 
-void cea_proxy::read() {
-    CEA_PXY_DBG_CALL_SIGNATURE;
-    cur_stream = streamq[0];
-    // cealog << *cur_stream;
-}
-
 void cea_proxy::worker() {
-    read();
+    read_next_stream();
     set_gen_vars();
     cur_stream->consolidate();
     cur_stream->gen_base_pkt();
     generate();
+}
+
+void cea_proxy::read_next_stream() {
+    CEA_PXY_DBG_CALL_SIGNATURE;
+    cur_stream = streamq[0];
+    // cealog << *cur_stream;
 }
 
 void cea_proxy::set_gen_vars() {
@@ -726,25 +696,25 @@ void cea_proxy::set_gen_vars() {
 
 void cea_proxy::generate() {
     CEA_PXY_DBG_CALL_SIGNATURE;
-    // write to fbuf
+    // write to pbuf
     // *(addr + i) = (char)i;
-    // read from fbuf
+    // read from pbuf
     // if (*(addr + i) != (char)i)
 }
 
-void cea_proxy::create_frm_buffer() {
-    fbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
-    if (fbuf == MAP_FAILED) {
-        CEA_MSG("Error: Memory map failed in __FUNCTION__");
-        exit(1);
-    }
+void cea_proxy::create_pkt_buffer() {
+    // pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
+    // if (pbuf == MAP_FAILED) {
+    //     CEA_MSG("Error: Memory map failed in __FUNCTION__");
+    //     exit(1);
+    // }
 }
 
-void cea_proxy::release_frm_buffer() {
-    if (munmap(fbuf, LENGTH)) {
-        CEA_MSG("Error: Memory unmap failed in __FUNCTION__");
-        exit(1);
-    }
+void cea_proxy::release_pkt_buffer() {
+    // if (munmap(pbuf, LENGTH)) {
+    //     CEA_MSG("Error: Memory unmap failed in __FUNCTION__");
+    //     exit(1);
+    // }
 }
 
 //--------
@@ -839,37 +809,37 @@ void cea_stream::generate_field_sequence() {
         htof[MAC].end());
 
     // TODO multiple vlan tags
-    if (is_touched(PKT_VLAN_Tags)) {
+    if (is_touched(VLAN_Tags)) {
         fseq.insert(fseq.end(), htof[VLAN].begin(), htof[VLAN].end());
     }
 
-    if (value_of(PKT_Type) == Ethernet_V2) {
+    if (value_of(PKT_Type) == ETH_V2) {
         fseq.push_back(MAC_Ether_Type);
     } else {
         fseq.push_back(MAC_Len);
     }
 
-    if (value_of(PKT_Type) == Ethernet_LLC) {
+    if (value_of(PKT_Type) == ETH_LLC) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
     }
 
-    if (value_of(PKT_Type) == Ethernet_SNAP) {
+    if (value_of(PKT_Type) == ETH_SNAP) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
         fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
     }
 
     // TODO multiple mpls labels
-    if (is_touched(PKT_MPLS_Labels)) {
+    if (is_touched(MPLS_Labels)) {
         fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
     }
 
     fseq.insert(fseq.end(), 
-        htof[(cea_pkt_hdr_type)value_of(PKT_Network_Hdr)].begin(), 
-        htof[(cea_pkt_hdr_type)value_of(PKT_Network_Hdr)].end());
+        htof[(cea_hdr_type)value_of(Network_Hdr)].begin(), 
+        htof[(cea_hdr_type)value_of(Network_Hdr)].end());
 
     fseq.insert(fseq.end(), 
-        htof[(cea_pkt_hdr_type)value_of(PKT_Transport_Hdr)].begin(), 
-        htof[(cea_pkt_hdr_type)value_of(PKT_Transport_Hdr)].end());
+        htof[(cea_hdr_type)value_of(Transport_Hdr)].begin(), 
+        htof[(cea_hdr_type)value_of(Transport_Hdr)].end());
 
     // TODO add paddings if any
 
@@ -931,11 +901,11 @@ void cea_stream::set(uint32_t id, uint64_t value) {
 }
 
 // user api to set fields of the stream
-void cea_stream::set(uint32_t id, cea_field_modifier spec) {
+void cea_stream::set(uint32_t id, cea_field_generation_type spec) {
     fields[id].touched = true;
 }
 
-void cea_stream::set(uint32_t id, cea_field_modifier mspec, cea_value_spec vspec) {
+void cea_stream::set(uint32_t id, cea_field_generation_type mspec, cea_field_generation_spec vspec) {
     fields[id].touched = true;
 }
 
@@ -952,10 +922,6 @@ void cea_stream::unpack(char *data) {
 
 void cea_stream::do_copy (const cea_stream* rhs) {
     CEA_DBG("Stream CC Called");
-}
-
-void cea_stream::testfn() {
-
 }
 
 string cea_stream::stream_name() {
@@ -987,14 +953,14 @@ string cea_stream::describe() const {
         << setw(CEA_FLDWIDTH)   << "Repeat"
         << "Name" << endl;
 
-    for (uint32_t id = 0; id <cea::PKT_Network_Hdr; id++) {
+    for (uint32_t id = 0; id <cea::Network_Hdr; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
             << setw(CEA_FLDWIDTH) << fields[id].id       
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].modifier 
+            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
             << setw(CEA_FLDWIDTH+6) << to_str((cea_pkt_type) fields[id].value)
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
@@ -1004,15 +970,15 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = cea::PKT_Network_Hdr; id <cea::PKT_VLAN_Tags; id++) {
+    for (uint32_t id = cea::Network_Hdr; id <cea::VLAN_Tags; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
             << setw(CEA_FLDWIDTH) << fields[id].id       
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].modifier 
-            << setw(CEA_FLDWIDTH+6) << to_str((cea_pkt_hdr_type) fields[id].value)
+            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
+            << setw(CEA_FLDWIDTH+6) << to_str((cea_hdr_type) fields[id].value)
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
             << setw(CEA_FLDWIDTH) << fields[id].step     
@@ -1021,14 +987,14 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = PKT_VLAN_Tags; id <cea::NumFields; id++) {
+    for (uint32_t id = VLAN_Tags; id <cea::NumFields; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
             << setw(CEA_FLDWIDTH) << fields[id].id       
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].modifier 
+            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
             << setw(CEA_FLDWIDTH+6) << fields[id].value    
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
@@ -1041,3 +1007,21 @@ string cea_stream::describe() const {
 }
 
 } // namespace
+
+// 1GB frame buffer with read and write capabilities
+#define LENGTH (1UL*1024*1024*1024)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0x40000 /* arch specific */
+#endif
+
+// Only ia64 requires this 
+#ifdef __ia64__
+#define ADDR (void *)(0x8000000000000000UL)
+#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_FIXED)
+#else
+#define ADDR (void *)(0x0UL)
+#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
+#endif
+

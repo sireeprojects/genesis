@@ -1,7 +1,8 @@
-// TODO: Implementation:
-// * combine fields that are not a multiple of a byte
-//     - might complicate set api, merge fields under consolidate fn
-// * reimplement reset to carry valid default values
+//------------------------------------------------------------------------------
+// TODO:Implementation:
+//      - 
+//      -
+//------------------------------------------------------------------------------
 
 #include <iostream>
 #include <vector>
@@ -25,6 +26,7 @@ using namespace std;
 
 namespace cea {
 
+// custom output stream to sent messages to both screen and log file    
 class outbuf : public streambuf {
 protected:
     virtual int overflow(int c) ;
@@ -34,10 +36,11 @@ ostream cealog(&ob);
 
 enum cea_msg_verbosity {
     NONE, // default
-    LOW,  // NONE + pkt details w/o payload bytes
-    FULL, // LOW + pkt payload bytes
+    LOW,  // debug only: NONE + pkt details w/o payload bytes
+    FULL, // debug only: LOW + pkt payload bytes
 };
 
+// TODO: Unused
 enum cea_msg_type {
     INFO,
     ERROR,
@@ -46,18 +49,13 @@ enum cea_msg_type {
     PKT
 };
 
-enum cea_pkt_print_type {
-    SHORT,
-    LONG
+enum cea_pkt_type {
+    ETH_V2,
+    ETH_LLC,
+    ETH_SNAP
 };
 
-enum cea_pkt_type{
-    Ethernet_V2,
-    Ethernet_LLC,
-    Ethernet_SNAP
-};
-
-enum cea_pkt_hdr_type {
+enum cea_hdr_type {
     MAC,
     VLAN,
     MPLS,
@@ -72,10 +70,10 @@ enum cea_pkt_hdr_type {
 
 enum cea_field_id {
     PKT_Type,
-    PKT_Network_Hdr,
-    PKT_Transport_Hdr,
-    PKT_VLAN_Tags,
-    PKT_MPLS_Labels,
+    Network_Hdr,
+    Transport_Hdr,
+    VLAN_Tags,
+    MPLS_Labels,
     MAC_Preamble,
     MAC_Dest_Addr,
     MAC_Src_Addr,
@@ -123,20 +121,20 @@ enum cea_field_id {
     TCP_Ack_Num,
     TCP_Data_Offset,
     TCP_Reserved,
-    TCP_URG,
-    TCP_ACK,
-    TCP_PSH,
-    TCP_RST,
-    TCP_SYN,
-    TCP_FIN,
+    TCP_Urg,
+    TCP_Ack,
+    TCP_Psh,
+    TCP_Rst,
+    TCP_Syn,
+    TCP_Fin,
     TCP_Window,
     TCP_Csum,
-    TCP_UrgPtr,
+    TCP_Urg_Ptr,
     TCP_Opts,
     TCP_Pad,
     UDP_Src_Port,
     UDP_Dest_Port,
-    UDP_len,
+    UDP_Len,
     UDP_Csum,
     ARP_Hw_Type,
     ARP_Proto_Type,
@@ -154,16 +152,16 @@ enum cea_field_id {
     STREAM_Inter_Stream_Gap,
     STREAM_Start_Delay,
     STREAM_Rate_Type,
-    STREAM_rate,
+    STREAM_Rate,
     STREAM_Ipg,
     STREAM_Percentage,
-    STREAM_PktsPerSec,
-    STREAM_BitRate,
+    STREAM_Pkts_Per_Sec,
+    STREAM_Bit_Rate,
     PAYLOAD_Type,
     NumFields
 };
 
-enum cea_field_modifier {
+enum cea_field_generation_type {
     Fixed,            
     Random,           
     Random_in_Range,  
@@ -187,8 +185,8 @@ enum cea_field_modifier {
     Bit_Rate
 };
 
-struct cea_value_spec {
-    cea_field_modifier type;
+struct cea_field_generation_spec {
+    cea_field_generation_type type;
     uint64_t value;
     uint32_t range_start;
     uint32_t range_stop;
@@ -204,7 +202,7 @@ struct CEA_PACKED cea_field {
     uint32_t id : 32;
     uint32_t len: 32;
     uint32_t offset : 32;
-    cea_field_modifier modifier : 32;
+    cea_field_generation_type gen_type : 32;
     uint64_t value: 64;
     uint32_t start: 32;
     uint32_t stop: 32;
@@ -214,16 +212,11 @@ struct CEA_PACKED cea_field {
     char pad[47];
 };
 
+// TODO: Unused
 struct CEA_PACKED cea_protocol_sequence {
-    cea_pkt_hdr_type id : 32;
-    uint32_t len : 32;
+    cea_hdr_type id : 32;
+    uint32_t nof_fields : 32;
     uint32_t seq[32];
-};
-
-enum cea_field_print_type {
-    HEX,
-    DEC,
-    STR
 };
 
 // forward declaration
@@ -231,9 +224,9 @@ class cea_stream;
 class cea_proxy;
 class cea_manager;
 
-//---------
+//------------------------------------------------------------------------------
 // Manager
-//---------
+//------------------------------------------------------------------------------
 class cea_manager {
 public:
     cea_manager();
@@ -242,18 +235,15 @@ public:
     void add_stream(cea_stream *stm, cea_proxy *pxy=NULL);
     void add_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
     void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    void testfn(cea_proxy *s);
 private:
     vector<cea_proxy*> proxies;
 };
 
-//-------
+//------------------------------------------------------------------------------
 // Proxy
-//-------
+//------------------------------------------------------------------------------
 class cea_proxy {
 public:
-// User interface functions
-
     // constructor
     cea_proxy(string name);
 
@@ -266,20 +256,15 @@ public:
     // execute a command immediately does not add to proxy queue
     void exec_cmd(cea_stream *stm);
 
-    // start stream processing and generate frames
+    // TODO: move to private before sharing
     void start();
 
 private:
+    // proxy identifiers
+    uint32_t proxy_id;
+    string proxy_name;
 
-    // utility functions
-    string port_name();
-    uint32_t port_num();
-
-    // port identifiers
-    uint32_t pnum;
-    string pname;
-
-    // input stream queue
+    // user's test streams will be pushed into this queue
     vector<cea_stream*> streamq;
 
     // handle to the stream being processed
@@ -288,42 +273,46 @@ private:
     // main thread
     thread worker_tid;
     void worker();
-
-    // start woker thread on stream start
     void start_worker();
-
-    // worker thread modules
-    void read();
-    void set_gen_vars();
-    void generate();
     void join_threads();
 
-    // frame buffer
-    void *fbuf;
-    void create_frm_buffer();
-    void release_frm_buffer();
+    // worker modules
+    void read_next_stream();
+    void set_gen_vars();
+    void generate();
+
+    // buffer to store the generated pkts
+    void *pbuf;
+    void create_pkt_buffer();
+    void release_pkt_buffer();
 
     friend class cea_manager;
 };
 
-// global variable to assign port numbers to proxy objects
-// TODO why static is not used 
-uint32_t port_num = 0;
+// global variable to track proxy id
+uint32_t proxy_id = 0;
 
-//--------
+//------------------------------------------------------------------------------
 // Stream
-//--------
+//------------------------------------------------------------------------------
 class cea_stream {
 public:    
-    cea_stream(string name="");
-    cea_stream (const cea_stream& rhs);
-    cea_stream& operator = (cea_stream& rhs);
-    friend ostream& operator << (ostream& os, const cea_stream& cmd);
+    // constructor
+    cea_stream(string name=string());
+
     void set(uint32_t id, uint64_t value);
-    void set(uint32_t id, cea_field_modifier spec);
-    void set(uint32_t id, cea_field_modifier mspec, cea_value_spec vspec);
-    void add(uint32_t id); // adding tags
-    void testfn();
+    void set(uint32_t id, cea_field_generation_type spec);
+    void set(uint32_t id, cea_field_generation_type mspec, cea_field_generation_spec vspec);
+    void add(uint32_t id);
+
+    // copy constructor
+    cea_stream (const cea_stream& rhs);
+
+    // overload =
+    cea_stream& operator = (cea_stream& rhs);
+
+    // overload <<
+    friend ostream& operator << (ostream& os, const cea_stream& cmd);
 
 private:
     string sname;
