@@ -31,6 +31,23 @@ THINGS TO DO:
     #define CEA_DBG(...) {}
 #endif
 
+// 1GB frame buffer with read and write capabilities
+#define LENGTH (1UL*1024*1024*1024)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0x40000 /* arch specific */
+#endif
+
+// Only ia64 requires this 
+#ifdef __ia64__
+#define ADDR (void *)(0x8000000000000000UL)
+#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_FIXED)
+#else
+#define ADDR (void *)(0x0UL)
+#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
+#endif
+
 template<typename ... Args>
 string string_format(const string& format, Args ... args) {
     size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
@@ -628,6 +645,10 @@ string to_str(cea_field_id t) {
     return cea_trim(name);
 }
 
+//------------------------------------------------------------------------------
+// Manager
+//------------------------------------------------------------------------------
+
 cea_manager::cea_manager() {
     CEA_DBG("%s called", __FUNCTION__);
 }
@@ -668,6 +689,10 @@ void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
 void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
     CEA_DBG("%s called", __FUNCTION__);
 }
+
+//------------------------------------------------------------------------------
+// Proxy
+//------------------------------------------------------------------------------
 
 // constructor
 cea_proxy::cea_proxy(string name) {
@@ -716,7 +741,6 @@ void cea_proxy::worker() {
 void cea_proxy::read_next_stream_from_stmq() {
     CEA_PXY_DBG_CALL_SIGNATURE;
     cur_stm = stmq[0];
-    // cealog << *cur_stm;
 }
 
 void cea_proxy::set_gen_vars() {
@@ -732,32 +756,35 @@ void cea_proxy::generate_traffic() {
 }
 
 void cea_proxy::create_pkt_buffer() {
-    // pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
-    // if (pbuf == MAP_FAILED) {
-    //     CEA_MSG("Error: Memory map failed in __FUNCTION__");
-    //     exit(1);
-    // }
+    pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
+    if (pbuf == MAP_FAILED) {
+        CEA_MSG("Error: Memory map failed in __FUNCTION__");
+        exit(1);
+    }
 }
 
 void cea_proxy::release_pkt_buffer() {
-    // if (munmap(pbuf, LENGTH)) {
-    //     CEA_MSG("Error: Memory unmap failed in __FUNCTION__");
-    //     exit(1);
-    // }
+    if (munmap(pbuf, LENGTH)) {
+        CEA_MSG("Error: Memory unmap failed in __FUNCTION__");
+        exit(1);
+    }
 }
 
-//--------
+//------------------------------------------------------------------------------
 // Stream
-//--------
+//------------------------------------------------------------------------------
+
 void cea_stream::prune_stream() {
-    build_list_of_all_fields();
+    organize_fields();
     trim_static_fields();
 }
 
 void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
-    basePktLen = 65;
+    // TODO: compute this correctly 65 is for test purpose only
+    baseline_pkt_len = 65;
+    
     uint32_t offset = 0;
     uint64_t merged = 0;
     uint64_t tmp =  0;
@@ -773,13 +800,13 @@ void cea_stream::build_baseline_pkt() {
                 merged = (merged << len) | fields[fseq[x]].value;
                 mlen += len;
             }
-            cea_memcpy_rev(basePkt+offset, (char*)&merged, mlen/8);
+            cea_memcpy_rev(base_pkt+offset, (char*)&merged, mlen/8);
             offset += mlen/8;
             i += fields[fseq[i]].merge; // skip mergable entries
         } else {
             uint64_t tmp = fields[fseq[i]].value;
             uint64_t len = fields[fseq[i]].len;
-            cea_memcpy_rev(basePkt+offset, (char*)&tmp, len/8);
+            cea_memcpy_rev(base_pkt+offset, (char*)&tmp, len/8);
             offset += len/8;
             mlen = 0; // TODO fix this
             merged = 0; // TODO fix this
@@ -787,25 +814,25 @@ void cea_stream::build_baseline_pkt() {
     }
 
     // EXPERIMENT: add ipv4 checksum
-    uint16_t ipcsum = calc_ipv4_csum((char*)basePkt+14, 20);
-    memcpy(basePkt+24, (char*)&ipcsum, 2);
-    // cea_memcpy_rev(basePkt+24, (char*)&ipcsum, 2);
+    uint16_t ipcsum = calc_ipv4_csum((char*)base_pkt+14, 20);
+    memcpy(base_pkt+24, (char*)&ipcsum, 2);
+    // cea_memcpy_rev(base_pkt+24, (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
-    printBasePkt();
-    write_pcap(basePkt, basePktLen);
+    print_baseline_pkt();
+    write_pcap(base_pkt, baseline_pkt_len);
     #endif
 }
 
-void cea_stream::printBasePkt() {
+void cea_stream::print_baseline_pkt() {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
     buf << endl;
     buf << cea_formatted_hdr("Base Packet");
     
-    for (uint32_t idx=0; idx<basePktLen; idx++) {
-        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) basePkt[idx] << " ";
+    for (uint32_t idx=0; idx<baseline_pkt_len; idx++) {
+        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_pkt[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
     }
@@ -830,7 +857,7 @@ uint32_t cea_stream::value_of(cea_field_id fid) {
 }
 
 // algorithm to organize the pkt fields
-void cea_stream::build_list_of_all_fields() {
+void cea_stream::organize_fields() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     fseq.insert(fseq.begin(),
@@ -872,23 +899,34 @@ void cea_stream::build_list_of_all_fields() {
 
     // TODO add paddings if any
 
+    #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_DBG("(%s) Fn:%s: fseq: %s (%d)", stream_name.c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
+        CEA_MSG("(%s) Fn:%s: fseq: %-20s (%d)",
+            stream_name.c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
         cntr++;
     }
+    #endif
 }
 
 void cea_stream::trim_static_fields() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
-    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
 
     for(auto i: fseq) {
         if (is_touched(i)) {
             cseq.push_back(i);
         }
     }
-    CEA_DBG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
+    #ifdef CEA_DEBUG
+    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
+    CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
+    uint32_t cntr=0;
+    for (auto i : cseq) {
+        CEA_MSG("(%s) Fn:%s: fseq: %-20s (%d)", 
+            stream_name.c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str(), cntr);
+        cntr++;
+    }
+    #endif
 }
 
 // constructor
@@ -901,16 +939,16 @@ cea_stream::cea_stream(string name) {
     //       the size of the base pkt should be calculated by
     //       summming the length of all the fields and payload
     //       properties
-    basePkt = new unsigned char[1024];
+    base_pkt = new unsigned char[1024];
 }
 
 // copy constructor
-cea_stream::cea_stream (const cea_stream& rhs) {
+cea_stream::cea_stream (const cea_stream &rhs) {
     cea_stream::do_copy(&rhs);
 }
 
 // assign operator overload
-cea_stream& cea_stream::operator = (cea_stream& rhs) {
+cea_stream& cea_stream::operator = (cea_stream &rhs) {
    if (this != &rhs) {
       do_copy(&rhs);
    }
@@ -918,7 +956,7 @@ cea_stream& cea_stream::operator = (cea_stream& rhs) {
 }
 
 // print operator overload
-ostream& operator << (ostream& os, const cea_stream& f) {
+ostream& operator << (ostream &os, const cea_stream &f) {
     os << f.describe();
     return os;
 }
@@ -942,19 +980,12 @@ void cea_stream::add(uint32_t id) {
     fields[id].touched = true;
 }
 
-char* cea_stream::pack() {
-    return NULL;
-}
-
-void cea_stream::unpack(char *data) {
-}
-
-void cea_stream::do_copy (const cea_stream* rhs) {
+void cea_stream::do_copy (const cea_stream *rhs) {
     CEA_DBG("Stream CC Called");
 }
 
 void cea_stream::reset() {
-    memcpy(&fields, &flds, (sizeof(cea_field)*(cea::NumFields)));
+    memcpy(&fields, &flds, (sizeof(cea_field)*(cea::Num_Fields)));
 }
 
 #define CEA_FLDWIDTH 8
@@ -1012,7 +1043,7 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = VLAN_Tags; id <cea::NumFields; id++) {
+    for (uint32_t id = VLAN_Tags; id <cea::Num_Fields; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
@@ -1032,21 +1063,3 @@ string cea_stream::describe() const {
 }
 
 } // namespace
-
-// 1GB frame buffer with read and write capabilities
-#define LENGTH (1UL*1024*1024*1024)
-#define PROTECTION (PROT_READ | PROT_WRITE)
-
-#ifndef MAP_HUGETLB
-#define MAP_HUGETLB 0x40000 /* arch specific */
-#endif
-
-// Only ia64 requires this 
-#ifdef __ia64__
-#define ADDR (void *)(0x8000000000000000UL)
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_FIXED)
-#else
-#define ADDR (void *)(0x0UL)
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
-#endif
-

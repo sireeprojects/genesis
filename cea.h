@@ -152,7 +152,7 @@ enum cea_field_id {
     STREAM_Pkts_Per_Sec,
     STREAM_Bit_Rate,
     PAYLOAD_Type,
-    NumFields
+    Num_Fields
 };
 
 enum cea_field_generation_type {
@@ -317,7 +317,7 @@ public:
     void add(uint32_t id);
 
     // copy constructor
-    cea_stream(const cea_stream& rhs);
+    cea_stream(const cea_stream &rhs);
 
     // overload =
     cea_stream& operator = (cea_stream& rhs);
@@ -334,7 +334,7 @@ private:
     uint32_t stream_id;
 
     // (container2) a list of all the field ids (in sequence) of the 
-    // selected pkt type and headers output of build_list_of_all_fields
+    // selected pkt type and headers output of organize_fields
     vector<cea_field_id> fseq;
 
     // (container3) a sequence of all the fields ids that needs 
@@ -342,7 +342,7 @@ private:
     vector<uint32_t> cseq;
 
     // (container4) field matrix
-    cea_field fields[cea::NumFields];
+    cea_field fields[cea::Num_Fields];
 
     // check if a field has been modified by user
     bool is_touched(cea_field_id fid);
@@ -353,21 +353,24 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
-    void build_list_of_all_fields();
+    void organize_fields();
     void trim_static_fields();
     void prune_stream();
     void build_baseline_pkt();
 
-    char* pack();
-    void unpack(char *data);
-    void do_copy (const cea_stream* rhs);
-    string describe() const;
+    // baseline pkt
+    unsigned char *base_pkt;
+    uint32_t baseline_pkt_len;
+    void print_baseline_pkt();
+
+    // reset to default values
     void reset();
-    string name;
+
+    // overloads
+    void do_copy (const cea_stream *rhs);
+    string describe() const;
+
     friend class cea_proxy;
-    unsigned char *basePkt;
-    uint32_t basePktLen;
-    void printBasePkt();
 };
 
 } // namespace
