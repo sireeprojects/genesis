@@ -373,4 +373,4 @@ private:
     friend class cea_proxy;
 };
 
-} // namespace
+} // namespace 

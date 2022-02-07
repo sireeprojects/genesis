@@ -438,24 +438,28 @@ void calc_tcp_csum(char *hdr) {
 void calc_udp_csum(char *hdr) {
 }
 
-
+// remove trailing whitespaces from a string
 string cea_rtrim(string s) {
     s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
     return s;
 }
 
+// remove leading whitespaces from a string
 string cea_ltrim(string s) {
     s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));
     return s;
 }
 
+// remove leading and trailing whitespaces from a string
 string cea_trim(string s) {
     return cea_ltrim(cea_rtrim(s));
 }
 
-string cea_wordwrap(string msg) {
+//  break a long string to a multiline string by breaking 
+//  the input string to an approximate length of line_width
+//  characters adding four leading spaces before each break
+string cea_wordwrap(string msg, uint32_t line_width=100) {
     stringstream wrapped_msg;
-    uint32_t line_width = 100;
     string leading_spaces = "    ";
     for (uint32_t pos=0; pos<msg.length(); pos=pos+line_width) {
         wrapped_msg << leading_spaces
@@ -474,6 +478,7 @@ string cea_formatted_hdr(string s) {
     return ss.str();
 }
 
+// read a environment variable and return stringize
 string cea_getenv(string &key) {
     char *val = getenv(key.c_str());
     return (val==NULL) ? string() : string(val);
@@ -484,10 +489,13 @@ enum cea_readable_type {
     KIS1000 = 1000
 };
 
+// convert a number to its equivalent in KB, MB, GB etc
+// type determines if K (kilo) should be considered 
+// as 1000 or 1024. default is 1024
 string cea_readable_fs(double size, cea_readable_type type) {
     int i = 0;
     ostringstream buf("");
-    const char *units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+    const char *units[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
     int divider = type;
 
     while (size > (divider-1)) {
@@ -498,6 +506,7 @@ string cea_readable_fs(double size, cea_readable_type type) {
     return buf.str();
 }
 
+// stringize cea_pkt_type
 string to_str(cea_pkt_type t) {
     string name;
     switch(t) {
@@ -509,6 +518,7 @@ string to_str(cea_pkt_type t) {
     return cea_trim(name);
 }
 
+// stringize cea_hdr_type
 string to_str(cea_hdr_type t) {
     string name;
     switch(t) {
@@ -527,6 +537,7 @@ string to_str(cea_hdr_type t) {
     return cea_trim(name);
 }
 
+// stringize cea_msg_verbosity
 string to_str(cea_msg_verbosity t) {
     string name;
     switch(t) {
@@ -537,6 +548,7 @@ string to_str(cea_msg_verbosity t) {
     return cea_trim(name);
 }
 
+// stringize cea_field_generation_type
 string to_str(cea_field_generation_type t) {
     string name;
     switch(t) {
@@ -566,6 +578,7 @@ string to_str(cea_field_generation_type t) {
     return cea_trim(name);
 }
 
+// stringize cea_field_id
 string to_str(cea_field_id t) {
     string name;
     switch(t) {
