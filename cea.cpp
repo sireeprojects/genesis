@@ -25,10 +25,14 @@ THINGS TO DO:
                     |- restore_context
         note: saving and restoring context incur performance penalty
               try some other idea
-
+              idea: store context in stream itself instead of storing 
+                    in proxy. then context switch means just pointing to 
+                    other stream
 - 
 ------------------------------------------------------------------------------*/
 
+    // s.add(VLAN_Tags);
+    // s.add(MPLS_Labels);
 #include "cea.h"
 
 #define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG( \
@@ -163,6 +167,14 @@ cea_field flds[] = {
 {  false,  0,  0,   ARP_Target_Proto_Addr    ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
 {  false,  0,  0,   PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "},
 {  false,  0,  0,   PAYLOAD_Len              ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Len            "},
+{  false,  0,  0,   UDF1                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF1                   "},
+{  false,  0,  0,   UDF2                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF2                   "},
+{  false,  0,  0,   UDF3                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF3                   "},
+{  false,  0,  0,   UDF4                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF4                   "},
+{  false,  0,  0,   UDF5                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF5                   "},
+{  false,  0,  0,   UDF6                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF6                   "},
+{  false,  0,  0,   UDF7                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF7                   "},
+{  false,  0,  0,   UDF8                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF8                   "},
 {  false,  0,  0,   STREAM_Type              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Type            "},
 {  false,  0,  0,   STREAM_Pkts_Per_Burst    ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Burst  "},
 {  false,  0,  0,   STREAM_Burst_Per_Stream  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Burst_Per_Stream"},
@@ -174,7 +186,8 @@ cea_field flds[] = {
 {  false,  0,  0,   STREAM_Ipg               ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Ipg             "},
 {  false,  0,  0,   STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
 {  false,  0,  0,   STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
-{  false,  0,  0,   STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "}
+{  false,  0,  0,   STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
+//
 };
 
 // header to fields map
@@ -677,6 +690,14 @@ string to_str(cea_field_id t) {
         case ARP_Target_Proto_Addr   : { name = "ARP_Target_Proto_Addr  "; break; }
         case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }
         case PAYLOAD_Len             : { name = "PAYLOAD_Len            "; break; }
+        case UDF1                    : { name = "UDF1                   "; break; }
+        case UDF2                    : { name = "UDF2                   "; break; }
+        case UDF3                    : { name = "UDF3                   "; break; }
+        case UDF4                    : { name = "UDF4                   "; break; }
+        case UDF5                    : { name = "UDF5                   "; break; }
+        case UDF6                    : { name = "UDF6                   "; break; }
+        case UDF7                    : { name = "UDF7                   "; break; }
+        case UDF8                    : { name = "UDF8                   "; break; }
         case STREAM_Type             : { name = "STREAM_Type            "; break; }
         case STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }
         case STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }
