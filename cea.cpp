@@ -394,10 +394,10 @@ uint64_t byte_reverse(uint64_t original, uint32_t num) {
 }
 
 // calculate and return checksum in network byte order
-uint16_t compute_ipv4_csum(char *vdata,size_t length) {
+uint16_t compute_ipv4_csum(unsigned char *vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
     // char* data=(char*)vdata;
-    char *data=vdata;
+    unsigned char *data=vdata;
 
     // Initialise the accumulator.
     uint64_t acc=0xffff;
@@ -415,7 +415,7 @@ uint16_t compute_ipv4_csum(char *vdata,size_t length) {
     }
 
     // Handle any complete 32-bit blocks.
-    char* data_end=data+(length&~3);
+    unsigned char* data_end=data+(length&~3);
     while (data!=data_end) {
         uint32_t word;
         memcpy(&word,data,4);
@@ -865,7 +865,7 @@ void cea_stream::build_baseline_pkt() {
     // baseline_pkt_len = offset; // TODO: fix this
 
     // insert IPv4 checksum
-    uint16_t ipcsum = compute_ipv4_csum((char*)base_pkt+14, 20);
+    uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
     memcpy(base_pkt+24, (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
