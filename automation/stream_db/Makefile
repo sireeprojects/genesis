@@ -1,5 +1,5 @@
 default:clean
-	python gen_cea.py
+	python3 gen_cea.py
 
 clean:
-	del cea_pkt.h
+	rm -f cea_pkt.h

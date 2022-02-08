@@ -2,7 +2,7 @@ import os
 import xlrd
 
 # name of the spreadsheet
-fname = "StreamDB.xls"
+fname = "streams.xls"
 
 # open spreadsheet and get handle to the first sheet
 wb = xlrd.open_workbook(fname)

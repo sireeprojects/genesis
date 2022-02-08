@@ -1,60 +1,53 @@
 import os
 import xlrd
 
-
 # name of the spreadsheet
-fname = "StreamDB.xls"
+file_name = "streams.xls"
 
+# open spreadsheet
+wb = xlrd.open_workbook(file_name)
 
-# open spreadsheet and get handle to the first sheet
-wb = xlrd.open_workbook(fname)
+# get handle to the first sheet
 sheet = wb.sheet_by_index(0)
 
-
-# aquire total number of rows and columns
-numRows = sheet.nrows
-numCols = sheet.ncols
-
+# get total number of rows and columns
+nof_rows = sheet.nrows
+nof_cols = sheet.ncols
 
 # the column which contains the name of the fieds
-nameColumn = 4
+name_column = 4
 
-
-def printBanner():
+def print_banner():
     print(80 * '-')
-    print(f"Spreadsheet       : {fname}")
-    print(f"Number of Rows    : {numRows}")
-    print(f"Number of Columns : {numCols}")
+    print(f"Spreadsheet       : {file_name}")
+    print(f"Number of Rows    : {nof_rows}")
+    print(f"Number of Columns : {nof_cols}")
     print(80 * '-')
 
-
-def genStruct():
-    nameList = []
+def gen_struct():
+    name_list = []
     # extract the names of all the fields
-    for nRow in range(1, (numRows)):
-        nameList.append(sheet.cell_value(nRow,nameColumn))
-    structCode = f'struct field ' + '{\n'
-    for nCol in range(0, numCols):
-        dataType = sheet.cell_value(0, nCol).split(':')[0]
-        fieldName = sheet.cell_value(0, nCol).split(':')[1].strip()
-        structCode += f"    {dataType:<{20}}"
-        structCode += f"{fieldName};\n"
-    structCode += '};'
-    print(structCode)
-
+    for row in range(1, (nof_rows)):
+        name_list.append(sheet.cell_value(row,name_column))
+    struct_code = f'struct field ' + '{\n'
+    for column in range(0, nof_cols):
+        data_type = sheet.cell_value(0, column).split(':')[0]
+        field_name = sheet.cell_value(0, column).split(':')[1].strip()
+        struct_code += f"    {data_type:<{20}}"
+        struct_code += f"{field_name};\n"
+    struct_code += '};'
+    print(struct_code)
 
 def fillVector():
-    for nRow in range(1, (numRows)):
-        nameList = []
-        for nCol in range(0, (numCols)):
-            tmp = sheet.cell_value(nRow,nCol)
+    for row in range(1, (nof_rows)):
+        name_list = []
+        for column in range(0, (nof_cols)):
+            tmp = sheet.cell_value(row,column)
             if type(tmp) != str:
-                nameList.append(int(tmp))
+                name_list.append(int(tmp))
             else:
-                nameList.append(tmp)
-        print(str(nameList))
-
-
+                name_list.append(tmp)
+        print(str(name_list))
 
 def clear_screen():
     if os.name == "posix":
@@ -62,9 +55,8 @@ def clear_screen():
     else:
         os.system("cls")
 
-
 if __name__ == "__main__":
     clear_screen()
-    printBanner()
-    genStruct()
+    print_banner()
+    gen_struct()
     # fillVector()
