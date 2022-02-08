@@ -66,10 +66,13 @@ THINGS TO DO:
 // maximum pkt size from mac dest addr to mac crc (16KB)
 #define CEA_MAX_PKT_SIZE 16384
 
+// stringize a printf like formatted output 
 template<typename ... Args>
 string string_format(const string& format, Args ... args) {
     size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-    if(size <= 0){ throw runtime_error("Error during formatting."); }
+    if(size <= 0) {
+        throw runtime_error("Error during formatting.");
+    }
     unique_ptr<char[]> buf(new char[size]);
     snprintf(buf.get(), size, format.c_str(), args ...);
     return string(buf.get(), buf.get() + size - 1);
@@ -78,11 +81,7 @@ string string_format(const string& format, Args ... args) {
 namespace cea {
 
 cea_field flds[] = {
-// TODO
-// multiple VLAN tags
-// multiple mpls labels
-// ip/tcp/udp checksum
-// multiple UDF fields
+// TODO multiple VLAN tags, multiple mpls labels, ip/tcp/udp checksum, multiple UDF fields
 //------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -162,6 +161,8 @@ cea_field flds[] = {
 {  false,  0,  0,   ARP_Sender_Proto_addr    ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Proto_addr  "},
 {  false,  0,  0,   ARP_Target_Hw_Addr       ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     "},
 {  false,  0,  0,   ARP_Target_Proto_Addr    ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
+{  false,  0,  0,   PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "},
+{  false,  0,  0,   PAYLOAD_Len              ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Len            "},
 {  false,  0,  0,   STREAM_Type              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Type            "},
 {  false,  0,  0,   STREAM_Pkts_Per_Burst    ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Burst  "},
 {  false,  0,  0,   STREAM_Burst_Per_Stream  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Burst_Per_Stream"},
@@ -173,13 +174,12 @@ cea_field flds[] = {
 {  false,  0,  0,   STREAM_Ipg               ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Ipg             "},
 {  false,  0,  0,   STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
 {  false,  0,  0,   STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
-{  false,  0,  0,   STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
-{  false,  0,  0,   PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "}
+{  false,  0,  0,   STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "}
 };
 
-map<cea_hdr_type, vector<cea_field_id> >htof = {
-// preamble, ether type and len will be added during the 
-// formation of fseq
+// header to fields map
+// preamble, ether type and len will be added during the formation of fseq
+map <cea_hdr_type, vector <cea_field_id>> htof = {
     {MAC,   {
             MAC_Dest_Addr,
             MAC_Src_Addr
@@ -268,8 +268,10 @@ map<cea_hdr_type, vector<cea_field_id> >htof = {
             }}
 };
 
+// file stream for cea message logging
 ofstream logfile;
 
+// custom output stream to sent messages to both screen and log file    
 int outbuf::overflow(int_type c) {
     if (c != EOF) {
     c = static_cast<char>(c);
@@ -280,6 +282,10 @@ int outbuf::overflow(int_type c) {
     }
     return c;
 }
+
+//------------------------------------------------------------------------------
+// cea library init
+//------------------------------------------------------------------------------
 
 class cea_init {
 public:
@@ -294,6 +300,11 @@ public:
 };
 cea_init init;
 
+//------------------------------------------------------------------------------
+// support for PCAP write
+//------------------------------------------------------------------------------
+
+// pcap global header
 struct CEA_PACKED pcap_file_hdr {
     uint32_t magic         : 32;
     uint16_t version_major : 16;
@@ -304,6 +315,7 @@ struct CEA_PACKED pcap_file_hdr {
     uint32_t linktype      : 32;
 };
 
+// pcap per packet header
 struct CEA_PACKED pcap_pkt_hdr {
     uint32_t tv_sec  : 32;
     uint32_t tv_usec : 32;
@@ -311,29 +323,8 @@ struct CEA_PACKED pcap_pkt_hdr {
     uint32_t len     : 32;
 };
 
-void *cea_memcpy_rev (void *dest, const void *src, size_t len) {
-    if (len==0) return dest;
-    char *d = (char*)dest;
-    const char *s = (char*)src;
-    int i = 0;
-    for (i=(len-1); i>=0; i--) {
-        *d++ = s[i];
-    }
-    return dest;
-}
-
-uint64_t byte_reverse (uint64_t original, uint32_t num) {
-   uint64_t reversed = 0;
-   uint32_t loopVar;
-   for (loopVar=0; loopVar<num; loopVar++) {
-      reversed = (reversed <<8) | (original & 0xFF);
-      original = original >> 8;
-   }
-   return reversed;
-}
-
 // true if the file exists, else false
-bool fileExists(const string& filename) {
+bool file_exists(const string& filename) {
     struct stat buf;
     if (stat(filename.c_str(), &buf) != -1) {
         return true;
@@ -341,7 +332,6 @@ bool fileExists(const string& filename) {
     return false;
 }
 
-// TODO make this thread-safe
 void write_pcap(unsigned char *pkt, uint32_t len) {
     pcap_file_hdr fh;
     pcap_pkt_hdr ph;
@@ -363,21 +353,48 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
     uint32_t offset = 0;
 
     ofstream pcapfile;
-    if (!fileExists("run.pcap")) {
+
+    if (!file_exists("run.pcap")) {
         pcapfile.open("run.pcap", ofstream::app);
         pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
     } else {
         pcapfile.open("run.pcap", ofstream::app);
     }
+
     memcpy(buf+offset, (char*)&ph, sizeof(pcap_pkt_hdr));
     offset += sizeof(pcap_pkt_hdr);
     memcpy(buf+offset, pkt, len);
     offset += len;
+
     pcapfile.write(buf, offset);
     pcapfile.close();
 }
 
-uint16_t calc_ipv4_csum(char *vdata,size_t length) {
+// memcpy in network byte order
+void *cea_memcpy_ntw_byte_order (void *dest, const void *src, size_t len) {
+    if (len==0) return dest;
+    char *d = (char*)dest;
+    const char *s = (char*)src;
+    int i = 0;
+    for (i=(len-1); i>=0; i--) {
+        *d++ = s[i];
+    }
+    return dest;
+}
+
+// reverse the order of bytes 
+uint64_t byte_reverse(uint64_t original, uint32_t num) {
+   uint64_t reversed = 0;
+   uint32_t loopVar;
+   for (loopVar=0; loopVar<num; loopVar++) {
+      reversed = (reversed <<8) | (original & 0xFF);
+      original = original >> 8;
+   }
+   return reversed;
+}
+
+// calculate and return checksum in network byte order
+uint16_t compute_ipv4_csum(char *vdata,size_t length) {
     // Cast the data pointer to one that can be indexed.
     // char* data=(char*)vdata;
     char *data=vdata;
@@ -431,11 +448,11 @@ uint16_t calc_ipv4_csum(char *vdata,size_t length) {
 }
 
 // TODO tcp checksum 
-void calc_tcp_csum(char *hdr) {
+void compute_tcp_csum(char *hdr) {
 }
 
 // TODO udp checksum 
-void calc_udp_csum(char *hdr) {
+void compute_udp_csum(char *hdr) {
 }
 
 // remove trailing whitespaces from a string
@@ -658,6 +675,8 @@ string to_str(cea_field_id t) {
         case ARP_Sender_Proto_addr   : { name = "ARP_Sender_Proto_addr  "; break; }
         case ARP_Target_Hw_Addr      : { name = "ARP_Target_Hw_Addr     "; break; }
         case ARP_Target_Proto_Addr   : { name = "ARP_Target_Proto_Addr  "; break; }
+        case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }
+        case PAYLOAD_Len             : { name = "PAYLOAD_Len            "; break; }
         case STREAM_Type             : { name = "STREAM_Type            "; break; }
         case STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }
         case STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }
@@ -670,7 +689,6 @@ string to_str(cea_field_id t) {
         case STREAM_Percentage       : { name = "STREAM_Percentage      "; break; }
         case STREAM_Pkts_Per_Sec     : { name = "STREAM_Pkts_Per_Sec    "; break; }
         case STREAM_Bit_Rate         : { name = "STREAM_Bit_Rate        "; break; }
-        case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }
         default                      : { name = "undefined              "; break; }
     }
     return cea_trim(name);
@@ -831,13 +849,13 @@ void cea_stream::build_baseline_pkt() {
                 merged = (merged << len) | fields[fseq[x]].value;
                 mlen += len;
             }
-            cea_memcpy_rev(base_pkt+offset, (char*)&merged, mlen/8);
+            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
             offset += mlen/8;
             i += fields[fseq[i]].merge; // skip mergable entries
         } else {
             uint64_t tmp = fields[fseq[i]].value;
             uint64_t len = fields[fseq[i]].len;
-            cea_memcpy_rev(base_pkt+offset, (char*)&tmp, len/8);
+            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
             offset += len/8;
             mlen = 0; // TODO fix this
             merged = 0; // TODO fix this
@@ -846,10 +864,9 @@ void cea_stream::build_baseline_pkt() {
 
     // baseline_pkt_len = offset; // TODO: fix this
 
-    // EXPERIMENT: add ipv4 checksum
-    uint16_t ipcsum = calc_ipv4_csum((char*)base_pkt+14, 20);
+    // insert IPv4 checksum
+    uint16_t ipcsum = compute_ipv4_csum((char*)base_pkt+14, 20);
     memcpy(base_pkt+24, (char*)&ipcsum, 2);
-    // cea_memcpy_rev(base_pkt+24, (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
     print_baseline_pkt();
@@ -862,7 +879,7 @@ void cea_stream::print_baseline_pkt() {
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
     buf << endl;
-    buf << cea_formatted_hdr("Base Packet");
+    buf << cea_formatted_hdr("Baseline Packet");
     
     for (uint32_t idx=0; idx<baseline_pkt_len; idx++) {
         buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_pkt[idx] << " ";
@@ -950,6 +967,7 @@ void cea_stream::trim_static_fields() {
             cseq.push_back(i);
         }
     }
+
     #ifdef CEA_DEBUG
     CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
     CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());

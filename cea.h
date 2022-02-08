@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <mutex>
 #include <bitset>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -20,7 +21,7 @@ using namespace std;
 
 namespace cea {
 
-// custom output stream to sent messages to both screen and log file    
+// custom output stream
 class outbuf : public streambuf {
 protected:
     virtual int overflow(int c) ;
@@ -139,6 +140,8 @@ enum cea_field_id {
     ARP_Sender_Proto_addr,
     ARP_Target_Hw_Addr,
     ARP_Target_Proto_Addr,
+    PAYLOAD_Type,
+    PAYLOAD_Len,
     STREAM_Type,
     STREAM_Pkts_Per_Burst,
     STREAM_Burst_Per_Stream,
@@ -151,7 +154,6 @@ enum cea_field_id {
     STREAM_Percentage,
     STREAM_Pkts_Per_Sec,
     STREAM_Bit_Rate,
-    PAYLOAD_Type,
     Num_Fields
 };
 
