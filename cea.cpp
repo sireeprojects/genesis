@@ -349,7 +349,7 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
     ph.caplen = len;
     ph.len = len;
 
-    char buf[16384]; // TODO fix this size
+    char buf[CEA_MAX_PKT_SIZE];
     uint32_t offset = 0;
 
     ofstream pcapfile;
@@ -383,7 +383,7 @@ void *cea_memcpy_ntw_byte_order (void *dest, const void *src, size_t len) {
 }
 
 // reverse the order of bytes 
-uint64_t byte_reverse(uint64_t original, uint32_t num) {
+uint64_t reverse_byte_order(uint64_t original, uint32_t num) {
    uint64_t reversed = 0;
    uint32_t loopVar;
    for (loopVar=0; loopVar<num; loopVar++) {
