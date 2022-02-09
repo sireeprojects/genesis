@@ -150,6 +150,8 @@ enum cea_field_id {
     UDF6,
     UDF7,
     UDF8,
+    Num_VLAN_Tags,
+    Num_MPLS_Labels,
     STREAM_Type,
     STREAM_Pkts_Per_Burst,
     STREAM_Burst_Per_Stream,
@@ -203,6 +205,7 @@ struct CEA_PACKED cea_field {
     bool touched : 1;
     uint32_t merge : 8;
     uint64_t mask : 64;
+    uint32_t stack : 32;
     uint32_t id : 32;
     uint32_t len: 32;
     uint32_t offset : 32;
@@ -379,6 +382,10 @@ private:
     // overloads
     void do_copy (const cea_stream *rhs);
     string describe() const;
+
+    // runtime and contexts
+    uint32_t ipv4_offset;
+    uint32_t tcp_offset;
 
     friend class cea_proxy;
 };
