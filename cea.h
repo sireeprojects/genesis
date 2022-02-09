@@ -67,8 +67,8 @@ enum cea_field_id {
     PKT_Type,
     Network_Hdr,
     Transport_Hdr,
-    VLAN_Tags,
-    MPLS_Labels,
+    VLAN_Tag, // TODO: Remove
+    MPLS_Hdr, // TODO: Remove
     MAC_Preamble,
     MAC_Dest_Addr,
     MAC_Src_Addr,
@@ -151,7 +151,7 @@ enum cea_field_id {
     UDF7,
     UDF8,
     Num_VLAN_Tags,
-    Num_MPLS_Labels,
+    Num_MPLS_Hdrs,
     STREAM_Type,
     STREAM_Pkts_Per_Burst,
     STREAM_Burst_Per_Stream,
@@ -356,6 +356,12 @@ private:
 
     // (container4) field matrix
     cea_field fields[cea::Num_Fields];
+
+    // (container5) mpls
+    vector<cea_field_id> mpls_stack;
+
+    // (container5) vlan
+    vector<cea_field_id> vlan_tag_stack;
 
     // check if a field has been modified by user
     bool is_touched(cea_field_id fid);

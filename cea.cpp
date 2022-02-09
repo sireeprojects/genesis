@@ -31,8 +31,6 @@ THINGS TO DO:
 - 
 ------------------------------------------------------------------------------*/
 
-    // s.add(VLAN_Tags);
-    // s.add(MPLS_Labels);
 #include "cea.h"
 
 #define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG( \
@@ -92,8 +90,8 @@ cea_field flds[] = {
 {  false,  0,  0,   0, PKT_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "PKT_Type               "},
 {  false,  0,  0,   0, Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  0,   0, Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
-{  false,  0,  0,   0, VLAN_Tags                ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tags              "},
-{  false,  0,  0,   0, MPLS_Labels              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Labels            "},
+{  false,  0,  0,   0, VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
+{  false,  0,  0,   0, MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               "},
 {  false,  0,  0,   0, MAC_Preamble             ,8*8,      0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
 {  false,  0,  0,   0, MAC_Dest_Addr            ,8*6,      0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
 {  false,  0,  0,   0, MAC_Src_Addr             ,8*6,      0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
@@ -176,7 +174,7 @@ cea_field flds[] = {
 {  false,  0,  0,   0, UDF7                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF7                   "},
 {  false,  0,  0,   0, UDF8                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF8                   "},
 {  false,  0,  0,   0, Num_VLAN_Tags            ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "Num_VLAN_Tags          "},
-{  false,  0,  0,   0, Num_MPLS_Labels          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "Num_MPLS_Labels        "},
+{  false,  0,  0,   0, Num_MPLS_Hdrs            ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "Num_MPLS_Hdrs          "},
 {  false,  0,  0,   0, STREAM_Type              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Type            "},
 {  false,  0,  0,   0, STREAM_Pkts_Per_Burst    ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Burst  "},
 {  false,  0,  0,   0, STREAM_Burst_Per_Stream  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Burst_Per_Stream"},
@@ -617,8 +615,8 @@ string to_str(cea_field_id t) {
         case PKT_Type                : { name = "PKT_Type               "; break; }
         case Network_Hdr             : { name = "Network_Hdr            "; break; }
         case Transport_Hdr           : { name = "Transport_Hdr          "; break; }
-        case VLAN_Tags               : { name = "VLAN_Tags              "; break; }
-        case MPLS_Labels             : { name = "MPLS_Labels            "; break; }
+        case VLAN_Tag                : { name = "VLAN_Tag               "; break; }
+        case MPLS_Hdr                : { name = "MPLS_Hdr               "; break; }
         case MAC_Preamble            : { name = "MAC_Preamble           "; break; }
         case MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }
         case MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }
@@ -701,7 +699,7 @@ string to_str(cea_field_id t) {
         case UDF7                    : { name = "UDF7                   "; break; }
         case UDF8                    : { name = "UDF8                   "; break; }
         case Num_VLAN_Tags           : { name = "Num_VLAN_Tags          "; break; }
-        case Num_MPLS_Labels         : { name = "Num_MPLS_Labels        "; break; }
+        case Num_MPLS_Hdrs           : { name = "Num_MPLS_Hdrs          "; break; }
         case STREAM_Type             : { name = "STREAM_Type            "; break; }
         case STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }
         case STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }
@@ -940,7 +938,7 @@ void cea_stream::organize_fields() {
         htof[MAC].end());
 
     // TODO multiple vlan tags
-    if (is_touched(VLAN_Tags)) {
+    if (is_touched(VLAN_Tag)) {
         fseq.insert(fseq.end(), htof[VLAN].begin(), htof[VLAN].end());
     }
 
@@ -960,7 +958,7 @@ void cea_stream::organize_fields() {
     }
 
     // TODO multiple mpls labels
-    if (is_touched(MPLS_Labels)) {
+    if (is_touched(MPLS_Hdr)) {
         fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
     }
 
@@ -977,8 +975,10 @@ void cea_stream::organize_fields() {
     #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_MSG("(%s) Fn:%s: fseq: %-20s (%d)",
-            stream_name.c_str(), __FUNCTION__, to_str(i).c_str(), cntr);
+        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)",
+            stream_name.c_str(),
+            string(10, ' ').c_str(),
+            __FUNCTION__, to_str(i).c_str(), cntr);
         cntr++;
     }
     #endif
@@ -998,8 +998,10 @@ void cea_stream::trim_static_fields() {
     CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
     uint32_t cntr=0;
     for (auto i : cseq) {
-        CEA_MSG("(%s) Fn:%s: fseq: %-20s (%d)", 
-            stream_name.c_str(), __FUNCTION__, to_str((cea_field_id)i).c_str(), cntr);
+        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
+            stream_name.c_str(),
+            string(10, ' ').c_str(),
+            __FUNCTION__, to_str((cea_field_id)i).c_str(), cntr);
         cntr++;
     }
     #endif
@@ -1102,7 +1104,7 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = cea::Network_Hdr; id <cea::VLAN_Tags; id++) {
+    for (uint32_t id = cea::Network_Hdr; id <cea::VLAN_Tag; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
@@ -1119,7 +1121,7 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = VLAN_Tags; id <cea::Num_Fields; id++) {
+    for (uint32_t id = VLAN_Tag; id <cea::Num_Fields; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     
