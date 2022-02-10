@@ -91,7 +91,7 @@ cea_field flds[] = {
 {  false,  0,  0,   0, Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  0,   0, Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  0,   0, VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
-{  false,  0,  0,   0, MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               "},
+// {  false,  0,  0,   0, MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               "},
 {  false,  0,  0,   0, MAC_Preamble             ,8*8,      0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
 {  false,  0,  0,   0, MAC_Dest_Addr            ,8*6,      0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
 {  false,  0,  0,   0, MAC_Src_Addr             ,8*6,      0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
@@ -107,10 +107,10 @@ cea_field flds[] = {
 {  false,  0,  0,   0, LLC_Control              ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Control            "},
 {  false,  0,  0,   0, SNAP_Oui                 ,8*3,      0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Oui               "},
 {  false,  0,  0,   0, SNAP_Pid                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Pid               "},
-{  false,  2,  0,   0, MPLS_Label               ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Label             "},
-{  false,  1,  0,   0, MPLS_Cos                 ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Cos               "},
-{  false,  1,  0,   0, MPLS_Stack               ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Stack             "},
-{  false,  0,  0,   0, MPLS_Ttl                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Ttl               "},
+// {  false,  2,  0,   0, MPLS_Label               ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Label             "},
+// {  false,  1,  0,   0, MPLS_Cos                 ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Cos               "},
+// {  false,  1,  0,   0, MPLS_Stack               ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Stack             "},
+// {  false,  0,  0,   0, MPLS_Ttl                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Ttl               "},
 {  false,  1,  0,   0, IPv4_Version             ,4,        0,     Fixed,   4,                   0,    0,   0,   0,  "IPv4_Version           "},
 {  false,  1,  0,   0, IPv4_IHL                 ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "IPv4_IHL               "},
 {  false,  0,  0,   0, IPv4_Tos                 ,8*1,      0,     Fixed,   0xc0,                0,    0,   0,   0,  "IPv4_Tos               "},
@@ -203,12 +203,12 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             VLAN_Tci_Cfi,
             VLAN_Vid
             }},
-    {MPLS,  {
-            MPLS_Label,
-            MPLS_Cos,
-            MPLS_Stack,
-            MPLS_Ttl
-            }},
+    // {MPLS,  {
+    //         MPLS_Label,
+    //         MPLS_Cos,
+    //         MPLS_Stack,
+    //         MPLS_Ttl
+    //         }},
     {LLC,   {
             LLC_Dsap,
             LLC_Ssap,
@@ -280,6 +280,14 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             UDP_Csum,
             }}
 };
+
+//------------------------------------------------------------------------------
+// mpls
+//------------------------------------------------------------------------------
+cea_mpls_hdr *new_mpls_hdr() {
+    cea_mpls_hdr *mh = new cea_mpls_hdr();
+    return mh;
+}
 
 // file stream for cea message logging
 ofstream logfile;
@@ -554,7 +562,7 @@ string to_str(cea_hdr_type t) {
     switch(t) {
         case MAC    : { name = "MAC "; break; }
         case VLAN   : { name = "VLAN"; break; }
-        case MPLS   : { name = "MPLS"; break; }
+        // case MPLS   : { name = "MPLS"; break; }
         case LLC    : { name = "LLC "; break; }
         case SNAP   : { name = "SNAP"; break; }
         case IPv4   : { name = "IPv4"; break; }
@@ -608,6 +616,18 @@ string to_str(cea_field_generation_type t) {
     return cea_trim(name);
 }
 
+string to_str(cea_mpls_field_id t) {
+    string name;
+    switch(t) {
+        case MPLS_Label : { name = "MPLS_Label"; break; }
+        case MPLS_Cos   : { name = "MPLS_Cos  "; break; }
+        case MPLS_Stack : { name = "MPLS_Stack"; break; }
+        case MPLS_Ttl   : { name = "MPLS_Ttl  "; break; }
+        default         : { name = "undefined "; break; }
+    }
+    return cea_trim(name);
+}
+
 // stringize cea_field_id
 string to_str(cea_field_id t) {
     string name;
@@ -616,7 +636,7 @@ string to_str(cea_field_id t) {
         case Network_Hdr             : { name = "Network_Hdr            "; break; }
         case Transport_Hdr           : { name = "Transport_Hdr          "; break; }
         case VLAN_Tag                : { name = "VLAN_Tag               "; break; }
-        case MPLS_Hdr                : { name = "MPLS_Hdr               "; break; }
+        // case MPLS_Hdr                : { name = "MPLS_Hdr               "; break; }
         case MAC_Preamble            : { name = "MAC_Preamble           "; break; }
         case MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }
         case MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }
@@ -632,10 +652,10 @@ string to_str(cea_field_id t) {
         case LLC_Control             : { name = "LLC_Control            "; break; }
         case SNAP_Oui                : { name = "SNAP_Oui               "; break; }
         case SNAP_Pid                : { name = "SNAP_Pid               "; break; }
-        case MPLS_Label              : { name = "MPLS_Label             "; break; }
-        case MPLS_Cos                : { name = "MPLS_Cos               "; break; }
-        case MPLS_Stack              : { name = "MPLS_Stack             "; break; }
-        case MPLS_Ttl                : { name = "MPLS_Ttl               "; break; }
+        // case MPLS_Label              : { name = "MPLS_Label             "; break; }
+        // case MPLS_Cos                : { name = "MPLS_Cos               "; break; }
+        // case MPLS_Stack              : { name = "MPLS_Stack             "; break; }
+        // case MPLS_Ttl                : { name = "MPLS_Ttl               "; break; }
         case IPv4_Version            : { name = "IPv4_Version           "; break; }
         case IPv4_IHL                : { name = "IPv4_IHL               "; break; }
         case IPv4_Tos                : { name = "IPv4_Tos               "; break; }
@@ -958,9 +978,9 @@ void cea_stream::organize_fields() {
     }
 
     // TODO multiple mpls labels
-    if (is_touched(MPLS_Hdr)) {
-        fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
-    }
+    // if (is_touched(MPLS_Hdr)) {
+    //     fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
+    // }
 
     fseq.insert(fseq.end(), 
         htof[(cea_hdr_type)value_of(Network_Hdr)].begin(), 
@@ -977,7 +997,7 @@ void cea_stream::organize_fields() {
     for (auto i : fseq) {
         CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)",
             stream_name.c_str(),
-            string(10, ' ').c_str(),
+            string(5, '.').c_str(),
             __FUNCTION__, to_str(i).c_str(), cntr);
         cntr++;
     }
@@ -1000,7 +1020,7 @@ void cea_stream::trim_static_fields() {
     for (auto i : cseq) {
         CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
             stream_name.c_str(),
-            string(10, ' ').c_str(),
+            string(5, '.').c_str(),
             __FUNCTION__, to_str((cea_field_id)i).c_str(), cntr);
         cntr++;
     }
@@ -1040,17 +1060,17 @@ ostream& operator << (ostream &os, const cea_stream &f) {
 }
 
 // user api to set fields of the stream
-void cea_stream::set(uint32_t id, uint64_t value) {
+void cea_stream::set(cea_field_id id, uint64_t value) {
     fields[id].value = value;
     fields[id].touched = true;
 }
 
 // user api to set fields of the stream
-void cea_stream::set(uint32_t id, cea_field_generation_type spec) {
+void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
     fields[id].touched = true;
 }
 
-void cea_stream::set(uint32_t id, cea_field_generation_type mspec, cea_field_generation_spec vspec) {
+void cea_stream::set(cea_field_id id, cea_field_generation_type mspec, cea_field_generation_spec vspec) {
     fields[id].touched = true;
 }
 

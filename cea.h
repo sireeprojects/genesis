@@ -53,7 +53,7 @@ enum cea_pkt_type {
 enum cea_hdr_type {
     MAC,
     VLAN,
-    MPLS,
+    // MPLS,
     LLC,
     SNAP,
     IPv4,
@@ -63,12 +63,19 @@ enum cea_hdr_type {
     UDP
 };
 
+enum cea_mpls_field_id {
+    MPLS_Label,
+    MPLS_Cos,
+    MPLS_Stack,
+    MPLS_Ttl
+};
+
 enum cea_field_id {
     PKT_Type,
     Network_Hdr,
     Transport_Hdr,
-    VLAN_Tag, // TODO: Remove
-    MPLS_Hdr, // TODO: Remove
+    VLAN_Tag,
+    // MPLS_Hdr,
     MAC_Preamble,
     MAC_Dest_Addr,
     MAC_Src_Addr,
@@ -84,10 +91,10 @@ enum cea_field_id {
     LLC_Control,
     SNAP_Oui,
     SNAP_Pid,
-    MPLS_Label,
-    MPLS_Cos,
-    MPLS_Stack,
-    MPLS_Ttl,
+    // MPLS_Label,
+    // MPLS_Cos,
+    // MPLS_Stack,
+    // MPLS_Ttl,
     IPv4_Version,
     IPv4_IHL,
     IPv4_Tos,
@@ -226,6 +233,25 @@ struct CEA_PACKED cea_protocol_sequence {
     uint32_t seq[32];
 };
 
+class cea_mpls_hdr {
+public:
+    cea_mpls_hdr(){}
+    
+    // fucntion to set the field to a fixed value
+    void set(cea_mpls_field_id id, uint64_t value);
+
+    // function to assign a field to an inbuilt value generator
+    // with default specifications
+    void set(cea_mpls_field_id id, cea_field_generation_type spec);
+
+    // function to assign a field to an inbuilt value generator
+    // with custom specifications
+    void set(cea_mpls_field_id id, cea_field_generation_type mspec,
+        cea_field_generation_spec vspec);
+};
+
+cea_mpls_hdr *new_mpls_hdr();
+
 // forward declaration
 class cea_stream;
 class cea_proxy;
@@ -313,15 +339,15 @@ public:
     cea_stream(string name=string("stm"));
 
     // fucntion to set the field to a fixed value
-    void set(uint32_t id, uint64_t value);
+    void set(cea_field_id id, uint64_t value);
 
     // function to assign a field to an inbuilt value generator
     // with default specifications
-    void set(uint32_t id, cea_field_generation_type spec);
+    void set(cea_field_id id, cea_field_generation_type spec);
 
     // function to assign a field to an inbuilt value generator
     // with custom specifications
-    void set(uint32_t id, cea_field_generation_type mspec,
+    void set(cea_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec);
 
     // function to add auxillary headers like tags and labels
