@@ -63,19 +63,12 @@ enum cea_hdr_type {
     UDP
 };
 
-enum cea_mpls_field_id {
-    MPLS_Label,
-    MPLS_Cos,
-    MPLS_Stack,
-    MPLS_Ttl
-};
-
 enum cea_field_id {
     PKT_Type,
     Network_Hdr,
     Transport_Hdr,
     VLAN_Tag,
-    // MPLS_Hdr,
+    MPLS_Hdr,
     MAC_Preamble,
     MAC_Dest_Addr,
     MAC_Src_Addr,
@@ -199,7 +192,6 @@ enum cea_field_generation_type {
 };
 
 struct cea_field_generation_spec {
-    cea_field_generation_type type;
     uint64_t value;
     uint32_t range_start;
     uint32_t range_stop;
@@ -233,9 +225,16 @@ struct CEA_PACKED cea_protocol_sequence {
     uint32_t seq[32];
 };
 
+enum cea_mpls_field_id {
+    MPLS_Label,
+    MPLS_Cos,
+    MPLS_Stack,
+    MPLS_Ttl
+};
+
 class cea_mpls_hdr {
 public:
-    cea_mpls_hdr(){}
+    cea_mpls_hdr();
     
     // fucntion to set the field to a fixed value
     void set(cea_mpls_field_id id, uint64_t value);
@@ -248,9 +247,11 @@ public:
     // with custom specifications
     void set(cea_mpls_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec);
+private:
+    void reset();
+    cea_field cache[4];
+    friend class cea_stream;
 };
-
-cea_mpls_hdr *new_mpls_hdr();
 
 // forward declaration
 class cea_stream;
@@ -355,6 +356,15 @@ public:
     // should also be set failing which default values will be used
     void add(uint32_t id);
 
+    // add a mpls header to the stream
+    void add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m);
+
+    // used to remove one mpls/vlan entry from their respective stack 
+    void purge(cea_field_id id, uint32_t stack_id);
+
+    // clear all mpls/vlan entries from its respective stack
+    void purge(cea_field_id id);
+
     // copy constructor
     cea_stream(const cea_stream &rhs);
 
@@ -373,21 +383,21 @@ private:
     uint32_t stream_id;
 
     // (container2) a list of all the field ids (in sequence) of the 
-    // selected pkt type and headers output of organize_fields
+    // selected pkt type and headers output of arrange_fields_in_sequence
     vector<cea_field_id> fseq;
 
     // (container3) a sequence of all the fields ids that needs 
-    // generation of values output of trim_static_fields
+    // generation of values output of purge_static_fields
     vector<uint32_t> cseq;
 
     // (container4) field matrix
     cea_field fields[cea::Num_Fields];
 
     // (container5) mpls
-    vector<cea_field_id> mpls_stack;
+    vector<cea_field> mpls_stack;
 
-    // (container5) vlan
-    vector<cea_field_id> vlan_tag_stack;
+    // (container6) vlan
+    vector<cea_field> vlan_stack;
 
     // check if a field has been modified by user
     bool is_touched(cea_field_id fid);
@@ -398,9 +408,9 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
-    void organize_fields();
-    void trim_static_fields();
-    void prune_stream();
+    void arrange_fields_in_sequence();
+    void purge_static_fields();
+    void prune();
     void build_baseline_pkt();
 
     // baseline pkt

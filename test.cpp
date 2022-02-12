@@ -15,8 +15,8 @@ int main() {
     s->set(Network_Hdr, IPv4);
     s->set(Transport_Hdr, UDP);
 
-    // s.add(VLAN_Tags);
-    // s->add(MPLS_Hdr);
+    cea_mpls_hdr m;
+    s->add(MPLS_Hdr, 0, &m);
 
     // add stream to proxy queue
     p->add_stream(s);
