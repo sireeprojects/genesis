@@ -3,10 +3,10 @@ using namespace cea;
 
 int main() {
     // proxy instance
-    cea_proxy *p = new cea_proxy("test_proxy");
+    cea_proxy *p = new cea_proxy("test_pxy");
 
     // stream
-    cea_stream *s = new cea_stream("test_stream");
+    cea_stream *s = new cea_stream("test_stm");
 
     // set stream properties
     s->set(PKT_Type, ETH_V2);
@@ -17,6 +17,9 @@ int main() {
 
     cea_mpls_hdr m;
     s->add(MPLS_Hdr, 0, &m);
+    s->add(MPLS_Hdr, 0, &m);
+    s->add(MPLS_Hdr, 0, &m);
+
 
     // add stream to proxy queue
     p->add_stream(s);

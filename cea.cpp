@@ -84,7 +84,7 @@ string string_format(const string& format, Args ... args) {
 
 namespace cea {
 
-cea_field flds[] = {
+vector<cea_field> flds = {
 // TODO multiple VLAN tags, multiple mpls labels, ip/tcp/udp checksum, multiple UDF fields
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
@@ -188,7 +188,7 @@ cea_field flds[] = {
 //
 };
 
-cea_field mpls_flds[] = {
+vector<cea_field> mpls_flds = {
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -882,7 +882,7 @@ cea_mpls_hdr::cea_mpls_hdr() {
 }
 
 void cea_mpls_hdr::reset() {
-    memcpy(&cache, &mpls_flds, (sizeof(cea_field)*(4)));
+    cache = mpls_flds;
 }
 
 // fucntion to set the field to a fixed value
@@ -915,7 +915,25 @@ void cea_mpls_hdr::set(cea_mpls_field_id id, cea_field_generation_type mspec,
 // Stream
 //------------------------------------------------------------------------------
 
+void cea_stream::integrate_fields() {
+    CEA_STREAM_DBG_CALL_SIGNATURE;
+
+    uint32_t mpls_stack_start_id = 1000;
+    for (auto &i : mpls_stack) {
+        i.id = mpls_stack_start_id++;
+    }
+    fields.insert(fields.end(), mpls_stack.begin(), mpls_stack.end());
+
+    uint32_t vlan_stack_start_id = 2000;
+    for (auto &i : vlan_stack) {
+        i.id = vlan_stack_start_id++;
+    }
+    fields.insert(fields.end(), vlan_stack.begin(), vlan_stack.end());
+    cout << describe().c_str() << endl;
+}
+
 void cea_stream::prune() {
+    integrate_fields();
     arrange_fields_in_sequence();
     purge_static_fields();
 }
@@ -1150,10 +1168,7 @@ void cea_stream::add(uint32_t id) {
 
 void cea_stream::add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m) {
     if (id==MPLS_Hdr) {
-        mpls_stack.push_back(m->cache[0]);
-        mpls_stack.push_back(m->cache[1]);
-        mpls_stack.push_back(m->cache[2]);
-        mpls_stack.push_back(m->cache[3]);
+        mpls_stack.insert(mpls_stack.end(), m->cache.begin(), m->cache.end());
     }
 }
 
@@ -1162,7 +1177,7 @@ void cea_stream::do_copy (const cea_stream *rhs) {
 }
 
 void cea_stream::reset() {
-    memcpy(&fields, &flds, (sizeof(cea_field)*(cea::Num_Fields)));
+    fields = flds;
 }
 
 #define CEA_FLDWIDTH 8
@@ -1220,7 +1235,8 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    for (uint32_t id = VLAN_Tag; id <cea::Num_Fields; id++) {
+    // for (uint32_t id = VLAN_Tag; id <cea::Num_Fields; id++) {
+    for (uint32_t id = VLAN_Tag; id<fields.size(); id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
             << setw(CEA_FLDWIDTH) << fields[id].mask     

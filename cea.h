@@ -249,7 +249,7 @@ public:
         cea_field_generation_spec vspec);
 private:
     void reset();
-    cea_field cache[4];
+    vector<cea_field> cache;
     friend class cea_stream;
 };
 
@@ -391,7 +391,8 @@ private:
     vector<uint32_t> cseq;
 
     // (container4) field matrix
-    cea_field fields[cea::Num_Fields];
+    // cea_field fields[cea::Num_Fields];
+    vector<cea_field> fields;
 
     // (container5) mpls
     vector<cea_field> mpls_stack;
@@ -408,6 +409,7 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
+    void integrate_fields();
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();
