@@ -316,7 +316,7 @@ private:
     // worker modules
     void read_next_stream_from_stmq();
     void extract_traffic_parameters();
-    void generate_traffic();
+    void begin_mutation();
 
     // buffer to store the generated pkts
     void *pbuf;

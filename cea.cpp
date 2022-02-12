@@ -827,7 +827,7 @@ void cea_proxy::worker() {
     extract_traffic_parameters();
     cur_stm->prune_stream();
     cur_stm->build_baseline_pkt();
-    generate_traffic();
+    begin_mutation();
 }
 
 void cea_proxy::read_next_stream_from_stmq() {
@@ -839,7 +839,7 @@ void cea_proxy::extract_traffic_parameters() {
     CEA_PXY_DBG_CALL_SIGNATURE;
 }
 
-void cea_proxy::generate_traffic() {
+void cea_proxy::begin_mutation() {
     CEA_PXY_DBG_CALL_SIGNATURE;
     // write to pbuf
     // *(addr + i) = (char)i;

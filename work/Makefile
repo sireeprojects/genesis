@@ -5,4 +5,4 @@ default:
 	@./run.x;
 
 clean:
-	@rm -rf *.x
+	@rm -rf *.x *.out
