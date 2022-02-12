@@ -826,7 +826,7 @@ void cea_proxy::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->prune();
-    cur_stm->build_baseline_pkt();
+    // cur_stm->build_baseline_pkt();
     begin_mutation();
 }
 
@@ -921,6 +921,8 @@ void cea_stream::integrate_fields() {
     uint32_t mpls_stack_start_id = 1000;
     for (auto &i : mpls_stack) {
         i.id = mpls_stack_start_id++;
+        string new_name = string(cea_trim(i.name)) + "_" + to_string(i.stack);
+        strcpy(i.name, new_name.c_str());
     }
     fields.insert(fields.end(), mpls_stack.begin(), mpls_stack.end());
 
@@ -929,7 +931,7 @@ void cea_stream::integrate_fields() {
         i.id = vlan_stack_start_id++;
     }
     fields.insert(fields.end(), vlan_stack.begin(), vlan_stack.end());
-    cout << describe().c_str() << endl;
+    // cout << describe().c_str() << endl;
 }
 
 void cea_stream::prune() {
@@ -1010,8 +1012,17 @@ void cea_stream::purge(cea_field_id id) {
 void cea_stream::purge(cea_field_id id, uint32_t stack_id) {
 }
 
-bool cea_stream::is_touched(cea_field_id fid) {
-    return fields[fid].touched;
+bool cea_stream::is_touched(uint32_t fid) {
+    bool touched;
+    for (auto &i : fields) {
+        if (i.id==fid) {
+            touched = i.touched;
+            break;
+        } else {
+            touched = false;
+        }
+    }
+    return touched;
 }
 
 uint32_t cea_stream::is_merge(cea_field_id fid) {
@@ -1023,6 +1034,19 @@ uint32_t cea_stream::is_merge(cea_field_id fid) {
 
 uint32_t cea_stream::value_of(cea_field_id fid) {
     return fields[fid].value;
+}
+
+string cea_stream::get_name(uint32_t fid) {
+    string name;
+    for (auto &i : fields) {
+        if (i.id==fid) {
+            name = cea_trim(string(i.name));
+            break;
+        } else {
+            name = "";
+        }
+    }
+    return name;
 }
 
 // algorithm to arrange the pkt fields
@@ -1059,6 +1083,10 @@ void cea_stream::arrange_fields_in_sequence() {
     // }
 
     if (mpls_stack.size() > 0) {
+        for  (auto &i : mpls_stack) {
+            fseq.push_back(i.id);
+
+        }
         // fseq.insert(fseq.end(), mpls_stack.begin(), mpls_stack.end());
     }
 
@@ -1076,9 +1104,10 @@ void cea_stream::arrange_fields_in_sequence() {
     uint32_t cntr=0;
     for (auto i : fseq) {
         CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)",
-            stream_name.c_str(),
-            string(5, '.').c_str(),
-            __FUNCTION__, to_str(i).c_str(), cntr);
+            stream_name.c_str(), string(5, '.').c_str(),
+            __FUNCTION__,
+            get_name(i).c_str(),
+            cntr);
         cntr++;
     }
     #endif
@@ -1097,13 +1126,16 @@ void cea_stream::purge_static_fields() {
     CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
     CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
     uint32_t cntr=0;
-    for (auto i : cseq) {
-        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
-            stream_name.c_str(),
-            string(5, '.').c_str(),
-            __FUNCTION__, to_str((cea_field_id)i).c_str(), cntr);
-        cntr++;
-    }
+    // for (auto i : cseq) {
+    //     CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
+    //         stream_name.c_str(),
+    //         string(5, '.').c_str(),
+    //         __FUNCTION__,
+    //         // to_str((cea_field_id)i).c_str(),
+    //         get_name(i).c_str(),
+    //         cntr);
+    //     cntr++;
+    // }
     #endif
 }
 
@@ -1168,6 +1200,9 @@ void cea_stream::add(uint32_t id) {
 
 void cea_stream::add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m) {
     if (id==MPLS_Hdr) {
+        for(auto &i : m->cache) {
+            i.stack = stack_id;
+        }
         mpls_stack.insert(mpls_stack.end(), m->cache.begin(), m->cache.end());
     }
 }

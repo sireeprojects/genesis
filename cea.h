@@ -384,7 +384,8 @@ private:
 
     // (container2) a list of all the field ids (in sequence) of the 
     // selected pkt type and headers output of arrange_fields_in_sequence
-    vector<cea_field_id> fseq;
+    // vector<cea_field_id> fseq;
+    vector<uint32_t> fseq;
 
     // (container3) a sequence of all the fields ids that needs 
     // generation of values output of purge_static_fields
@@ -401,13 +402,15 @@ private:
     vector<cea_field> vlan_stack;
 
     // check if a field has been modified by user
-    bool is_touched(cea_field_id fid);
+    bool is_touched(uint32_t fid);
 
     // check if a field is not aligned to 8-bit boundary
     uint32_t is_merge(cea_field_id fid);
 
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
+
+    string get_name(uint32_t fid);
 
     void integrate_fields();
     void arrange_fields_in_sequence();

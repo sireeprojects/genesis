@@ -17,8 +17,8 @@ int main() {
 
     cea_mpls_hdr m;
     s->add(MPLS_Hdr, 0, &m);
-    s->add(MPLS_Hdr, 0, &m);
-    s->add(MPLS_Hdr, 0, &m);
+    s->add(MPLS_Hdr, 1, &m);
+    s->add(MPLS_Hdr, 2, &m);
 
 
     // add stream to proxy queue
