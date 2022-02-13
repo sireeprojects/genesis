@@ -821,7 +821,7 @@ void cea_proxy::worker() {
     extract_traffic_parameters();
     cur_stm->prune();
     cur_stm->build_baseline_pkt();
-    begin_mutation();
+    // begin_mutation();
 }
 
 void cea_proxy::read_next_stream_from_stmq() {
@@ -981,6 +981,16 @@ void cea_stream::prune() {
     purge_static_fields();
 }
 
+uint32_t cea_stream::get_idx(uint32_t fid) {
+    uint32_t idx = 0;
+
+    for (auto &i : fields) {
+        if (i.id==fid) break;
+        idx++;
+    }
+    return idx;
+}
+
 void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
@@ -994,44 +1004,46 @@ void cea_stream::build_baseline_pkt() {
 
     CEA_DBG("Final length of the packet: %d bytes", baseline_pkt_len);
     
-    // uint32_t offset = 0;
-    // uint64_t merged = 0;
-    // uint64_t tmp =  0;
-    // uint64_t len = 0;
-    // uint64_t mlen = 0;
+    uint32_t offset = 0;
+    uint64_t merged = 0;
+    uint64_t tmp =  0;
+    uint64_t len = 0;
+    uint64_t mlen = 0;
+    uint32_t idx = 0;
 
-    // for (uint32_t i=0; i<fseq.size(); i++) {
-    //     if (fields[fseq[i]].merge != 0) {
-    //         merged = fields[fseq[i]].value; // first field
-    //         mlen += fields[fseq[i]].len;
-    //         for(uint32_t x=(i+1); x<=((i+fields[fseq[i]].merge)); x++) {
-    //             len = fields[fseq[x]].len;
-    //             merged = (merged << len) | fields[fseq[x]].value;
-    //             mlen += len;
-    //         }
-    //         cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
-    //         offset += mlen/8;
-    //         i += fields[fseq[i]].merge; // skip mergable entries
-    //     } else {
-    //         uint64_t tmp = fields[fseq[i]].value;
-    //         uint64_t len = fields[fseq[i]].len;
-    //         cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
-    //         offset += len/8;
-    //         mlen = 0; // TODO fix this
-    //         merged = 0; // TODO fix this
-    //     }
-    // }
+    for (uint32_t i=0; i<fseq.size(); i++) {
+        idx = get_idx(fseq[i]);
+        if (fields[idx].merge != 0) {
+            merged = fields[idx].value; // first field
+            mlen += fields[idx].len;
+            for(uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
+                uint32_t xidx = get_idx(fseq[x]);
+                len = fields[xidx].len;
+                merged = (merged << len) | fields[xidx].value;
+                mlen += len;
+            }
+            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
+            offset += mlen/8;
+            i += fields[idx].merge; // skip mergable entries
+        } else {
+            uint64_t tmp = fields[idx].value;
+            uint64_t len = fields[idx].len;
+            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
+            offset += len/8;
+            mlen = 0; // TODO fix this
+            merged = 0; // TODO fix this
+        }
+    }
 
-    // // baseline_pkt_len = offset; // TODO: fix this
+    // insert IPv4 checksum
+    // TODO: find ipv4 csum offset
+    uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
+    memcpy(base_pkt+24, (char*)&ipcsum, 2);
 
-    // // insert IPv4 checksum
-    // uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
-    // memcpy(base_pkt+24, (char*)&ipcsum, 2);
-
-    // #ifdef CEA_DEBUG
-    // print_baseline_pkt();
+    #ifdef CEA_DEBUG
+    print_baseline_pkt();
     // write_pcap(base_pkt, baseline_pkt_len);
-    // #endif
+    #endif
 }
 
 void cea_stream::print_baseline_pkt() {
