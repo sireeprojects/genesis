@@ -425,6 +425,7 @@ private:
     uint32_t value_of(cea_field_id fid);
 
     string get_name(uint32_t fid);
+    uint64_t get_len(uint32_t fid);
 
     void integrate_fields();
     void arrange_fields_in_sequence();

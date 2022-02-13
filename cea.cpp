@@ -85,7 +85,7 @@ string string_format(const string& format, Args ... args) {
 namespace cea {
 
 vector<cea_field> flds = {
-// TODO multiple VLAN tags, ip/tcp/udp checksum
+// TODO ip/tcp/udp checksum
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -94,43 +94,43 @@ vector<cea_field> flds = {
 {  false,  0,  0,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  0,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
 {  false,  0,  0,   0,    MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               "},
-{  false,  0,  0,   0,    MAC_Preamble             ,8*8,      0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
-{  false,  0,  0,   0,    MAC_Dest_Addr            ,8*6,      0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
-{  false,  0,  0,   0,    MAC_Src_Addr             ,8*6,      0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
-{  false,  0,  0,   0,    MAC_Len                  ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                "},
-{  false,  0,  0,   0,    MAC_Ether_Type           ,8*2,      0,     Fixed,   0x0800,              0,    0,   0,   0,  "MAC_Ether_Type         "},
-{  false,  0,  0,   0,    MAC_Fcs                  ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Fcs                "},
-{  false,  0,  0,   0,    LLC_Dsap                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Dsap               "},
-{  false,  0,  0,   0,    LLC_Ssap                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Ssap               "},
-{  false,  0,  0,   0,    LLC_Control              ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Control            "},
-{  false,  0,  0,   0,    SNAP_Oui                 ,8*3,      0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Oui               "},
-{  false,  0,  0,   0,    SNAP_Pid                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Pid               "},
+{  false,  0,  0,   0,    MAC_Preamble             ,64,       0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
+{  false,  0,  0,   0,    MAC_Dest_Addr            ,48,       0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
+{  false,  0,  0,   0,    MAC_Src_Addr             ,48,       0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
+{  false,  0,  0,   0,    MAC_Len                  ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                "},
+{  false,  0,  0,   0,    MAC_Ether_Type           ,16,       0,     Fixed,   0x0800,              0,    0,   0,   0,  "MAC_Ether_Type         "},
+{  false,  0,  0,   0,    MAC_Fcs                  ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Fcs                "},
+{  false,  0,  0,   0,    LLC_Dsap                 ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Dsap               "},
+{  false,  0,  0,   0,    LLC_Ssap                 ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Ssap               "},
+{  false,  0,  0,   0,    LLC_Control              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Control            "},
+{  false,  0,  0,   0,    SNAP_Oui                 ,24,       0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Oui               "},
+{  false,  0,  0,   0,    SNAP_Pid                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Pid               "},
 {  false,  1,  0,   0,    IPv4_Version             ,4,        0,     Fixed,   4,                   0,    0,   0,   0,  "IPv4_Version           "},
 {  false,  1,  0,   0,    IPv4_IHL                 ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "IPv4_IHL               "},
-{  false,  0,  0,   0,    IPv4_Tos                 ,8*1,      0,     Fixed,   0xc0,                0,    0,   0,   0,  "IPv4_Tos               "},
-{  false,  0,  0,   0,    IPv4_Total_Len           ,8*2,      0,     Fixed,   0x33,                0,    0,   0,   0,  "IPv4_Total_Len         "},
-{  false,  0,  0,   0,    IPv4_Id                  ,8*2,      0,     Fixed,   0xaabb,              0,    0,   0,   0,  "IPv4_Id                "},
+{  false,  0,  0,   0,    IPv4_Tos                 ,8,        0,     Fixed,   0xc0,                0,    0,   0,   0,  "IPv4_Tos               "},
+{  false,  0,  0,   0,    IPv4_Total_Len           ,16,       0,     Fixed,   0x33,                0,    0,   0,   0,  "IPv4_Total_Len         "},
+{  false,  0,  0,   0,    IPv4_Id                  ,16,       0,     Fixed,   0xaabb,              0,    0,   0,   0,  "IPv4_Id                "},
 {  false,  1,  0,   0,    IPv4_Flags               ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             "},
 {  false,  1,  0,   0,    IPv4_Frag_Offset         ,13,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       "},
-{  false,  0,  0,   0,    IPv4_TTL                 ,8*1,      0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
-{  false,  0,  0,   0,    IPv4_Protocol            ,8*1,      0,     Fixed,   17,                  0,    0,   0,   0,  "IPv4_Protocol          "},
-{  false,  0,  0,   0,    IPv4_Hdr_Csum            ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
-{  false,  0,  0,   0,    IPv4_Src_Addr            ,8*4,      0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          "},
-{  false,  0,  0,   0,    IPv4_Dest_Addr           ,8*4,      0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         "},
-{  false,  0,  0,   0,    IPv4_Opts                ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Opts              "},
-{  false,  0,  0,   0,    IPv4_Pad                 ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Pad               "},
+{  false,  0,  0,   0,    IPv4_TTL                 ,8,        0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
+{  false,  0,  0,   0,    IPv4_Protocol            ,8,        0,     Fixed,   17,                  0,    0,   0,   0,  "IPv4_Protocol          "},
+{  false,  0,  0,   0,    IPv4_Hdr_Csum            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
+{  false,  0,  0,   0,    IPv4_Src_Addr            ,32,       0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          "},
+{  false,  0,  0,   0,    IPv4_Dest_Addr           ,32,       0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         "},
+{  false,  0,  0,   0,    IPv4_Opts                ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Opts              "},
+{  false,  0,  0,   0,    IPv4_Pad                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Pad               "},
 {  false,  2,  0,   0,    IPv6_Version             ,4,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Version           "},
 {  false,  1,  0,   0,    IPv6_Traffic_Class       ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Traffic_Class     "},
 {  false,  1,  0,   0,    IPv6_Flow_Label          ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Flow_Label        "},
-{  false,  0,  0,   0,    IPv6_Payload_Len         ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Payload_Len       "},
-{  false,  0,  0,   0,    IPv6_Next_Hdr            ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Next_Hdr          "},
-{  false,  0,  0,   0,    IPv6_Hop_Limit           ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         "},
-{  false,  0,  0,   0,    IPv6_Src_Addr            ,8*16,     0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          "},
-{  false,  0,  0,   0,    IPv6_Dest_Addr           ,8*16,     0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         "},
-{  false,  0,  0,   0,    TCP_Src_Port             ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Src_Port           "},
-{  false,  0,  0,   0,    TCP_Dest_Port            ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
-{  false,  0,  0,   0,    TCP_Seq_Num              ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            "},
-{  false,  0,  0,   0,    TCP_Ack_Num              ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            "},
+{  false,  0,  0,   0,    IPv6_Payload_Len         ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Payload_Len       "},
+{  false,  0,  0,   0,    IPv6_Next_Hdr            ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Next_Hdr          "},
+{  false,  0,  0,   0,    IPv6_Hop_Limit           ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         "},
+{  false,  0,  0,   0,    IPv6_Src_Addr            ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          "},
+{  false,  0,  0,   0,    IPv6_Dest_Addr           ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         "},
+{  false,  0,  0,   0,    TCP_Src_Port             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Src_Port           "},
+{  false,  0,  0,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
+{  false,  0,  0,   0,    TCP_Seq_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            "},
+{  false,  0,  0,   0,    TCP_Ack_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            "},
 {  false,  7,  0,   0,    TCP_Data_Offset          ,4,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Data_Offset        "},
 {  false,  1,  0,   0,    TCP_Reserved             ,6,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Reserved           "},
 {  false,  1,  0,   0,    TCP_Urg                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg                "},
@@ -139,24 +139,24 @@ vector<cea_field> flds = {
 {  false,  1,  0,   0,    TCP_Rst                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Rst                "},
 {  false,  1,  0,   0,    TCP_Syn                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Syn                "},
 {  false,  1,  0,   0,    TCP_Fin                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Fin                "},
-{  false,  0,  0,   0,    TCP_Window               ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Window             "},
-{  false,  0,  0,   0,    TCP_Csum                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Csum               "},
-{  false,  0,  0,   0,    TCP_Urg_Ptr              ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg_Ptr            "},
-{  false,  0,  0,   0,    TCP_Opts                 ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Opts               "},
-{  false,  0,  0,   0,    TCP_Pad                  ,8*0,      0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                "},
-{  false,  0,  0,   0,    UDP_Src_Port             ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           "},
-{  false,  0,  0,   0,    UDP_Dest_Port            ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          "},
-{  false,  0,  0,   0,    UDP_Len                  ,8*2,      0,     Fixed,   0x1f,                0,    0,   0,   0,  "UDP_Len                "},
-{  false,  0,  0,   0,    UDP_Csum                 ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               "},
-{  false,  0,  0,   0,    ARP_Hw_Type              ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            "},
-{  false,  0,  0,   0,    ARP_Proto_Type           ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         "},
-{  false,  0,  0,   0,    ARP_Hw_Len               ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Len             "},
-{  false,  0,  0,   0,    ARP_Proto_Len            ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Len          "},
-{  false,  0,  0,   0,    ARP_Opcode               ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Opcode             "},
-{  false,  0,  0,   0,    ARP_Sender_Hw_Addr       ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Hw_Addr     "},
-{  false,  0,  0,   0,    ARP_Sender_Proto_addr    ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Proto_addr  "},
-{  false,  0,  0,   0,    ARP_Target_Hw_Addr       ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     "},
-{  false,  0,  0,   0,    ARP_Target_Proto_Addr    ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
+{  false,  0,  0,   0,    TCP_Window               ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Window             "},
+{  false,  0,  0,   0,    TCP_Csum                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Csum               "},
+{  false,  0,  0,   0,    TCP_Urg_Ptr              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg_Ptr            "},
+{  false,  0,  0,   0,    TCP_Opts                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Opts               "},
+{  false,  0,  0,   0,    TCP_Pad                  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                "},
+{  false,  0,  0,   0,    UDP_Src_Port             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           "},
+{  false,  0,  0,   0,    UDP_Dest_Port            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          "},
+{  false,  0,  0,   0,    UDP_Len                  ,16,       0,     Fixed,   0x1f,                0,    0,   0,   0,  "UDP_Len                "},
+{  false,  0,  0,   0,    UDP_Csum                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               "},
+{  false,  0,  0,   0,    ARP_Hw_Type              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            "},
+{  false,  0,  0,   0,    ARP_Proto_Type           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         "},
+{  false,  0,  0,   0,    ARP_Hw_Len               ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Len             "},
+{  false,  0,  0,   0,    ARP_Proto_Len            ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Len          "},
+{  false,  0,  0,   0,    ARP_Opcode               ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Opcode             "},
+{  false,  0,  0,   0,    ARP_Sender_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Hw_Addr     "},
+{  false,  0,  0,   0,    ARP_Sender_Proto_addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Proto_addr  "},
+{  false,  0,  0,   0,    ARP_Target_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     "},
+{  false,  0,  0,   0,    ARP_Target_Proto_Addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
 {  false,  0,  0,   0,    PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "},
 {  false,  0,  0,   0,    PAYLOAD_Len              ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Len            "},
 {  false,  0,  0,   0,    UDF1                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF1                   "},
@@ -191,11 +191,11 @@ vector<cea_field> mpls_flds = {
 {  false,  2,  0,   0,    MPLS_Label               ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Label             "},
 {  false,  1,  0,   0,    MPLS_Cos                 ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Cos               "},
 {  false,  1,  0,   0,    MPLS_Stack               ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Stack             "},
-{  false,  0,  0,   0,    MPLS_Ttl                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Ttl               "}
+{  false,  0,  0,   0,    MPLS_Ttl                 ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Ttl               "}
 };
 
 vector<cea_field> vlan_flds = {
-{  false,  0,  0,   0,    VLAN_Tpi                 ,8*2,      0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_Tpi               "},
+{  false,  0,  0,   0,    VLAN_Tpi                 ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_Tpi               "},
 {  false,  2,  0,   0,    VLAN_Tci_Pcp             ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Pcp           "},
 {  false,  1,  0,   0,    VLAN_Tci_Cfi             ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Cfi           "},
 {  false,  1,  0,   0,    VLAN_Vid                 ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Vid               "}
@@ -820,7 +820,7 @@ void cea_proxy::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->prune();
-    // cur_stm->build_baseline_pkt();
+    cur_stm->build_baseline_pkt();
     begin_mutation();
 }
 
@@ -984,47 +984,54 @@ void cea_stream::prune() {
 void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
-    // TODO: compute this correctly; 65 is for test purpose only
-    baseline_pkt_len = 65;
-    
-    uint32_t offset = 0;
-    uint64_t merged = 0;
-    uint64_t tmp =  0;
-    uint64_t len = 0;
-    uint64_t mlen = 0;
+    // find final pkt len and padding
+    baseline_pkt_len = 0;
 
-    for (uint32_t i=0; i<fseq.size(); i++) {
-        if (fields[fseq[i]].merge != 0) {
-            merged = fields[fseq[i]].value; // first field
-            mlen += fields[fseq[i]].len;
-            for(uint32_t x=(i+1); x<=((i+fields[fseq[i]].merge)); x++) {
-                len = fields[fseq[x]].len;
-                merged = (merged << len) | fields[fseq[x]].value;
-                mlen += len;
-            }
-            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
-            offset += mlen/8;
-            i += fields[fseq[i]].merge; // skip mergable entries
-        } else {
-            uint64_t tmp = fields[fseq[i]].value;
-            uint64_t len = fields[fseq[i]].len;
-            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
-            offset += len/8;
-            mlen = 0; // TODO fix this
-            merged = 0; // TODO fix this
-        }
+    for(auto &i : fseq) {
+        baseline_pkt_len += get_len(i); // in bits
     }
+    baseline_pkt_len /= 8; // in bytes
 
-    // baseline_pkt_len = offset; // TODO: fix this
+    CEA_DBG("Final length of the packet: %d bytes", baseline_pkt_len);
+    
+    // uint32_t offset = 0;
+    // uint64_t merged = 0;
+    // uint64_t tmp =  0;
+    // uint64_t len = 0;
+    // uint64_t mlen = 0;
 
-    // insert IPv4 checksum
-    uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
-    memcpy(base_pkt+24, (char*)&ipcsum, 2);
+    // for (uint32_t i=0; i<fseq.size(); i++) {
+    //     if (fields[fseq[i]].merge != 0) {
+    //         merged = fields[fseq[i]].value; // first field
+    //         mlen += fields[fseq[i]].len;
+    //         for(uint32_t x=(i+1); x<=((i+fields[fseq[i]].merge)); x++) {
+    //             len = fields[fseq[x]].len;
+    //             merged = (merged << len) | fields[fseq[x]].value;
+    //             mlen += len;
+    //         }
+    //         cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
+    //         offset += mlen/8;
+    //         i += fields[fseq[i]].merge; // skip mergable entries
+    //     } else {
+    //         uint64_t tmp = fields[fseq[i]].value;
+    //         uint64_t len = fields[fseq[i]].len;
+    //         cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
+    //         offset += len/8;
+    //         mlen = 0; // TODO fix this
+    //         merged = 0; // TODO fix this
+    //     }
+    // }
 
-    #ifdef CEA_DEBUG
-    print_baseline_pkt();
-    write_pcap(base_pkt, baseline_pkt_len);
-    #endif
+    // // baseline_pkt_len = offset; // TODO: fix this
+
+    // // insert IPv4 checksum
+    // uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
+    // memcpy(base_pkt+24, (char*)&ipcsum, 2);
+
+    // #ifdef CEA_DEBUG
+    // print_baseline_pkt();
+    // write_pcap(base_pkt, baseline_pkt_len);
+    // #endif
 }
 
 void cea_stream::print_baseline_pkt() {
@@ -1074,7 +1081,29 @@ uint32_t cea_stream::is_merge(cea_field_id fid) {
 }
 
 uint32_t cea_stream::value_of(cea_field_id fid) {
-    return fields[fid].value;
+    uint64_t value;
+    for (auto &i : fields) {
+        if (i.id==fid) {
+            value = i.value;
+            break;
+        } else {
+            value = 0;
+        }
+    }
+    return value;
+}
+
+uint64_t cea_stream::get_len(uint32_t fid) {
+    uint64_t value;
+    for (auto &i : fields) {
+        if (i.id==fid) {
+            value = i.len;
+            break;
+        } else {
+            value = 0;
+        }
+    }
+    return value;
 }
 
 string cea_stream::get_name(uint32_t fid) {
