@@ -52,8 +52,6 @@ enum cea_pkt_type {
 
 enum cea_hdr_type {
     MAC,
-    VLAN,
-    // MPLS,
     LLC,
     SNAP,
     IPv4,
@@ -75,19 +73,11 @@ enum cea_field_id {
     MAC_Len,
     MAC_Ether_Type,
     MAC_Fcs,
-    VLAN_Tpi,
-    VLAN_Tci_Pcp,
-    VLAN_Tci_Cfi,
-    VLAN_Vid,
     LLC_Dsap,
     LLC_Ssap,
     LLC_Control,
     SNAP_Oui,
     SNAP_Pid,
-    // MPLS_Label,
-    // MPLS_Cos,
-    // MPLS_Stack,
-    // MPLS_Ttl,
     IPv4_Version,
     IPv4_IHL,
     IPv4_Tos,
@@ -200,29 +190,22 @@ struct cea_field_generation_spec {
     uint32_t step;
 };
 
-struct CEA_PACKED cea_field {
-    bool touched : 1;
-    uint32_t merge : 8;
-    uint64_t mask : 64;
-    uint32_t stack : 32;
-    uint32_t id : 32;
-    uint32_t len: 32;
-    uint32_t offset : 32;
-    cea_field_generation_type gen_type : 32;
-    uint64_t value: 64;
-    uint32_t start: 32;
-    uint32_t stop: 32;
-    uint32_t step: 32;
-    uint32_t repeat: 32;
-    char name[32];
+struct cea_field {
+    bool touched;
+    uint32_t merge;
+    uint64_t mask;
+    uint32_t stack;
+    uint32_t id;
+    uint32_t len;
+    uint32_t offset;
+    cea_field_generation_type gen_type;
+    uint64_t value;
+    uint32_t start;
+    uint32_t stop;
+    uint32_t step;
+    uint32_t repeat;
+    string name;
     char pad[47];
-};
-
-// TODO: Unused
-struct CEA_PACKED cea_protocol_sequence {
-    cea_hdr_type id : 32;
-    uint32_t nof_fields : 32;
-    uint32_t seq[32];
 };
 
 enum cea_mpls_field_id {
@@ -230,6 +213,13 @@ enum cea_mpls_field_id {
     MPLS_Cos,
     MPLS_Stack,
     MPLS_Ttl
+};
+
+enum cea_vlan_field_id {
+    VLAN_Tpi,
+    VLAN_Tci_Pcp,
+    VLAN_Tci_Cfi,
+    VLAN_Vid
 };
 
 class cea_mpls_hdr {
@@ -246,6 +236,27 @@ public:
     // function to assign a field to an inbuilt value generator
     // with custom specifications
     void set(cea_mpls_field_id id, cea_field_generation_type mspec,
+        cea_field_generation_spec vspec);
+private:
+    void reset();
+    vector<cea_field> cache;
+    friend class cea_stream;
+};
+
+class cea_vlan_tag {
+public:
+    cea_vlan_tag();
+    
+    // fucntion to set the field to a fixed value
+    void set(cea_vlan_field_id id, uint64_t value);
+
+    // function to assign a field to an inbuilt value generator
+    // with default specifications
+    void set(cea_vlan_field_id id, cea_field_generation_type spec);
+
+    // function to assign a field to an inbuilt value generator
+    // with custom specifications
+    void set(cea_vlan_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec);
 private:
     void reset();
@@ -358,6 +369,9 @@ public:
 
     // add a mpls header to the stream
     void add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m);
+
+    // add a vlan tag to the stream
+    void add(uint32_t id, uint32_t stack_id, cea_vlan_tag *m);
 
     // used to remove one mpls/vlan entry from their respective stack 
     void purge(cea_field_id id, uint32_t stack_id);

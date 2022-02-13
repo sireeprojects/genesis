@@ -85,7 +85,7 @@ string string_format(const string& format, Args ... args) {
 namespace cea {
 
 vector<cea_field> flds = {
-// TODO multiple VLAN tags, multiple mpls labels, ip/tcp/udp checksum, multiple UDF fields
+// TODO multiple VLAN tags, ip/tcp/udp checksum
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -100,10 +100,6 @@ vector<cea_field> flds = {
 {  false,  0,  0,   0,    MAC_Len                  ,8*2,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                "},
 {  false,  0,  0,   0,    MAC_Ether_Type           ,8*2,      0,     Fixed,   0x0800,              0,    0,   0,   0,  "MAC_Ether_Type         "},
 {  false,  0,  0,   0,    MAC_Fcs                  ,8*4,      0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Fcs                "},
-{  false,  0,  0,   0,    VLAN_Tpi                 ,8*2,      0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_Tpi               "},
-{  false,  2,  0,   0,    VLAN_Tci_Pcp             ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Pcp           "},
-{  false,  1,  0,   0,    VLAN_Tci_Cfi             ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Cfi           "},
-{  false,  1,  0,   0,    VLAN_Vid                 ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Vid               "},
 {  false,  0,  0,   0,    LLC_Dsap                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Dsap               "},
 {  false,  0,  0,   0,    LLC_Ssap                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Ssap               "},
 {  false,  0,  0,   0,    LLC_Control              ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Control            "},
@@ -198,6 +194,13 @@ vector<cea_field> mpls_flds = {
 {  false,  0,  0,   0,    MPLS_Ttl                 ,8*1,      0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Ttl               "}
 };
 
+vector<cea_field> vlan_flds = {
+{  false,  0,  0,   0,    VLAN_Tpi                 ,8*2,      0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_Tpi               "},
+{  false,  2,  0,   0,    VLAN_Tci_Pcp             ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Pcp           "},
+{  false,  1,  0,   0,    VLAN_Tci_Cfi             ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tci_Cfi           "},
+{  false,  1,  0,   0,    VLAN_Vid                 ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Vid               "}
+};
+
 // header to fields map
 // preamble, ether type and len will be added during the formation of fseq
 map <cea_hdr_type, vector <cea_field_id>> htof = {
@@ -205,18 +208,6 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             MAC_Dest_Addr,
             MAC_Src_Addr
             }},
-    {VLAN,  {
-            VLAN_Tpi,
-            VLAN_Tci_Pcp,
-            VLAN_Tci_Cfi,
-            VLAN_Vid
-            }},
-    // {MPLS,  {
-    //         MPLS_Label,
-    //         MPLS_Cos,
-    //         MPLS_Stack,
-    //         MPLS_Ttl
-    //         }},
     {LLC,   {
             LLC_Dsap,
             LLC_Ssap,
@@ -561,8 +552,6 @@ string to_str(cea_hdr_type t) {
     string name;
     switch(t) {
         case MAC    : { name = "MAC "; break; }
-        case VLAN   : { name = "VLAN"; break; }
-        // case MPLS   : { name = "MPLS"; break; }
         case LLC    : { name = "LLC "; break; }
         case SNAP   : { name = "SNAP"; break; }
         case IPv4   : { name = "IPv4"; break; }
@@ -628,6 +617,18 @@ string to_str(cea_mpls_field_id t) {
     return cea_trim(name);
 }
 
+string to_str(cea_vlan_field_id t) {
+    string name;
+    switch(t) {
+        case VLAN_Tpi     : { name = "VLAN_Tpi     "; break; }
+        case VLAN_Tci_Pcp : { name = "VLAN_Tci_Pcp "; break; }
+        case VLAN_Tci_Cfi : { name = "VLAN_Tci_Cfi "; break; }
+        case VLAN_Vid     : { name = "VLAN_Vid     "; break; }
+        default         : { name = "undefined "; break; }
+    }
+    return cea_trim(name);
+}
+
 // stringize cea_field_id
 string to_str(cea_field_id t) {
     string name;
@@ -643,19 +644,11 @@ string to_str(cea_field_id t) {
         case MAC_Len                 : { name = "MAC_Len                "; break; }
         case MAC_Ether_Type          : { name = "MAC_Ether_Type         "; break; }
         case MAC_Fcs                 : { name = "MAC_Fcs                "; break; }
-        case VLAN_Tpi                : { name = "VLAN_Tpi               "; break; }
-        case VLAN_Tci_Pcp            : { name = "VLAN_Tci_Pcp           "; break; }
-        case VLAN_Tci_Cfi            : { name = "VLAN_Tci_Cfi           "; break; }
-        case VLAN_Vid                : { name = "VLAN_Vid               "; break; }
         case LLC_Dsap                : { name = "LLC_Dsap               "; break; }
         case LLC_Ssap                : { name = "LLC_Ssap               "; break; }
         case LLC_Control             : { name = "LLC_Control            "; break; }
         case SNAP_Oui                : { name = "SNAP_Oui               "; break; }
         case SNAP_Pid                : { name = "SNAP_Pid               "; break; }
-        // case MPLS_Label              : { name = "MPLS_Label             "; break; }
-        // case MPLS_Cos                : { name = "MPLS_Cos               "; break; }
-        // case MPLS_Stack              : { name = "MPLS_Stack             "; break; }
-        // case MPLS_Ttl                : { name = "MPLS_Ttl               "; break; }
         case IPv4_Version            : { name = "IPv4_Version           "; break; }
         case IPv4_IHL                : { name = "IPv4_IHL               "; break; }
         case IPv4_Tos                : { name = "IPv4_Tos               "; break; }
@@ -794,6 +787,7 @@ cea_proxy::cea_proxy(string name) {
     CEA_DBG("(%s) Fn:%s: ProxyID: %d", proxy_name.c_str(), __FUNCTION__, proxy_id);
 }
 
+// TODO: print stream properties after adding in debug mode
 void cea_proxy::add_stream(cea_stream *stm) {
     stmq.push_back(stm);
 }
@@ -904,7 +898,56 @@ void cea_mpls_hdr::set(cea_mpls_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec) {
     cache[id].touched = true;
     cache[id].gen_type = mspec;
-    cache[id].value = vspec.value; // TODO: is this required? can this be starting value
+    cache[id].value = vspec.value;
+    cache[id].start = vspec.range_start;
+    cache[id].stop = vspec.range_stop;
+    cache[id].step = vspec.range_step;
+    cache[id].repeat = vspec.repeat_after;
+}
+
+//------------------------------------------------------------------------------
+// VLAN
+//------------------------------------------------------------------------------
+/* usage model:
+
+    proxy p;
+    stream s;
+    vlan m;
+        m.set(MPLS_Label, xxx);
+        m.set(MPLS_Cos, xxx);
+        m.set(MPLS_Stack, xxx);
+        m.set(MPLS_Ttl, xxx);
+    s.add(VLAN_Tag, <stack_id>, m);
+*/
+
+cea_vlan_tag::cea_vlan_tag() {
+    reset();
+}
+
+void cea_vlan_tag::reset() {
+    cache = vlan_flds;
+}
+
+// fucntion to set the field to a fixed value
+void cea_vlan_tag::set(cea_vlan_field_id id, uint64_t value) {
+    cache[id].value = value;
+    cache[id].touched = true;
+}
+
+// function to assign a field to an inbuilt value generator
+// with default specifications
+void cea_vlan_tag::set(cea_vlan_field_id id, cea_field_generation_type spec) {
+    cache[id].touched = true;
+    cache[id].gen_type = spec;
+}
+
+// function to assign a field to an inbuilt value generator
+// with custom specifications
+void cea_vlan_tag::set(cea_vlan_field_id id, cea_field_generation_type mspec,
+        cea_field_generation_spec vspec) {
+    cache[id].touched = true;
+    cache[id].gen_type = mspec;
+    cache[id].value = vspec.value;
     cache[id].start = vspec.range_start;
     cache[id].stop = vspec.range_stop;
     cache[id].step = vspec.range_step;
@@ -921,8 +964,7 @@ void cea_stream::integrate_fields() {
     uint32_t mpls_stack_start_id = 1000;
     for (auto &i : mpls_stack) {
         i.id = mpls_stack_start_id++;
-        string new_name = string(cea_trim(i.name)) + "_" + to_string(i.stack);
-        strcpy(i.name, new_name.c_str());
+        i.name = string(cea_trim(i.name)) + "_" + to_string(i.stack);
     }
     fields.insert(fields.end(), mpls_stack.begin(), mpls_stack.end());
 
@@ -931,7 +973,6 @@ void cea_stream::integrate_fields() {
         i.id = vlan_stack_start_id++;
     }
     fields.insert(fields.end(), vlan_stack.begin(), vlan_stack.end());
-    // cout << describe().c_str() << endl;
 }
 
 void cea_stream::prune() {
@@ -1057,9 +1098,10 @@ void cea_stream::arrange_fields_in_sequence() {
         htof[MAC].begin(),
         htof[MAC].end());
 
-    // TODO multiple vlan tags
-    if (is_touched(VLAN_Tag)) {
-        fseq.insert(fseq.end(), htof[VLAN].begin(), htof[VLAN].end());
+    if (vlan_stack.size() > 0) {
+        for  (auto &i : vlan_stack) {
+            fseq.push_back(i.id);
+        }
     }
 
     if (value_of(PKT_Type) == ETH_V2) {
@@ -1077,17 +1119,10 @@ void cea_stream::arrange_fields_in_sequence() {
         fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
     }
 
-    // TODO multiple mpls labels
-    // if (is_touched(MPLS_Hdr)) {
-    //     fseq.insert(fseq.end(), htof[MPLS].begin(), htof[MPLS].end());
-    // }
-
     if (mpls_stack.size() > 0) {
         for  (auto &i : mpls_stack) {
             fseq.push_back(i.id);
-
         }
-        // fseq.insert(fseq.end(), mpls_stack.begin(), mpls_stack.end());
     }
 
     fseq.insert(fseq.end(), 
@@ -1126,16 +1161,15 @@ void cea_stream::purge_static_fields() {
     CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
     CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
     uint32_t cntr=0;
-    // for (auto i : cseq) {
-    //     CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
-    //         stream_name.c_str(),
-    //         string(5, '.').c_str(),
-    //         __FUNCTION__,
-    //         // to_str((cea_field_id)i).c_str(),
-    //         get_name(i).c_str(),
-    //         cntr);
-    //     cntr++;
-    // }
+    for (auto i : cseq) {
+        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
+            stream_name.c_str(),
+            string(5, '.').c_str(),
+            __FUNCTION__,
+            get_name(i).c_str(),
+            cntr);
+        cntr++;
+    }
     #endif
 }
 
@@ -1204,6 +1238,16 @@ void cea_stream::add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m) {
             i.stack = stack_id;
         }
         mpls_stack.insert(mpls_stack.end(), m->cache.begin(), m->cache.end());
+
+    }
+}
+
+void cea_stream::add(uint32_t id, uint32_t stack_id, cea_vlan_tag *m) {
+    if (id==VLAN_Tag) {
+        for(auto &i : m->cache) {
+            i.stack = stack_id;
+        }
+        vlan_stack.insert(vlan_stack.end(), m->cache.begin(), m->cache.end());
     }
 }
 
@@ -1270,7 +1314,6 @@ string cea_stream::describe() const {
             buf << endl;
     }
 
-    // for (uint32_t id = VLAN_Tag; id <cea::Num_Fields; id++) {
     for (uint32_t id = VLAN_Tag; id<fields.size(); id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    

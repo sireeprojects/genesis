@@ -17,9 +17,9 @@ int main() {
 
     cea_mpls_hdr m;
     s->add(MPLS_Hdr, 0, &m);
-    s->add(MPLS_Hdr, 1, &m);
-    s->add(MPLS_Hdr, 2, &m);
 
+    cea_vlan_tag v;
+    s->add(VLAN_Tag, 0, &v);
 
     // add stream to proxy queue
     p->add_stream(s);
