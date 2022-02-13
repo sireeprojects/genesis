@@ -35,15 +35,6 @@ enum cea_msg_verbosity {
     FULL, // debug only: LOW + pkt payload bytes
 };
 
-// TODO: Unused
-enum cea_msg_type {
-    INFO,
-    ERROR,
-    WARNING,
-    SCBD_ERROR,
-    PKT
-};
-
 enum cea_pkt_type {
     ETH_V2,
     ETH_LLC,
@@ -140,6 +131,70 @@ enum cea_field_id {
     UDF6,
     UDF7,
     UDF8,
+    MPLS_01_Label,
+    MPLS_01_Cos,
+    MPLS_01_Stack,
+    MPLS_01_Ttl,
+    MPLS_02_Label,
+    MPLS_02_Cos,
+    MPLS_02_Stack,
+    MPLS_02_Ttl,
+    MPLS_03_Label,
+    MPLS_03_Cos,
+    MPLS_03_Stack,
+    MPLS_03_Ttl,
+    MPLS_04_Label,
+    MPLS_04_Cos,
+    MPLS_04_Stack,
+    MPLS_04_Ttl,
+    MPLS_05_Label,
+    MPLS_05_Cos,
+    MPLS_05_Stack,
+    MPLS_05_Ttl,
+    MPLS_06_Label,
+    MPLS_06_Cos,
+    MPLS_06_Stack,
+    MPLS_06_Ttl,
+    MPLS_07_Label,
+    MPLS_07_Cos,
+    MPLS_07_Stack,
+    MPLS_07_Ttl,
+    MPLS_08_Label,
+    MPLS_08_Cos,
+    MPLS_08_Stack,
+    MPLS_08_Ttl,
+    VLAN_01_Tpi,
+    VLAN_01_Tci_Pcp,
+    VLAN_01_Tci_Cfi,
+    VLAN_01_Vid,
+    VLAN_02_Tpi,
+    VLAN_02_Tci_Pcp,
+    VLAN_02_Tci_Cfi,
+    VLAN_02_Vid,
+    VLAN_03_Tpi,
+    VLAN_03_Tci_Pcp,
+    VLAN_03_Tci_Cfi,
+    VLAN_03_Vid,
+    VLAN_04_Tpi,
+    VLAN_04_Tci_Pcp,
+    VLAN_04_Tci_Cfi,
+    VLAN_04_Vid,
+    VLAN_05_Tpi,
+    VLAN_05_Tci_Pcp,
+    VLAN_05_Tci_Cfi,
+    VLAN_05_Vid,
+    VLAN_06_Tpi,
+    VLAN_06_Tci_Pcp,
+    VLAN_06_Tci_Cfi,
+    VLAN_06_Vid,
+    VLAN_07_Tpi,
+    VLAN_07_Tci_Pcp,
+    VLAN_07_Tci_Cfi,
+    VLAN_07_Vid,
+    VLAN_08_Tpi,
+    VLAN_08_Tci_Pcp,
+    VLAN_08_Tci_Cfi,
+    VLAN_08_Vid,
     Num_VLAN_Tags,
     Num_MPLS_Hdrs,
     STREAM_Type,
@@ -193,7 +248,7 @@ struct cea_field_generation_spec {
 struct cea_field {
     bool touched;
     uint32_t merge;
-    uint64_t mask;
+    bool added;
     uint32_t stack;
     uint32_t id;
     uint32_t len;
@@ -205,63 +260,6 @@ struct cea_field {
     uint32_t step;
     uint32_t repeat;
     string name;
-    char pad[47];
-};
-
-enum cea_mpls_field_id {
-    MPLS_Label,
-    MPLS_Cos,
-    MPLS_Stack,
-    MPLS_Ttl
-};
-
-enum cea_vlan_field_id {
-    VLAN_Tpi,
-    VLAN_Tci_Pcp,
-    VLAN_Tci_Cfi,
-    VLAN_Vid
-};
-
-class cea_mpls_hdr {
-public:
-    cea_mpls_hdr();
-    
-    // fucntion to set the field to a fixed value
-    void set(cea_mpls_field_id id, uint64_t value);
-
-    // function to assign a field to an inbuilt value generator
-    // with default specifications
-    void set(cea_mpls_field_id id, cea_field_generation_type spec);
-
-    // function to assign a field to an inbuilt value generator
-    // with custom specifications
-    void set(cea_mpls_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec);
-private:
-    void reset();
-    vector<cea_field> cache;
-    friend class cea_stream;
-};
-
-class cea_vlan_tag {
-public:
-    cea_vlan_tag();
-    
-    // fucntion to set the field to a fixed value
-    void set(cea_vlan_field_id id, uint64_t value);
-
-    // function to assign a field to an inbuilt value generator
-    // with default specifications
-    void set(cea_vlan_field_id id, cea_field_generation_type spec);
-
-    // function to assign a field to an inbuilt value generator
-    // with custom specifications
-    void set(cea_vlan_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec);
-private:
-    void reset();
-    vector<cea_field> cache;
-    friend class cea_stream;
 };
 
 // forward declaration
@@ -362,23 +360,6 @@ public:
     void set(cea_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec);
 
-    // function to add auxillary headers like tags and labels
-    // following add(), the relevant fields of the auxillary headers 
-    // should also be set failing which default values will be used
-    void add(uint32_t id);
-
-    // add a mpls header to the stream
-    void add(uint32_t id, uint32_t stack_id, cea_mpls_hdr *m);
-
-    // add a vlan tag to the stream
-    void add(uint32_t id, uint32_t stack_id, cea_vlan_tag *m);
-
-    // used to remove one mpls/vlan entry from their respective stack 
-    void purge(cea_field_id id, uint32_t stack_id);
-
-    // clear all mpls/vlan entries from its respective stack
-    void purge(cea_field_id id);
-
     // copy constructor
     cea_stream(const cea_stream &rhs);
 
@@ -409,12 +390,6 @@ private:
     // cea_field fields[cea::Num_Fields];
     vector<cea_field> fields;
 
-    // (container5) mpls
-    vector<cea_field> mpls_stack;
-
-    // (container6) vlan
-    vector<cea_field> vlan_stack;
-
     // check if a field has been modified by user
     bool is_touched(uint32_t fid);
 
@@ -424,11 +399,11 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
+    // TODO: check and remove
     string get_name(uint32_t fid);
     uint64_t get_len(uint32_t fid);
     uint32_t get_idx(uint32_t fid);
 
-    void integrate_fields();
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();

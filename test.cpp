@@ -15,11 +15,11 @@ int main() {
     s->set(Network_Hdr, IPv4);
     s->set(Transport_Hdr, UDP);
 
-    cea_mpls_hdr m;
-    s->add(MPLS_Hdr, 0, &m);
-
-    cea_vlan_tag v;
-    s->add(VLAN_Tag, 0, &v);
+    // s->set(MPLS_01_Ttl, 1);
+    // s->set(MPLS_02_Label, 1);
+    // s->set(MPLS_03_Label, 1);
+    // s->set(VLAN_01_Tpi, 1);
+    // s->set(VLAN_02_Vid, 1);
 
     // add stream to proxy queue
     p->add_stream(s);
