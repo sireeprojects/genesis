@@ -1,0 +1,6 @@
+This prototype end with build_baseline_pkt;
+VLAN and MPLS headers are maintained in seperate containers
+    having seperate containers increased the code complexity
+    hence, deciding to limit the number of VLAN and MPLS headers to 32
+    this means VLAN and MPLS need not be maintained in seperate containers
+    next version will implement single container method
