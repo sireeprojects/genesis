@@ -28,7 +28,8 @@ THINGS TO DO:
               idea: store context in stream itself instead of storing 
                     in proxy. then context switch means just pointing to 
                     other stream
-- 
+- ip/tcp/udp checksum
+
 Terminologies: prune purge mutate probe 
 ------------------------------------------------------------------------------*/
 
@@ -85,7 +86,6 @@ string string_format(const string& format, Args ... args) {
 namespace cea {
 
 vector<cea_field> flds = {
-// TODO ip/tcp/udp checksum
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Mask Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -202,7 +202,6 @@ vector<cea_field> vlan_flds = {
 };
 
 // header to fields map
-// preamble, ether type and len will be added during the formation of fseq
 map <cea_hdr_type, vector <cea_field_id>> htof = {
     {MAC,   {
             MAC_Dest_Addr,
@@ -859,18 +858,6 @@ void cea_proxy::release_pkt_buffer() {
 //------------------------------------------------------------------------------
 // MPLS
 //------------------------------------------------------------------------------
-/* usage model:
-
-    proxy p;
-    stream s;
-    mpls m;
-        m.set(MPLS_Label, xxx);
-        m.set(MPLS_Cos, xxx);
-        m.set(MPLS_Stack, xxx);
-        m.set(MPLS_Ttl, xxx);
-    s.add(MPLS_Hdr, <stack_id>, m);
-*/
-
 cea_mpls_hdr::cea_mpls_hdr() {
     reset();
 }
