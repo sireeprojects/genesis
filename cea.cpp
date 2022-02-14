@@ -822,7 +822,7 @@ void cea_stream::build_offsets() {
             fields[i].offset = 0;
         } else {
             auto prev_offset = fseq.begin() + (cntr-1);
-            fields[i].offset = (fields[*prev_offset].len/8) + fields[*prev_offset].offset;
+            fields[i].offset = floor((double)fields[*prev_offset].len/8) + fields[*prev_offset].offset;
         }
         cntr++;
     }
