@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <cmath>
 #include <mutex>
 #include <bitset>
 #include <unistd.h>

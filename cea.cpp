@@ -816,6 +816,16 @@ void cea_stream::prune() {
 }
 
 void cea_stream::build_offsets() {
+    uint32_t cntr = 0;
+    for (auto i: fseq) {
+        if (cntr==0) {
+            fields[i].offset = 0;
+        } else {
+            auto prev_offset = fseq.begin() + (cntr-1);
+            fields[i].offset = (fields[*prev_offset].len/8) + fields[*prev_offset].offset;
+        }
+        cntr++;
+    }
 }
 
 void cea_stream::build_base_pkt() {
@@ -946,13 +956,18 @@ void cea_stream::arrange_fields_in_sequence() {
     }
 
     // TODO add paddings if any
+    
+    build_offsets();
 
     #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
-            << '(' << cntr << ')' 
-            << " (" << fields[i].id<< ')');
+        CEA_DBG(       setw(20)<< left << cea_trim(fields[i].name) 
+            << " (" << setw(2) << right << cntr << ')' 
+            << " (" << setw(2) << right << fields[i].id<< ')'
+            << " (" << setw(2) << right << fields[i].len<< ')'
+            << " (" << setw(2) << right << fields[i].offset<< ')'
+            );
         cntr++;
     }
     #endif
