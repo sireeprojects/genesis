@@ -412,6 +412,7 @@ private:
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();
+    void build_offsets();
     void build_base_pkt();
 
     // base pkt

@@ -95,7 +95,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  false,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
 {  false,  0,  false,   0,    MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               "},
-{  false,  0,  false,   0,    MAC_Preamble             ,64,       0,     Fixed,   0x5555555555d5,      0,    0,   0,   0,  "MAC_Preamble           "},
+{  false,  0,  false,   0,    MAC_Preamble             ,64,       0,     Fixed,   0x55555555555555d5,  0,    0,   0,   0,  "MAC_Preamble           "},
 {  false,  0,  false,   0,    MAC_Dest_Addr            ,48,       0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          "},
 {  false,  0,  false,   0,    MAC_Src_Addr             ,48,       0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           "},
 {  false,  0,  false,   0,    MAC_Len                  ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                "},
@@ -815,6 +815,9 @@ void cea_stream::prune() {
     purge_static_fields();
 }
 
+void cea_stream::build_offsets() {
+}
+
 void cea_stream::build_base_pkt() {
 
     // find final pkt len and padding
@@ -893,8 +896,10 @@ void cea_stream::print_base_pkt() {
 
 // algorithm to arrange the pkt fields
 void cea_stream::arrange_fields_in_sequence() {
+    
+    fseq.push_back(MAC_Preamble);
 
-    fseq.insert(fseq.begin(),
+    fseq.insert(fseq.end(),
         htof[MAC].begin(),
         htof[MAC].end());
 
