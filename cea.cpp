@@ -42,6 +42,7 @@ Terminologies: prune purge mutate probe
 #define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG( \
     "(%s) Fn:%s: Invoked", stream_name.c_str(), __FUNCTION__);
 
+
 #define CEA_MSG(...) \
     cealog << string_format(__VA_ARGS__) << endl; 
 
@@ -897,13 +898,20 @@ void cea_stream::arrange_fields_in_sequence() {
         }
     }
 
-    fseq.insert(fseq.end(), 
-        htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
-        htof[(cea_hdr_type)fields[Network_Hdr].value].end());
+    // ARP does not contain IP or TCP/UDP headers
+    if (fields[Network_Hdr].value == ARP) {
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
+    } else {
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
 
-    fseq.insert(fseq.end(), 
-        htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
-        htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
+    }
 
     // TODO add paddings if any
 
@@ -1159,105 +1167,3 @@ string cea_stream::describe() const {
 }
 
 } // namespace
-
-
-// stringize cea_field_id
-// string to_str(cea_field_id t) {
-//     string name;
-//     switch(t) {
-//         case PKT_Type                : { name = "PKT_Type               "; break; }
-//         case Network_Hdr             : { name = "Network_Hdr            "; break; }
-//         case Transport_Hdr           : { name = "Transport_Hdr          "; break; }
-//         case VLAN_Tag                : { name = "VLAN_Tag               "; break; }
-//         case MPLS_Hdr                : { name = "MPLS_Hdr               "; break; }
-//         case MAC_Preamble            : { name = "MAC_Preamble           "; break; }
-//         case MAC_Dest_Addr           : { name = "MAC_Dest_Addr          "; break; }
-//         case MAC_Src_Addr            : { name = "MAC_Src_Addr           "; break; }
-//         case MAC_Len                 : { name = "MAC_Len                "; break; }
-//         case MAC_Ether_Type          : { name = "MAC_Ether_Type         "; break; }
-//         case MAC_Fcs                 : { name = "MAC_Fcs                "; break; }
-//         case LLC_Dsap                : { name = "LLC_Dsap               "; break; }
-//         case LLC_Ssap                : { name = "LLC_Ssap               "; break; }
-//         case LLC_Control             : { name = "LLC_Control            "; break; }
-//         case SNAP_Oui                : { name = "SNAP_Oui               "; break; }
-//         case SNAP_Pid                : { name = "SNAP_Pid               "; break; }
-//         case IPv4_Version            : { name = "IPv4_Version           "; break; }
-//         case IPv4_IHL                : { name = "IPv4_IHL               "; break; }
-//         case IPv4_Tos                : { name = "IPv4_Tos               "; break; }
-//         case IPv4_Total_Len          : { name = "IPv4_Total_Len         "; break; }
-//         case IPv4_Id                 : { name = "IPv4_Id                "; break; }
-//         case IPv4_Flags              : { name = "IPv4_Flags             "; break; }
-//         case IPv4_Frag_Offset        : { name = "IPv4_Frag_Offset       "; break; }
-//         case IPv4_TTL                : { name = "IPv4_TTL               "; break; }
-//         case IPv4_Protocol           : { name = "IPv4_Protocol          "; break; }
-//         case IPv4_Hdr_Csum           : { name = "IPv4_Hdr_Csum          "; break; }
-//         case IPv4_Src_Addr           : { name = "IPv4_Src_Addr          "; break; }
-//         case IPv4_Dest_Addr          : { name = "IPv4_Dest_Addr         "; break; }
-//         case IPv4_Opts               : { name = "IPv4_Opts              "; break; }
-//         case IPv4_Pad                : { name = "IPv4_Pad               "; break; }
-//         case IPv6_Version            : { name = "IPv6_Version           "; break; }
-//         case IPv6_Traffic_Class      : { name = "IPv6_Traffic_Class     "; break; }
-//         case IPv6_Flow_Label         : { name = "IPv6_Flow_Label        "; break; }
-//         case IPv6_Payload_Len        : { name = "IPv6_Payload_Len       "; break; }
-//         case IPv6_Next_Hdr           : { name = "IPv6_Next_Hdr          "; break; }
-//         case IPv6_Hop_Limit          : { name = "IPv6_Hop_Limit         "; break; }
-//         case IPv6_Src_Addr           : { name = "IPv6_Src_Addr          "; break; }
-//         case IPv6_Dest_Addr          : { name = "IPv6_Dest_Addr         "; break; }
-//         case TCP_Src_Port            : { name = "TCP_Src_Port           "; break; }
-//         case TCP_Dest_Port           : { name = "TCP_Dest_Port          "; break; }
-//         case TCP_Seq_Num             : { name = "TCP_Seq_Num            "; break; }
-//         case TCP_Ack_Num             : { name = "TCP_Ack_Num            "; break; }
-//         case TCP_Data_Offset         : { name = "TCP_Data_Offset        "; break; }
-//         case TCP_Reserved            : { name = "TCP_Reserved           "; break; }
-//         case TCP_Urg                 : { name = "TCP_Urg                "; break; }
-//         case TCP_Ack                 : { name = "TCP_Ack                "; break; }
-//         case TCP_Psh                 : { name = "TCP_Psh                "; break; }
-//         case TCP_Rst                 : { name = "TCP_Rst                "; break; }
-//         case TCP_Syn                 : { name = "TCP_Syn                "; break; }
-//         case TCP_Fin                 : { name = "TCP_Fin                "; break; }
-//         case TCP_Window              : { name = "TCP_Window             "; break; }
-//         case TCP_Csum                : { name = "TCP_Csum               "; break; }
-//         case TCP_Urg_Ptr             : { name = "TCP_Urg_Ptr            "; break; }
-//         case TCP_Opts                : { name = "TCP_Opts               "; break; }
-//         case TCP_Pad                 : { name = "TCP_Pad                "; break; }
-//         case UDP_Src_Port            : { name = "UDP_Src_Port           "; break; }
-//         case UDP_Dest_Port           : { name = "UDP_Dest_Port          "; break; }
-//         case UDP_Len                 : { name = "UDP_Len                "; break; }
-//         case UDP_Csum                : { name = "UDP_Csum               "; break; }
-//         case ARP_Hw_Type             : { name = "ARP_Hw_Type            "; break; }
-//         case ARP_Proto_Type          : { name = "ARP_Proto_Type         "; break; }
-//         case ARP_Hw_Len              : { name = "ARP_Hw_Len             "; break; }
-//         case ARP_Proto_Len           : { name = "ARP_Proto_Len          "; break; }
-//         case ARP_Opcode              : { name = "ARP_Opcode             "; break; }
-//         case ARP_Sender_Hw_Addr      : { name = "ARP_Sender_Hw_Addr     "; break; }
-//         case ARP_Sender_Proto_addr   : { name = "ARP_Sender_Proto_addr  "; break; }
-//         case ARP_Target_Hw_Addr      : { name = "ARP_Target_Hw_Addr     "; break; }
-//         case ARP_Target_Proto_Addr   : { name = "ARP_Target_Proto_Addr  "; break; }
-//         case PAYLOAD_Type            : { name = "PAYLOAD_Type           "; break; }
-//         case PAYLOAD_Len             : { name = "PAYLOAD_Len            "; break; }
-//         case UDF1                    : { name = "UDF1                   "; break; }
-//         case UDF2                    : { name = "UDF2                   "; break; }
-//         case UDF3                    : { name = "UDF3                   "; break; }
-//         case UDF4                    : { name = "UDF4                   "; break; }
-//         case UDF5                    : { name = "UDF5                   "; break; }
-//         case UDF6                    : { name = "UDF6                   "; break; }
-//         case UDF7                    : { name = "UDF7                   "; break; }
-//         case UDF8                    : { name = "UDF8                   "; break; }
-//         case Num_VLAN_Tags           : { name = "Num_VLAN_Tags          "; break; }
-//         case Num_MPLS_Hdrs           : { name = "Num_MPLS_Hdrs          "; break; }
-//         case STREAM_Type             : { name = "STREAM_Type            "; break; }
-//         case STREAM_Pkts_Per_Burst   : { name = "STREAM_Pkts_Per_Burst  "; break; }
-//         case STREAM_Burst_Per_Stream : { name = "STREAM_Burst_Per_Stream"; break; }
-//         case STREAM_Inter_Burst_Gap  : { name = "STREAM_Inter_Burst_Gap "; break; }
-//         case STREAM_Inter_Stream_Gap : { name = "STREAM_Inter_Stream_Gap"; break; }
-//         case STREAM_Start_Delay      : { name = "STREAM_Start_Delay     "; break; }
-//         case STREAM_Rate_Type        : { name = "STREAM_Rate_Type       "; break; }
-//         case STREAM_Rate             : { name = "STREAM_Rate            "; break; }
-//         case STREAM_Ipg              : { name = "STREAM_Ipg             "; break; }
-//         case STREAM_Percentage       : { name = "STREAM_Percentage      "; break; }
-//         case STREAM_Pkts_Per_Sec     : { name = "STREAM_Pkts_Per_Sec    "; break; }
-//         case STREAM_Bit_Rate         : { name = "STREAM_Bit_Rate        "; break; }
-//         default                      : { name = "undefined              "; break; }
-//     }
-//     return cea_trim(name);
-// }
