@@ -49,7 +49,9 @@ enum cea_hdr_type {
     IPv6,
     ARP,
     TCP,
-    UDP
+    UDP,
+    PAUSE,
+    PFC,
 };
 
 enum cea_field_id {
@@ -209,6 +211,19 @@ enum cea_field_id {
     STREAM_Percentage,
     STREAM_Pkts_Per_Sec,
     STREAM_Bit_Rate,
+    // pause
+    MAC_Control,
+    MAC_Control_Opcode,
+    Pause_Quanta,
+    Priority_En_Vector,
+    Pause_Quanta_0,
+    Pause_Quanta_1,
+    Pause_Quanta_2,
+    Pause_Quanta_3,
+    Pause_Quanta_4,
+    Pause_Quanta_5,
+    Pause_Quanta_6,
+    Pause_Quanta_7,
     Num_Fields
 };
 
@@ -280,6 +295,7 @@ public:
     void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
 private:
     vector<cea_proxy*> proxies;
+    string msg_prefix;
 };
 
 //------------------------------------------------------------------------------
@@ -333,6 +349,8 @@ private:
     void create_pkt_buffer();
     void release_pkt_buffer();
 
+    void reset();
+    string msg_prefix;
     friend class cea_manager;
 };
 
@@ -408,6 +426,7 @@ private:
     void do_copy (const cea_stream *rhs);
     string describe() const;
 
+    string msg_prefix;
     friend class cea_proxy;
 };
 

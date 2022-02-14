@@ -12,7 +12,7 @@ int main() {
     s->set(PKT_Type, ETH_V2);
     // s->set(MAC_Dest_Addr, 0x112233445566UL);
     // s->set(MAC_Src_Addr, 0xaabbccddeeffUL);
-    s->set(Network_Hdr, ARP);
+    s->set(Network_Hdr, IPv4);
     s->set(Transport_Hdr, UDP);
 
     // s->set(MPLS_01_Ttl, 1);

@@ -1,4 +1,4 @@
-/*------------------------------------------------------------------------------
+/*
 NOTES:
 CEA_DEBUG - to include debug code and to generate debug library
 
@@ -31,25 +31,25 @@ THINGS TO DO:
 - ip/tcp/udp checksum
 
 Terminologies: prune purge mutate probe 
-------------------------------------------------------------------------------*/
+*/
 
 
 #include "cea.h"
 
-#define CEA_PXY_DBG_CALL_SIGNATURE CEA_DBG( \
-    "(%s) Fn:%s: Invoked", proxy_name.c_str(), __FUNCTION__);
+//------------------------------------------------------------------------------
+// Messaging 
+//------------------------------------------------------------------------------
 
-#define CEA_STREAM_DBG_CALL_SIGNATURE CEA_DBG( \
-    "(%s) Fn:%s: Invoked", stream_name.c_str(), __FUNCTION__);
-
-
-#define CEA_MSG(...) \
-    cealog << string_format(__VA_ARGS__) << endl; 
+#define CEA_MSG(msg) { \
+    stringstream s; \
+    s << msg; \
+    cealog << msg_prefix << string(__FUNCTION__) << ": " <<  s.str() << endl; \
+}
 
 #ifdef CEA_DEBUG
-    #define CEA_DBG(...) { CEA_MSG(__VA_ARGS__) }
+    #define CEA_DBG(msg) { CEA_MSG(msg) }
 #else
-    #define CEA_DBG(...) {}
+    #define CEA_DBG(msg) {}
 #endif
 
 // 1GB frame buffer with read and write capabilities
@@ -245,7 +245,20 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    STREAM_Ipg               ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Ipg             "},
 {  false,  0,  false,   0,    STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
 {  false,  0,  false,   0,    STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
-{  false,  0,  false,   0,    STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "}
+{  false,  0,  false,   0,    STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
+{  false,  0,  false,   0,    MAC_Control              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control            "},
+{  false,  0,  false,   0,    MAC_Control_Opcode       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control_Opcode     "},
+{  false,  0,  false,   0,    Pause_Quanta             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta           "},
+{  false,  0,  false,   0,    Priority_En_Vector       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Priority_En_Vector     "},
+{  false,  0,  false,   0,    Pause_Quanta_0           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_0         "},
+{  false,  0,  false,   0,    Pause_Quanta_1           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_1         "},
+{  false,  0,  false,   0,    Pause_Quanta_2           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_2         "},
+{  false,  0,  false,   0,    Pause_Quanta_3           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_3         "},
+{  false,  0,  false,   0,    Pause_Quanta_4           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_4         "},
+{  false,  0,  false,   0,    Pause_Quanta_5           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_5         "},
+{  false,  0,  false,   0,    Pause_Quanta_6           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_6         "},
+{  false,  0,  false,   0,    Pause_Quanta_7           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_7         "}
+
 };
 
 // header to fields map
@@ -319,10 +332,27 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             TCP_Opts,
             TCP_Pad
             }},
-    {UDP, { UDP_Src_Port,
+    {UDP,   { 
+            UDP_Src_Port,
             UDP_Dest_Port,
             UDP_Len,
-            UDP_Csum,
+            UDP_Csum
+            }},
+    {PAUSE, {
+            MAC_Control_Opcode,
+            Pause_Quanta
+            }},
+    {PFC,   {
+            MAC_Control_Opcode,
+            Priority_En_Vector,
+            Pause_Quanta_0,
+            Pause_Quanta_1,
+            Pause_Quanta_2,
+            Pause_Quanta_3,
+            Pause_Quanta_4,
+            Pause_Quanta_5,
+            Pause_Quanta_6,
+            Pause_Quanta_7
             }}
 };
 
@@ -597,14 +627,16 @@ string to_str(cea_pkt_type t) {
 string to_str(cea_hdr_type t) {
     string name;
     switch(t) {
-        case MAC    : { name = "MAC "; break; }
-        case LLC    : { name = "LLC "; break; }
-        case SNAP   : { name = "SNAP"; break; }
-        case IPv4   : { name = "IPv4"; break; }
-        case IPv6   : { name = "IPv6"; break; }
-        case ARP    : { name = "ARP "; break; }
-        case TCP    : { name = "TCP "; break; }
-        case UDP    : { name = "UDP "; break; }
+        case MAC    : { name = "MAC  "; break; }
+        case LLC    : { name = "LLC  "; break; }
+        case SNAP   : { name = "SNAP "; break; }
+        case IPv4   : { name = "IPv4 "; break; }
+        case IPv6   : { name = "IPv6 "; break; }
+        case ARP    : { name = "ARP  "; break; }
+        case TCP    : { name = "TCP  "; break; }
+        case UDP    : { name = "UDP  "; break; }
+        case PAUSE  : { name = "PAUSE"; break; }
+        case PFC    : { name = "PFC  "; break; }
         default     : { name = "undefined"; break; }
     }
     return cea_trim(name);
@@ -656,22 +688,19 @@ string to_str(cea_field_generation_type t) {
 //------------------------------------------------------------------------------
 
 cea_manager::cea_manager() {
-    CEA_DBG("%s called", __FUNCTION__);
 }
 
 void cea_manager::add_proxy(cea_proxy *pxy) {
-    CEA_DBG("%s called", __FUNCTION__);
     proxies.push_back(pxy);
 }
 
 void cea_manager::add_proxy(cea_proxy *pxy, uint32_t cnt) {
-    CEA_DBG("%s called with %d proxies", __FUNCTION__, cnt);
+    CEA_DBG(cnt << " Proxies added");
     for(uint32_t idx=0; idx<cnt; idx++)
         proxies.push_back(&pxy[idx]);
 }
 
 void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
-    CEA_DBG("%s called", __FUNCTION__);
     if (pxy != NULL) {
         vector<cea_proxy*>::iterator it;
         for (it = proxies.begin(); it != proxies.end(); it++) {
@@ -688,12 +717,10 @@ void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
 }
 
 void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
-    CEA_DBG("%s called", __FUNCTION__);
     add_stream(stm, pxy);
 }
 
 void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
-    CEA_DBG("%s called", __FUNCTION__);
 }
 
 //------------------------------------------------------------------------------
@@ -705,7 +732,8 @@ cea_proxy::cea_proxy(string name) {
     proxy_id = cea::proxy_id;
     cea::proxy_id++;
     proxy_name = name + ":" + to_string(proxy_id);
-    CEA_DBG("(%s) Fn:%s: ProxyID: %d", proxy_name.c_str(), __FUNCTION__, proxy_id);
+    reset();
+    CEA_MSG("Proxy created with name=" << name << " and id=" << proxy_id);
 }
 
 // TODO: print stream properties after adding in debug mode
@@ -718,6 +746,10 @@ void cea_proxy::add_cmd(cea_stream *stm) {
 }
 
 void cea_proxy::exec_cmd(cea_stream *stm) {
+}
+
+void cea_proxy::reset() {
+    msg_prefix = '(' + proxy_name + ") ";
 }
 
 // start stream processing and generate frames
@@ -746,16 +778,13 @@ void cea_proxy::worker() {
 }
 
 void cea_proxy::read_next_stream_from_stmq() {
-    CEA_PXY_DBG_CALL_SIGNATURE;
     cur_stm = stmq[0];
 }
 
 void cea_proxy::extract_traffic_parameters() {
-    CEA_PXY_DBG_CALL_SIGNATURE;
 }
 
 void cea_proxy::begin_mutation() {
-    CEA_PXY_DBG_CALL_SIGNATURE;
     // write to pbuf
     // *(addr + i) = (char)i;
     // read from pbuf
@@ -765,14 +794,14 @@ void cea_proxy::begin_mutation() {
 void cea_proxy::create_pkt_buffer() {
     pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
     if (pbuf == MAP_FAILED) {
-        CEA_MSG("Error: Memory map failed in __FUNCTION__");
+        CEA_MSG("Error: Memory map failed");
         exit(1);
     }
 }
 
 void cea_proxy::release_pkt_buffer() {
     if (munmap(pbuf, LENGTH)) {
-        CEA_MSG("Error: Memory unmap failed in __FUNCTION__");
+        CEA_MSG("Error: Memory unmap failed");
         exit(1);
     }
 }
@@ -787,7 +816,6 @@ void cea_stream::prune() {
 }
 
 void cea_stream::build_base_pkt() {
-    CEA_STREAM_DBG_CALL_SIGNATURE;
 
     // find final pkt len and padding
     base_pkt_len = 0;
@@ -803,7 +831,7 @@ void cea_stream::build_base_pkt() {
     base_pkt = new unsigned char[base_pkt_len];
 
 
-    CEA_DBG("Final length of the packet: %d bytes", base_pkt_len);
+    CEA_DBG("Final length of the packet: " << base_pkt_len << " bytes");
     
     uint32_t offset = 0;
     uint64_t merged = 0;
@@ -865,7 +893,6 @@ void cea_stream::print_base_pkt() {
 
 // algorithm to arrange the pkt fields
 void cea_stream::arrange_fields_in_sequence() {
-    CEA_STREAM_DBG_CALL_SIGNATURE;
 
     fseq.insert(fseq.begin(),
         htof[MAC].begin(),
@@ -918,20 +945,15 @@ void cea_stream::arrange_fields_in_sequence() {
     #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%2d) (id=%d)",
-            stream_name.c_str(), string(5, '.').c_str(),
-            __FUNCTION__,
-            fields[i].name.c_str(),
-            cntr,
-            fields[i].id
-            );
+        CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
+            << '(' << cntr << ')' 
+            << " (" << fields[i].id<< ')');
         cntr++;
     }
     #endif
 }
 
 void cea_stream::purge_static_fields() {
-    CEA_STREAM_DBG_CALL_SIGNATURE;
 
     for(auto i: fseq) {
         if (fields[i].touched) {
@@ -939,19 +961,15 @@ void cea_stream::purge_static_fields() {
         }
     }
 
+    CEA_DBG("Total Number of fields: " << fseq.size());
+    CEA_DBG("Total Number of mutable fields: " << cseq.size());
+
     #ifdef CEA_DEBUG
-    CEA_DBG("(%s) Fn:%s: Total Nof Fields: %d", stream_name.c_str(), __FUNCTION__, fseq.size());
-    CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
     uint32_t cntr=0;
     for (auto i : cseq) {
-        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d) (id=%d)", 
-            stream_name.c_str(),
-            string(5, '.').c_str(),
-            __FUNCTION__,
-            fields[i].name.c_str(),
-            cntr,
-            fields[i].id
-            );
+        CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
+            << '(' << cntr << ')' 
+            << " (" << fields[i].id<< ')');
         cntr++;
     }
     #endif
@@ -1085,11 +1103,11 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
 }
 
 void cea_stream::do_copy (const cea_stream *rhs) {
-    CEA_DBG("Stream CC Called");
 }
 
 void cea_stream::reset() {
     fields = flds;
+    msg_prefix = '(' + stream_name + ") ";
 }
 
 #define CEA_FLDWIDTH 8
