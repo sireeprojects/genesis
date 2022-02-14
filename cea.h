@@ -399,11 +399,6 @@ private:
     // get the fixed or current value of the field
     uint32_t value_of(cea_field_id fid);
 
-    // TODO: check and remove
-    string get_name(uint32_t fid);
-    uint64_t get_len(uint32_t fid);
-    uint32_t get_idx(uint32_t fid);
-
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();

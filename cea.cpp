@@ -785,16 +785,6 @@ void cea_stream::prune() {
     purge_static_fields();
 }
 
-uint32_t cea_stream::get_idx(uint32_t fid) {
-    uint32_t idx = 0;
-
-    for (auto &i : fields) {
-        if (i.id==fid) break;
-        idx++;
-    }
-    return idx;
-}
-
 void cea_stream::build_baseline_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
@@ -802,7 +792,7 @@ void cea_stream::build_baseline_pkt() {
     baseline_pkt_len = 0;
 
     for(auto &i : fseq) {
-        baseline_pkt_len += get_len(i); // in bits
+        baseline_pkt_len += fields[i].len; // in bits
     }
     baseline_pkt_len /= 8; // in bytes
 
@@ -819,15 +809,14 @@ void cea_stream::build_baseline_pkt() {
     uint64_t tmp =  0;
     uint64_t len = 0;
     uint64_t mlen = 0;
-    uint32_t idx = 0;
 
     for (uint32_t i=0; i<fseq.size(); i++) {
-        idx = get_idx(fseq[i]);
+        uint32_t idx = fields[fseq[i]].id;
         if (fields[idx].merge != 0) {
             merged = fields[idx].value; // first field
             mlen += fields[idx].len;
             for(uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
-                uint32_t xidx = get_idx(fseq[x]);
+                uint32_t xidx = fields[fseq[x]].id;
                 len = fields[xidx].len;
                 merged = (merged << len) | fields[xidx].value;
                 mlen += len;
@@ -906,32 +895,6 @@ uint32_t cea_stream::value_of(cea_field_id fid) {
     return value;
 }
 
-uint64_t cea_stream::get_len(uint32_t fid) {
-    uint64_t value;
-    for (auto &i : fields) {
-        if (i.id==fid) {
-            value = i.len;
-            break;
-        } else {
-            value = 0;
-        }
-    }
-    return value;
-}
-
-string cea_stream::get_name(uint32_t fid) {
-    string name;
-    for (auto &i : fields) {
-        if (i.id==fid) {
-            name = cea_trim(string(i.name));
-            break;
-        } else {
-            name = "";
-        }
-    }
-    return name;
-}
-
 // algorithm to arrange the pkt fields
 void cea_stream::arrange_fields_in_sequence() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
@@ -980,11 +943,13 @@ void cea_stream::arrange_fields_in_sequence() {
     #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
-        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)",
+        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%2d) (id=%d)",
             stream_name.c_str(), string(5, '.').c_str(),
             __FUNCTION__,
-            get_name(i).c_str(),
-            cntr);
+            fields[i].name.c_str(),
+            cntr,
+            fields[i].id
+            );
         cntr++;
     }
     #endif
@@ -1004,12 +969,14 @@ void cea_stream::purge_static_fields() {
     CEA_MSG("(%s) Fn:%s: Total Nof Consolidated Fields: %d", stream_name.c_str(), __FUNCTION__, cseq.size());
     uint32_t cntr=0;
     for (auto i : cseq) {
-        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d)", 
+        CEA_MSG("(%s) %s Fn:%s: fseq: %-20s (%d) (id=%d)", 
             stream_name.c_str(),
             string(5, '.').c_str(),
             __FUNCTION__,
-            get_name(i).c_str(),
-            cntr);
+            fields[i].name.c_str(),
+            cntr,
+            fields[i].id
+            );
         cntr++;
     }
     #endif
