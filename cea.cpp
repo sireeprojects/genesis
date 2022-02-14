@@ -828,6 +828,16 @@ void cea_stream::build_offsets() {
     }
 }
 
+uint32_t cea_stream::get_offset(cea_field_id id) {
+    uint32_t total_bits = 0;
+    for (auto i: fseq) {
+        if (fields[i].id == id)
+            break;
+        total_bits += fields[i].len;
+    }
+    return (total_bits/8);
+}
+
 void cea_stream::build_base_pkt() {
 
     // find final pkt len and padding
@@ -879,7 +889,7 @@ void cea_stream::build_base_pkt() {
     // insert IPv4 checksum
     // TODO: find ipv4 csum offset
     uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
-    memcpy(base_pkt+24, (char*)&ipcsum, 2);
+    memcpy(base_pkt+get_offset(IPv4_Hdr_Csum), (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
     print_base_pkt();
@@ -957,8 +967,6 @@ void cea_stream::arrange_fields_in_sequence() {
 
     // TODO add paddings if any
     
-    build_offsets();
-
     #ifdef CEA_DEBUG
     uint32_t cntr=0;
     for (auto i : fseq) {
@@ -966,10 +974,12 @@ void cea_stream::arrange_fields_in_sequence() {
             << " (" << setw(2) << right << cntr << ')' 
             << " (" << setw(2) << right << fields[i].id<< ')'
             << " (" << setw(2) << right << fields[i].len<< ')'
-            << " (" << setw(2) << right << fields[i].offset<< ')'
             );
         cntr++;
     }
+    CEA_DBG("IPv4 checksum offset is : " << get_offset(IPv4_Hdr_Csum));
+    CEA_DBG("UDP checksum offset is : " << get_offset(UDP_Csum));
+    CEA_DBG("UDP checksum offset is : " << get_offset(MAC_Dest_Addr));
     #endif
 }
 

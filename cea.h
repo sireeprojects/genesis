@@ -413,7 +413,6 @@ private:
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();
-    void build_offsets();
     void build_base_pkt();
 
     // base pkt
@@ -428,7 +427,12 @@ private:
     void do_copy (const cea_stream *rhs);
     string describe() const;
 
+
+    void build_offsets();
+    uint32_t get_offset(cea_field_id id);
+
     string msg_prefix;
+    uint32_t pads;
     friend class cea_proxy;
 };
 

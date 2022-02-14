@@ -20,6 +20,8 @@ int main() {
     // s->set(MPLS_03_Label, 1);
     // s->set(VLAN_01_Tpi, 1);
     // s->set(VLAN_02_Vid, 1);
+    
+    // s->set(PAYLOAD_Len, 64);
 
     // add stream to proxy queue
     p->add_stream(s);
