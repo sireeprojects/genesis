@@ -390,35 +390,23 @@ private:
     // cea_field fields[cea::Num_Fields];
     vector<cea_field> fields;
 
-    // check if a field has been modified by user
-    bool is_touched(uint32_t fid);
-
-    // check if a field is not aligned to 8-bit boundary
-    uint32_t is_merge(cea_field_id fid);
-
-    // get the fixed or current value of the field
-    uint32_t value_of(cea_field_id fid);
-
+    // states
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();
-    void build_baseline_pkt();
+    void build_base_pkt();
 
-    // baseline pkt
+    // base pkt
     unsigned char *base_pkt;
-    uint32_t baseline_pkt_len;
-    void print_baseline_pkt();
+    uint32_t base_pkt_len;
+    void print_base_pkt();
 
-    // reset to default values
+    // reset stream to default values
     void reset();
 
     // overloads
     void do_copy (const cea_stream *rhs);
     string describe() const;
-
-    // runtime and contexts
-    uint32_t ipv4_offset;
-    uint32_t tcp_offset;
 
     friend class cea_proxy;
 };

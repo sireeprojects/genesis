@@ -86,9 +86,9 @@ string string_format(const string& format, Args ... args) {
 namespace cea {
 
 vector<cea_field> flds = {
-//-----------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Added    Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
-//-----------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------
 {  false,  0,  false,   0,    PKT_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "PKT_Type               "},
 {  false,  0,  false,   0,    Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
@@ -740,7 +740,7 @@ void cea_proxy::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->prune();
-    cur_stm->build_baseline_pkt();
+    cur_stm->build_base_pkt();
     // begin_mutation();
 }
 
@@ -785,24 +785,24 @@ void cea_stream::prune() {
     purge_static_fields();
 }
 
-void cea_stream::build_baseline_pkt() {
+void cea_stream::build_base_pkt() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     // find final pkt len and padding
-    baseline_pkt_len = 0;
+    base_pkt_len = 0;
 
     for(auto &i : fseq) {
-        baseline_pkt_len += fields[i].len; // in bits
+        base_pkt_len += fields[i].len; // in bits
     }
-    baseline_pkt_len /= 8; // in bytes
+    base_pkt_len /= 8; // in bytes
 
-    // TODO: calculate padding and adjust baseline_pkt_len
+    // TODO: calculate padding and adjust base_pkt_len
         
     // TODO: is this safe? remember to free
-    base_pkt = new unsigned char[baseline_pkt_len];
+    base_pkt = new unsigned char[base_pkt_len];
 
 
-    CEA_DBG("Final length of the packet: %d bytes", baseline_pkt_len);
+    CEA_DBG("Final length of the packet: %d bytes", base_pkt_len);
     
     uint32_t offset = 0;
     uint64_t merged = 0;
@@ -840,19 +840,19 @@ void cea_stream::build_baseline_pkt() {
     memcpy(base_pkt+24, (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
-    print_baseline_pkt();
-    // write_pcap(base_pkt, baseline_pkt_len);
+    print_base_pkt();
+    // write_pcap(base_pkt, base_pkt_len);
     #endif
 }
 
-void cea_stream::print_baseline_pkt() {
+void cea_stream::print_base_pkt() {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
     buf << endl;
     buf << cea_formatted_hdr("Baseline Packet");
     
-    for (uint32_t idx=0; idx<baseline_pkt_len; idx++) {
+    for (uint32_t idx=0; idx<base_pkt_len; idx++) {
         buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_pkt[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
@@ -860,39 +860,6 @@ void cea_stream::print_baseline_pkt() {
     buf << endl << endl;
 
     cealog << buf.str();
-}
-
-bool cea_stream::is_touched(uint32_t fid) {
-    bool touched;
-    for (auto &i : fields) {
-        if (i.id==fid) {
-            touched = i.touched;
-            break;
-        } else {
-            touched = false;
-        }
-    }
-    return touched;
-}
-
-uint32_t cea_stream::is_merge(cea_field_id fid) {
-    if (fields[fid].merge != 0)
-        return fields[fid].merge;
-    else 
-        return 0;
-}
-
-uint32_t cea_stream::value_of(cea_field_id fid) {
-    uint64_t value;
-    for (auto &i : fields) {
-        if (i.id==fid) {
-            value = i.value;
-            break;
-        } else {
-            value = 0;
-        }
-    }
-    return value;
 }
 
 // algorithm to arrange the pkt fields
@@ -909,17 +876,17 @@ void cea_stream::arrange_fields_in_sequence() {
         }
     }
 
-    if (value_of(PKT_Type) == ETH_V2) {
+    if (fields[PKT_Type].value == ETH_V2) {
         fseq.push_back(MAC_Ether_Type);
     } else {
         fseq.push_back(MAC_Len);
     }
 
-    if (value_of(PKT_Type) == ETH_LLC) {
+    if (fields[PKT_Type].value == ETH_LLC) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
     }
 
-    if (value_of(PKT_Type) == ETH_SNAP) {
+    if (fields[PKT_Type].value == ETH_SNAP) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
         fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
     }
@@ -931,12 +898,12 @@ void cea_stream::arrange_fields_in_sequence() {
     }
 
     fseq.insert(fseq.end(), 
-        htof[(cea_hdr_type)value_of(Network_Hdr)].begin(), 
-        htof[(cea_hdr_type)value_of(Network_Hdr)].end());
+        htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
+        htof[(cea_hdr_type)fields[Network_Hdr].value].end());
 
     fseq.insert(fseq.end(), 
-        htof[(cea_hdr_type)value_of(Transport_Hdr)].begin(), 
-        htof[(cea_hdr_type)value_of(Transport_Hdr)].end());
+        htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
+        htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
 
     // TODO add paddings if any
 
@@ -959,7 +926,7 @@ void cea_stream::purge_static_fields() {
     CEA_STREAM_DBG_CALL_SIGNATURE;
 
     for(auto i: fseq) {
-        if (is_touched(i)) {
+        if (fields[i].touched) {
             cseq.push_back(i);
         }
     }
