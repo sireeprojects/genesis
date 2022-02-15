@@ -134,7 +134,7 @@ vector<cea_field> flds = {
 {  false,  1,  false,   0,    IPv4_Flags               ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             "},
 {  false,  1,  false,   0,    IPv4_Frag_Offset         ,13,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       "},
 {  false,  0,  false,   0,    IPv4_TTL                 ,8,        0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
-{  false,  0,  false,   0,    IPv4_Protocol            ,8,        0,     Fixed,   17,                  0,    0,   0,   0,  "IPv4_Protocol          "},
+{  false,  0,  false,   0,    IPv4_Protocol            ,8,        0,     Fixed,   6,                  0,    0,   0,   0,  "IPv4_Protocol          "},
 {  false,  0,  false,   0,    IPv4_Hdr_Csum            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
 {  false,  0,  false,   0,    IPv4_Src_Addr            ,32,       0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          "},
 {  false,  0,  false,   0,    IPv4_Dest_Addr           ,32,       0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         "},
@@ -435,7 +435,7 @@ public:
     cea_init() {
         logfile.open("run.log", ofstream::out);
         if (!logfile.is_open()) {
-            cout << "Error creating logfile. Aborting..." << endl;
+
             exit(1);
         }
     }
@@ -593,10 +593,6 @@ uint16_t compute_ipv4_csum(unsigned char *vdata,size_t length) {
 
     // Return the checksum in network byte order.
     return htons(~acc);
-}
-
-// TODO tcp checksum 
-void compute_tcp_csum(char *hdr) {
 }
 
 // remove trailing whitespaces from a string
@@ -964,6 +960,11 @@ void cea_stream::arrange_fields_in_sequence() {
         fseq.insert(fseq.end(), 
             htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
             htof[(cea_hdr_type)fields[Network_Hdr].value].end());
+    
+        if (get_value(Transport_Hdr)==UDP)
+            set(IPv4_Protocol, 17);
+        else if (get_value(Transport_Hdr)==UDP)
+            set(IPv4_Protocol, 6);
 
         fseq.insert(fseq.end(), 
             htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
@@ -989,20 +990,21 @@ void cea_stream::purge_static_fields() {
             cseq.push_back(i);
         }
     }
-    // CEA_DBG("Total Number of fields: " << fseq.size());
-    // CEA_DBG("Total Number of mutable fields: " << cseq.size());
+    CEA_DBG("Total Number of fields: " << fseq.size());
+    CEA_DBG("Total Number of mutable fields: " << cseq.size());
 
-    // #ifdef CEA_DEBUG
-    // uint32_t cntr=0;
-    // for (auto i : cseq) {
-    //     CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
-    //         << '(' << cntr << ')' 
-    //         << " (" << fields[i].id<< ')');
-    //     cntr++;
-    // }
-    // #endif
+    #ifdef CEA_DEBUG
+    uint32_t cntr=0;
+    for (auto i : cseq) {
+        CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
+            << '(' << cntr << ')' 
+            << " (" << fields[i].id<< ')');
+        cntr++;
+    }
+    #endif
 }
 
+// TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::compute_udp_csum() {
     uint32_t offset = 0;
     for (auto i : htof[UDP_PHDR]) {
@@ -1011,8 +1013,25 @@ uint32_t cea_stream::compute_udp_csum() {
         cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
         offset += (flen/8);
     }
-    // TODO: add payload also
-    return (compute_ipv4_csum(scratchpad, offset));
+    // copy payload
+    memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
+    return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
+}
+
+// TODO: Optimize, try to avoid copying the hdr and payload again
+uint32_t cea_stream::compute_tcp_csum() {
+    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len));
+    uint32_t offset = 0;
+    for (auto i : htof[TCP_PHDR]) {
+        uint32_t flen = fields[i].len;
+        uint64_t val = fields[i].value;
+        cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
+        offset += (flen/8);
+    }
+    CEA_DBG("offset: " << offset);
+    CEA_DBG("total_len: " << payload_offset+offset);
+    memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
+    return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
 }
 
 void cea_stream::build_base_frame() {
@@ -1020,18 +1039,19 @@ void cea_stream::build_base_frame() {
     for (auto i : fseq) {
         base_frame_len += fields[i].len;
     }
-
-    // in bytes
-    base_frame_len /= 8;
+    base_frame_len /= 8; // in bytes
 
     CEA_DBG("Original base_frame_len: " 
             << base_frame_len << " bytes");
 
     // remove len of preamble for proper calculation
-    base_frame_len -= get_len(MAC_Preamble);
+    base_frame_len = base_frame_len - get_len(MAC_Preamble);
 
     CEA_DBG("base_frame_len w/o preamble: " 
             << base_frame_len << " bytes");
+
+    CEA_DBG("Frame len: " 
+            << get_value(FRAME_Len) << " bytes");
 
     // throw error if base_frame_len is greater than user specified FRAME_Len 
     if (base_frame_len > get_value(FRAME_Len)) {
@@ -1043,10 +1063,11 @@ void cea_stream::build_base_frame() {
         exit(1);
     }
 
-    uint32_t payload_len = 0;
     payload_len = get_value(FRAME_Len) - base_frame_len;
+    payload_offset = base_frame_len+8;
         
     CEA_DBG("Payload length: " << payload_len << " bytes");
+    CEA_DBG("Payload offset: " << payload_offset << " bytes");
 
     CEA_DBG("Final length of the frame with payload: "
         << get_value(FRAME_Len) << " bytes");
@@ -1089,17 +1110,27 @@ void cea_stream::build_base_frame() {
         }
     }
 
+    // fill dummy payload value
+    for (uint32_t i=0; i<payload_len; i++)
+        memcpy(base_frame+(payload_offset+i), (char*)&i, 1);
+
     // find ipv4 csum and overlay on the base frame
-    uint16_t ip_csum = compute_ipv4_csum(base_frame+get_offset(IPv4_Version), 20);
-    memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
+    if (get_value(Network_Hdr) == IPv4) {
+        uint16_t ip_csum = compute_ipv4_csum(base_frame+get_offset(IPv4_Version), 20);
+        memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
+    }
 
-    // TODO: find udp csum and overlay on the base frame
-    uint16_t udp_csum = compute_udp_csum();
-    memcpy(base_frame+get_offset(UDP_Csum), (char*)&udp_csum, 2);
+    // find udp csum and overlay on the base frame
+    if (get_value(Transport_Hdr) == UDP) {
+        uint16_t udp_csum = compute_udp_csum();
+        memcpy(base_frame+get_offset(UDP_Csum), (char*)&udp_csum, 2);
+    }
 
-    // TODO: find tcp csum and overlay on the base frame
-    // uint16_t tcp_csum = compute_ipv4_csum(base_frame+get_offset(TCP_Src_Port), 20);
-    // memcpy(base_frame+get_offset(TCP_Csum), (char*)&tcp_csum, 2);
+    // find tcp csum and overlay on the base frame
+    if (get_value(Transport_Hdr) == TCP) {
+        uint16_t tcp_csum = compute_tcp_csum();
+        memcpy(base_frame+get_offset(TCP_Csum), (char*)&tcp_csum, 2);
+    }
 
     #ifdef CEA_DEBUG
     print_base_frame();
@@ -1253,6 +1284,8 @@ void cea_stream::reset() {
     memset(scratchpad, 0, CEA_SCRATCHPAD_SIZE);
 
     base_frame_len = 0;
+    payload_len = 0;
+    payload_offset = 0;
     fields = flds;
     msg_prefix = '(' + stream_name + ") ";
 }

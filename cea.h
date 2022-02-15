@@ -460,8 +460,11 @@ private:
     string msg_prefix;
 
     uint32_t compute_udp_csum();
+    uint32_t compute_tcp_csum();
 
     unsigned char *scratchpad;
+    uint32_t payload_len;
+    uint32_t payload_offset;
 
     friend class cea_proxy;
 };
