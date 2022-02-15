@@ -438,8 +438,9 @@ void write_pcap(unsigned char *frame, uint32_t len) {
     ph.caplen = len;
     ph.len = len;
 
-    char buf[CEA_MAX_FRAME_SIZE];
+    unsigned char buf[CEA_MAX_FRAME_SIZE];
     uint32_t offset = 0;
+    memset(buf, 0, CEA_MAX_FRAME_SIZE);
 
     ofstream pcapfile;
 
@@ -459,7 +460,7 @@ void write_pcap(unsigned char *frame, uint32_t len) {
     memcpy(buf+offset, frame, len);
     offset += len;
 
-    pcapfile.write(buf, offset);
+    pcapfile.write((const char*)buf, offset);
     pcapfile.close();
 }
 
@@ -832,18 +833,20 @@ uint32_t cea_stream::get_offset(cea_field_id id) {
 
 void cea_stream::build_base_frame() {
 
-    // find final frame len and padding
-    base_frame_len = 0;
+    // // find final frame len and padding
+    // base_frame_len = 0;
 
-    for(auto &i : fseq) {
-        base_frame_len += fields[i].len; // in bits
-    }
-    base_frame_len /= 8; // in bytes
+    // for(auto &i : fseq) {
+    //     base_frame_len += fields[i].len; // in bits
+    // }
+    // base_frame_len /= 8; // in bytes
+    base_frame_len = 64+8;
 
     // TODO: calculate padding and adjust base_frame_len
         
     // TODO: is this safe? remember to free
     base_frame = new unsigned char[base_frame_len];
+    memset(base_frame, 0, base_frame_len);
 
 
     CEA_DBG("Final length of the frame: " << base_frame_len << " bytes");
@@ -853,6 +856,12 @@ void cea_stream::build_base_frame() {
     uint64_t tmp =  0;
     uint64_t len = 0;
     uint64_t mlen = 0;
+
+    uint32_t iplen = base_frame_len - get_offset(IPv4_Version);
+    set(IPv4_Total_Len, iplen);
+
+    uint32_t udplen = base_frame_len - get_offset(UDP_Src_Port);
+    set(UDP_Len, udplen);
 
     for (uint32_t i=0; i<fseq.size(); i++) {
         uint32_t idx = fields[fseq[i]].id;
@@ -880,16 +889,35 @@ void cea_stream::build_base_frame() {
 
     // insert IPv4 checksum
     // TODO: find ipv4 csum offset
-    uint16_t ipcsum = compute_ipv4_csum(base_frame+14, 20);
+    uint16_t ipcsum = compute_ipv4_csum(base_frame+get_offset(IPv4_Version), 20);
+
+    // copy csum to offset
     memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
     print_base_frame();
-    // write_pcap(base_frame, base_frame_len);
+    write_pcap(base_frame+8, base_frame_len-8); // skip preamble
     #endif
 }
 
 void cea_stream::print_base_frame() {
+    ostringstream buf("");
+    buf.setf(ios::hex, ios::basefield);
+    buf.setf(ios_base::left);
+    buf << endl;
+    buf << cea_formatted_hdr("Baseline Frame");
+    
+    for (uint32_t idx=0; idx<base_frame_len; idx++) {
+        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_frame[idx] << " ";
+        if (idx%8==7) buf << " ";
+        if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
+    }
+    buf << endl << endl;
+
+    cealog << buf.str();
+}
+
+void cea_stream::print_pcap() {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);

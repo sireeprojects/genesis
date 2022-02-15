@@ -419,6 +419,7 @@ private:
     unsigned char *base_frame;
     uint32_t base_frame_len;
     void print_base_frame();
+    void print_pcap();
 
     // reset stream to default values
     void reset();
