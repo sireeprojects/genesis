@@ -310,7 +310,7 @@ public:
     // add stream to proxy queue
     void add_stream(cea_stream *stm);
 
-    // add a command(cea_stream) to proxy queue
+    // add a command (in the form of cea_stream) to proxy queue
     void add_cmd(cea_stream *stm);
 
     // execute a command immediately does not add to proxy queue
@@ -434,7 +434,7 @@ private:
     void reset();
 
     // overloads
-    void do_copy (const cea_stream *rhs);
+    void do_copy(const cea_stream *rhs);
     string describe() const;
 
     // get offset of a particular field by parsing fseq

@@ -76,7 +76,7 @@ Terminologies: prune purge mutate probe
 template<typename ... Args>
 string string_format(const string& format, Args ... args) {
     size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-    if(size <= 0) {
+    if (size <= 0) {
         throw runtime_error("Error during formatting.");
     }
     unique_ptr<char[]> buf(new char[size]);
@@ -465,7 +465,7 @@ void write_pcap(unsigned char *frame, uint32_t len) {
 }
 
 // memcpy in network byte order
-void *cea_memcpy_ntw_byte_order (void *dest, const void *src, size_t len) {
+void *cea_memcpy_ntw_byte_order(void *dest, const void *src, size_t len) {
     if (len==0) return dest;
     char *d = (char*)dest;
     const char *s = (char*)src;
@@ -702,7 +702,7 @@ void cea_manager::add_proxy(cea_proxy *pxy) {
 
 void cea_manager::add_proxy(cea_proxy *pxy, uint32_t cnt) {
     CEA_DBG(cnt << " Proxies added");
-    for(uint32_t idx=0; idx<cnt; idx++)
+    for (uint32_t idx=0; idx<cnt; idx++)
         proxies.push_back(&pxy[idx]);
 }
 
@@ -716,7 +716,7 @@ void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
             }
         }
     } else {
-        for(uint32_t idx=0; idx<proxies.size(); idx++) {
+        for (uint32_t idx=0; idx<proxies.size(); idx++) {
             proxies[idx]->add_stream(stm);
         }
     }
@@ -769,7 +769,7 @@ void cea_proxy::join_threads() {
 }
 
 void cea_proxy::start_worker() {
-    worker_tid = thread (&cea_proxy::worker, this);
+    worker_tid = thread(&cea_proxy::worker, this);
     char name[16];
     sprintf(name, "worker_%d", proxy_id);
     pthread_setname_np(worker_tid.native_handle(), name);
@@ -836,7 +836,7 @@ void cea_stream::build_base_frame() {
     // // find final frame len and padding
     // base_frame_len = 0;
 
-    // for(auto &i : fseq) {
+    // for (auto &i : fseq) {
     //     base_frame_len += fields[i].len; // in bits
     // }
     // base_frame_len /= 8; // in bytes
@@ -869,7 +869,7 @@ void cea_stream::build_base_frame() {
         if (fields[idx].merge != 0) {
             merged = fields[idx].value; // first field
             mlen += fields[idx].len;
-            for(uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
+            for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
                 uint32_t xidx = fields[fseq[x]].id;
                 len = fields[xidx].len;
                 merged = (merged << len) | fields[xidx].value;
@@ -988,13 +988,11 @@ void cea_stream::arrange_fields_in_sequence() {
 }
 
 void cea_stream::purge_static_fields() {
-
-    for(auto i: fseq) {
+    for (auto i: fseq) {
         if (fields[i].touched) {
             cseq.push_back(i);
         }
     }
-
     CEA_DBG("Total Number of fields: " << fseq.size());
     CEA_DBG("Total Number of mutable fields: " << cseq.size());
 
@@ -1018,7 +1016,7 @@ cea_stream::cea_stream(string name) {
 }
 
 // copy constructor
-cea_stream::cea_stream (const cea_stream &rhs) {
+cea_stream::cea_stream(const cea_stream &rhs) {
     cea_stream::do_copy(&rhs);
 }
 
@@ -1049,7 +1047,7 @@ void cea_stream::set(cea_field_id id, uint64_t value) {
         fields[Num_MPLS_Hdrs].value += 1;
         uint32_t stack = fields[id].stack;
         // mark all fields of this stack
-        for(uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
+        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
             if (fields[idx].stack == stack) {
                 fields[idx].added = true;
             }
@@ -1062,7 +1060,7 @@ void cea_stream::set(cea_field_id id, uint64_t value) {
         fields[Num_VLAN_Tags].value += 1;
         uint32_t stack = fields[id].stack;
         // touch all fields of this stack
-        for(uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
+        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
             if (fields[idx].stack == stack)
                 fields[idx].added = true;
         }
@@ -1080,7 +1078,7 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
         fields[Num_MPLS_Hdrs].value += 1;
         uint32_t stack = fields[id].stack;
         // touch all fields of this stack
-        for(uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
+        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
             if (fields[idx].stack == stack)
                 fields[idx].added = true;
         }
@@ -1092,7 +1090,7 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
         fields[Num_VLAN_Tags].value += 1;
         uint32_t stack = fields[id].stack;
         // touch all fields of this stack
-        for(uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
+        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
             if (fields[idx].stack == stack)
                 fields[idx].added = true;
         }
@@ -1109,7 +1107,7 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
         fields[Num_MPLS_Hdrs].value += 1;
         uint32_t stack = fields[id].stack;
         // touch all fields of this stack
-        for(uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
+        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
             if (fields[idx].stack == stack)
                 fields[idx].added = true;
         }
@@ -1121,7 +1119,7 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
         fields[Num_VLAN_Tags].value += 1;
         uint32_t stack = fields[id].stack;
         // touch all fields of this stack
-        for(uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
+        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
             if (fields[idx].stack == stack)
                 fields[idx].added = true;
         }
@@ -1136,7 +1134,7 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
     fields[id].repeat = vspec.repeat_after;
 }
 
-void cea_stream::do_copy (const cea_stream *rhs) {
+void cea_stream::do_copy(const cea_stream *rhs) {
 }
 
 void cea_stream::reset() {
