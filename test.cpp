@@ -15,11 +15,13 @@ int main() {
     s->set(Network_Hdr, IPv4);
     s->set(Transport_Hdr, UDP);
 
-    // s->set(MPLS_01_Ttl, 1);
+    s->set(MPLS_01_Stack, 1);
     // s->set(MPLS_02_Label, 1);
     // s->set(MPLS_03_Label, 1);
     // s->set(VLAN_01_Tpi, 1);
-    // s->set(VLAN_02_Vid, 1);
+    s->set(VLAN_01_Vid, 1);
+
+    s->set(MAC_Ether_Type, 0x8847); // move to build_base_frame
     
     // s->set(PAYLOAD_Len, 64);
 

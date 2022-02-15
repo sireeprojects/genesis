@@ -90,8 +90,8 @@ vector<cea_field> flds = {
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Added    Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-{  false,  0,  false,   0,    FRAME_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "FRAME_Type               "},
-{  false,  0,  false,   0,    FRAME_Len                  ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "FRAME_Len                "},
+{  false,  0,  false,   0,    FRAME_Type               ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "FRAME_Type             "},
+{  false,  0,  false,   0,    FRAME_Len                ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "FRAME_Len              "},
 {  false,  0,  false,   0,    Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  false,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
@@ -845,6 +845,7 @@ void cea_stream::build_base_frame() {
     // TODO: calculate padding and adjust base_frame_len
         
     // TODO: is this safe? remember to free
+    // TODO: move to contructor
     base_frame = new unsigned char[base_frame_len];
     memset(base_frame, 0, base_frame_len);
 
