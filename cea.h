@@ -53,6 +53,8 @@ enum cea_hdr_type {
     UDP,
     PAUSE,
     PFC,
+    UDP_PHDR,
+    TCP_PHDR
 };
 
 enum cea_field_id {
@@ -225,6 +227,9 @@ enum cea_field_id {
     Pause_Quanta_5,
     Pause_Quanta_6,
     Pause_Quanta_7,
+    // helper fields
+    Zeros_8Bit,
+    TCP_Total_Len,
     Num_Fields
 };
 
@@ -433,15 +438,30 @@ private:
     // reset stream to factory settings
     void reset();
 
-    // overloads
+    // overload =
     void do_copy(const cea_stream *rhs);
+
+    // overload <<
     string describe() const;
+
+    // calculate offset in fseq
+    void build_offsets();
 
     // get offset of a particular field by parsing fseq
     uint32_t get_offset(cea_field_id id);
 
+    // get length (in bits) of a field from fields
+    uint32_t get_len(cea_field_id id);
+
+    // get current value of a field from fields
+    uint64_t get_value(cea_field_id id);
+
     // build a string to be prefixed in all messages generated from this class
     string msg_prefix;
+
+    uint32_t compute_udp_csum();
+
+    unsigned char *scratchpad;
 
     friend class cea_proxy;
 };
