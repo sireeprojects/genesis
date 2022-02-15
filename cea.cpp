@@ -69,8 +69,8 @@ Terminologies: prune purge mutate probe
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 #endif
 
-// maximum pkt size from mac dest addr to mac crc (16KB)
-#define CEA_MAX_PKT_SIZE 16384
+// maximum frame size from mac dest addr to mac crc (16KB)
+#define CEA_MAX_FRAME_SIZE 16384
 
 // stringize a printf like formatted output 
 template<typename ... Args>
@@ -90,8 +90,8 @@ vector<cea_field> flds = {
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 // Toc     Mrg Added    Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-{  false,  0,  false,   0,    PKT_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "PKT_Type               "},
-{  false,  0,  false,   0,    PKT_Len                  ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "PKT_Len                "},
+{  false,  0,  false,   0,    FRAME_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "FRAME_Type               "},
+{  false,  0,  false,   0,    FRAME_Len                  ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "FRAME_Len                "},
 {  false,  0,  false,   0,    Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  false,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
@@ -404,8 +404,8 @@ struct CEA_PACKED pcap_file_hdr {
     uint32_t linktype      : 32;
 };
 
-// pcap per packet header
-struct CEA_PACKED pcap_pkt_hdr {
+// pcap per frame header
+struct CEA_PACKED pcap_frame_hdr {
     uint32_t tv_sec  : 32;
     uint32_t tv_usec : 32;
     uint32_t caplen  : 32;
@@ -421,9 +421,9 @@ bool file_exists(const string& filename) {
     return false;
 }
 
-void write_pcap(unsigned char *pkt, uint32_t len) {
+void write_pcap(unsigned char *frame, uint32_t len) {
     pcap_file_hdr fh;
-    pcap_pkt_hdr ph;
+    pcap_frame_hdr ph;
 
     fh.magic= 0xa1b2c3d4;
     fh.version_major = 2;  
@@ -438,7 +438,7 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
     ph.caplen = len;
     ph.len = len;
 
-    char buf[CEA_MAX_PKT_SIZE];
+    char buf[CEA_MAX_FRAME_SIZE];
     uint32_t offset = 0;
 
     ofstream pcapfile;
@@ -454,9 +454,9 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
         pcapfile.open("run.pcap", ofstream::app);
     }
 
-    memcpy(buf+offset, (char*)&ph, sizeof(pcap_pkt_hdr));
-    offset += sizeof(pcap_pkt_hdr);
-    memcpy(buf+offset, pkt, len);
+    memcpy(buf+offset, (char*)&ph, sizeof(pcap_frame_hdr));
+    offset += sizeof(pcap_frame_hdr);
+    memcpy(buf+offset, frame, len);
     offset += len;
 
     pcapfile.write(buf, offset);
@@ -616,8 +616,8 @@ string cea_readable_fs(double size, cea_readable_type type) {
     return buf.str();
 }
 
-// stringize cea_pkt_type
-string to_str(cea_pkt_type t) {
+// stringize cea_frame_type
+string to_str(cea_frame_type t) {
     string name;
     switch(t) {
         case ETH_V2   : { name = "ETH_V2  "; break; }
@@ -778,7 +778,7 @@ void cea_proxy::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->prune();
-    cur_stm->build_base_pkt();
+    cur_stm->build_base_frame();
     // begin_mutation();
 }
 
@@ -796,7 +796,7 @@ void cea_proxy::begin_mutation() {
     // if (*(addr + i) != (char)i)
 }
 
-void cea_proxy::create_pkt_buffer() {
+void cea_proxy::create_frame_buffer() {
     pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
     if (pbuf == MAP_FAILED) {
         CEA_MSG("Error: Memory map failed");
@@ -804,7 +804,7 @@ void cea_proxy::create_pkt_buffer() {
     }
 }
 
-void cea_proxy::release_pkt_buffer() {
+void cea_proxy::release_frame_buffer() {
     if (munmap(pbuf, LENGTH)) {
         CEA_MSG("Error: Memory unmap failed");
         exit(1);
@@ -830,23 +830,23 @@ uint32_t cea_stream::get_offset(cea_field_id id) {
     return (total_bits/8);
 }
 
-void cea_stream::build_base_pkt() {
+void cea_stream::build_base_frame() {
 
-    // find final pkt len and padding
-    base_pkt_len = 0;
+    // find final frame len and padding
+    base_frame_len = 0;
 
     for(auto &i : fseq) {
-        base_pkt_len += fields[i].len; // in bits
+        base_frame_len += fields[i].len; // in bits
     }
-    base_pkt_len /= 8; // in bytes
+    base_frame_len /= 8; // in bytes
 
-    // TODO: calculate padding and adjust base_pkt_len
+    // TODO: calculate padding and adjust base_frame_len
         
     // TODO: is this safe? remember to free
-    base_pkt = new unsigned char[base_pkt_len];
+    base_frame = new unsigned char[base_frame_len];
 
 
-    CEA_DBG("Final length of the packet: " << base_pkt_len << " bytes");
+    CEA_DBG("Final length of the frame: " << base_frame_len << " bytes");
     
     uint32_t offset = 0;
     uint64_t merged = 0;
@@ -865,13 +865,13 @@ void cea_stream::build_base_pkt() {
                 merged = (merged << len) | fields[xidx].value;
                 mlen += len;
             }
-            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&merged, mlen/8);
+            cea_memcpy_ntw_byte_order(base_frame+offset, (char*)&merged, mlen/8);
             offset += mlen/8;
             i += fields[idx].merge; // skip mergable entries
         } else {
             uint64_t tmp = fields[idx].value;
             uint64_t len = fields[idx].len;
-            cea_memcpy_ntw_byte_order(base_pkt+offset, (char*)&tmp, len/8);
+            cea_memcpy_ntw_byte_order(base_frame+offset, (char*)&tmp, len/8);
             offset += len/8;
             mlen = 0; // TODO fix this
             merged = 0; // TODO fix this
@@ -880,24 +880,24 @@ void cea_stream::build_base_pkt() {
 
     // insert IPv4 checksum
     // TODO: find ipv4 csum offset
-    uint16_t ipcsum = compute_ipv4_csum(base_pkt+14, 20);
-    memcpy(base_pkt+get_offset(IPv4_Hdr_Csum), (char*)&ipcsum, 2);
+    uint16_t ipcsum = compute_ipv4_csum(base_frame+14, 20);
+    memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ipcsum, 2);
 
     #ifdef CEA_DEBUG
-    print_base_pkt();
-    // write_pcap(base_pkt, base_pkt_len);
+    print_base_frame();
+    // write_pcap(base_frame, base_frame_len);
     #endif
 }
 
-void cea_stream::print_base_pkt() {
+void cea_stream::print_base_frame() {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
     buf << endl;
-    buf << cea_formatted_hdr("Baseline Packet");
+    buf << cea_formatted_hdr("Baseline Frame");
     
-    for (uint32_t idx=0; idx<base_pkt_len; idx++) {
-        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_pkt[idx] << " ";
+    for (uint32_t idx=0; idx<base_frame_len; idx++) {
+        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_frame[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
     }
@@ -906,7 +906,7 @@ void cea_stream::print_base_pkt() {
     cealog << buf.str();
 }
 
-// algorithm to arrange the pkt fields
+// algorithm to arrange the frame fields
 void cea_stream::arrange_fields_in_sequence() {
     
     fseq.push_back(MAC_Preamble);
@@ -921,17 +921,17 @@ void cea_stream::arrange_fields_in_sequence() {
         }
     }
 
-    if (fields[PKT_Type].value == ETH_V2) {
+    if (fields[FRAME_Type].value == ETH_V2) {
         fseq.push_back(MAC_Ether_Type);
     } else {
         fseq.push_back(MAC_Len);
     }
 
-    if (fields[PKT_Type].value == ETH_LLC) {
+    if (fields[FRAME_Type].value == ETH_LLC) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
     }
 
-    if (fields[PKT_Type].value == ETH_SNAP) {
+    if (fields[FRAME_Type].value == ETH_SNAP) {
         fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
         fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
     }
@@ -1161,7 +1161,7 @@ string cea_stream::describe() const {
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
             << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+6) << to_str((cea_pkt_type) fields[id].value)
+            << setw(CEA_FLDWIDTH+6) << to_str((cea_frame_type) fields[id].value)
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
             << setw(CEA_FLDWIDTH) << fields[id].step     

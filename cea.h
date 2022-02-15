@@ -32,11 +32,11 @@ ostream cealog(&ob);
 
 enum cea_msg_verbosity {
     NONE, // default
-    LOW,  // debug only: NONE + pkt details w/o payload bytes
-    FULL, // debug only: LOW + pkt payload bytes
+    LOW,  // debug only: NONE + frame details w/o payload bytes
+    FULL, // debug only: LOW + frame payload bytes
 };
 
-enum cea_pkt_type {
+enum cea_frame_type {
     ETH_V2,
     ETH_LLC,
     ETH_SNAP
@@ -56,8 +56,8 @@ enum cea_hdr_type {
 };
 
 enum cea_field_id {
-    PKT_Type,
-    PKT_Len,
+    FRAME_Type,
+    FRAME_Len,
     Network_Hdr,
     Transport_Hdr,
     VLAN_Tag,
@@ -345,10 +345,10 @@ private:
     void extract_traffic_parameters();
     void begin_mutation();
 
-    // buffer to store the generated pkts
+    // buffer to store the generated frames
     void *pbuf;
-    void create_pkt_buffer();
-    void release_pkt_buffer();
+    void create_frame_buffer();
+    void release_frame_buffer();
 
     void reset();
     string msg_prefix;
@@ -397,7 +397,7 @@ private:
     uint32_t stream_id;
 
     // (container2) a list of all the field ids (in sequence) of the 
-    // selected pkt type and headers output of arrange_fields_in_sequence
+    // selected frame type and headers output of arrange_fields_in_sequence
     // vector<cea_field_id> fseq;
     vector<uint32_t> fseq;
 
@@ -413,12 +413,12 @@ private:
     void arrange_fields_in_sequence();
     void purge_static_fields();
     void prune();
-    void build_base_pkt();
+    void build_base_frame();
 
-    // base pkt
-    unsigned char *base_pkt;
-    uint32_t base_pkt_len;
-    void print_base_pkt();
+    // base frame
+    unsigned char *base_frame;
+    uint32_t base_frame_len;
+    void print_base_frame();
 
     // reset stream to default values
     void reset();
