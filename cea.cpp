@@ -918,23 +918,6 @@ void cea_stream::print_base_frame() {
     cealog << buf.str();
 }
 
-void cea_stream::print_pcap() {
-    ostringstream buf("");
-    buf.setf(ios::hex, ios::basefield);
-    buf.setf(ios_base::left);
-    buf << endl;
-    buf << cea_formatted_hdr("Baseline Frame");
-    
-    for (uint32_t idx=0; idx<base_frame_len; idx++) {
-        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_frame[idx] << " ";
-        if (idx%8==7) buf << " ";
-        if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
-    }
-    buf << endl << endl;
-
-    cealog << buf.str();
-}
-
 // algorithm to arrange the frame fields
 void cea_stream::arrange_fields_in_sequence() {
     

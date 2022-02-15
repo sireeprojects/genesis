@@ -406,33 +406,43 @@ private:
     vector<uint32_t> cseq;
 
     // (container4) field matrix
-    // cea_field fields[cea::Num_Fields];
     vector<cea_field> fields;
 
-    // states
+    // based on user specification of the frame, build a vector of 
+    // field ids in the sequence required by the specification
     void arrange_fields_in_sequence();
+
+    // build cseq by parsing fseq and adding only mutable fields
     void purge_static_fields();
+
+    // calls arrange and purge
     void prune();
+
+    // build the principal frame using fseq
     void build_base_frame();
 
-    // base frame
+    // base frame buffer
     unsigned char *base_frame;
-    uint32_t base_frame_len;
-    void print_base_frame();
-    void print_pcap();
 
-    // reset stream to default values
+    // total or initial len of the principal frame
+    uint32_t base_frame_len;
+
+    // (debug only) print all the bytes of the principal frame in hex
+    void print_base_frame();
+
+    // reset stream to factory settings
     void reset();
 
     // overloads
     void do_copy (const cea_stream *rhs);
     string describe() const;
 
-
+    // get offset of a particular field by parsing fseq
     uint32_t get_offset(cea_field_id id);
 
+    // build a string to be prefixed in all messages generated from this class
     string msg_prefix;
-    uint32_t pads;
+
     friend class cea_proxy;
 };
 
