@@ -57,6 +57,7 @@ enum cea_hdr_type {
 
 enum cea_field_id {
     PKT_Type,
+    PKT_Len,
     Network_Hdr,
     Transport_Hdr,
     VLAN_Tag,
@@ -212,7 +213,6 @@ enum cea_field_id {
     STREAM_Percentage,
     STREAM_Pkts_Per_Sec,
     STREAM_Bit_Rate,
-    // pause
     MAC_Control,
     MAC_Control_Opcode,
     Pause_Quanta,
@@ -428,7 +428,6 @@ private:
     string describe() const;
 
 
-    void build_offsets();
     uint32_t get_offset(cea_field_id id);
 
     string msg_prefix;

@@ -9,8 +9,8 @@ int main() {
     uint32_t cntr = 0;
     for (auto i: fseq) {
         if (cntr!=0) {
-        auto x = fseq.begin() + (cntr-1);
-        cout << "i=" << i << "  " << "x=" << *x << "  " << "Cntr=" << cntr << endl; 
+        auto prev = fseq.begin() + (cntr-1);
+        cout << "i=" << i << "  " << "prev=" << *prev << "  " << "Cntr=" << cntr << endl; 
         }
         cntr++;
     }

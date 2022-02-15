@@ -91,6 +91,7 @@ vector<cea_field> flds = {
 // Toc     Mrg Added    Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {  false,  0,  false,   0,    PKT_Type                 ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "PKT_Type               "},
+{  false,  0,  false,   0,    PKT_Len                  ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "PKT_Len                "},
 {  false,  0,  false,   0,    Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            "},
 {  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          "},
 {  false,  0,  false,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               "},
@@ -442,6 +443,10 @@ void write_pcap(unsigned char *pkt, uint32_t len) {
 
     ofstream pcapfile;
 
+    // TODO: what if the run.pcap was present from a previous run
+    // the file will exist and hence the pcapfile handle will not be created
+    // make sure the old file is deleted
+    // move the file_exists check to a constructor of the stream
     if (!file_exists("run.pcap")) {
         pcapfile.open("run.pcap", ofstream::app);
         pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
@@ -813,19 +818,6 @@ void cea_proxy::release_pkt_buffer() {
 void cea_stream::prune() {
     arrange_fields_in_sequence();
     purge_static_fields();
-}
-
-void cea_stream::build_offsets() {
-    uint32_t cntr = 0;
-    for (auto i: fseq) {
-        if (cntr==0) {
-            fields[i].offset = 0;
-        } else {
-            auto prev_offset = fseq.begin() + (cntr-1);
-            fields[i].offset = floor((double)fields[*prev_offset].len/8) + fields[*prev_offset].offset;
-        }
-        cntr++;
-    }
 }
 
 uint32_t cea_stream::get_offset(cea_field_id id) {
