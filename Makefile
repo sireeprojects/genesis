@@ -11,7 +11,7 @@ sim:makelib
 	@./sim.x;
 
 makelib:clean
-	@clear; g++ cea.cpp -s -fPIC -shared -o libcea.so -Wall -Wno-unused -lpthread ${LIBPARAMS}
+	@g++ cea.cpp -s -fPIC -shared -o libcea.so -Wall -Wno-unused -lpthread ${LIBPARAMS}
 
 clean:
 	@rm -rf *.x *.log *.so *.o run.pcap

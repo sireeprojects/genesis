@@ -403,7 +403,6 @@ private:
 
     // (container2) a list of all the field ids (in sequence) of the 
     // selected frame type and headers output of arrange_fields_in_sequence
-    // vector<cea_field_id> fseq;
     vector<uint32_t> fseq;
 
     // (container3) a sequence of all the fields ids that needs 
@@ -425,6 +424,9 @@ private:
 
     // build the principal frame using fseq
     void build_base_frame();
+
+    // concatenate all fields reuired by the frame spec
+    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
 
     // base frame buffer
     unsigned char *base_frame;

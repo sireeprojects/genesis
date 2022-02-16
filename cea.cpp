@@ -148,8 +148,9 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    IPv6_Hop_Limit           ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         "},
 {  false,  0,  false,   0,    IPv6_Src_Addr            ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          "},
 {  false,  0,  false,   0,    IPv6_Dest_Addr           ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         "},
-{  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Src_Port           "},
-{  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
+
+{  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   1234,                   0,    0,   0,   0,  "TCP_Src_Port           "},
+{  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   5678,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
 {  false,  0,  false,   0,    TCP_Seq_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            "},
 {  false,  0,  false,   0,    TCP_Ack_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            "},
 {  false,  7,  false,   0,    TCP_Data_Offset          ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "TCP_Data_Offset        "},
@@ -1006,13 +1007,20 @@ void cea_stream::purge_static_fields() {
 
 // TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::compute_udp_csum() {
-    uint32_t offset = 0;
-    for (auto i : htof[UDP_PHDR]) {
-        uint32_t flen = fields[i].len;
-        uint64_t val = fields[i].value;
-        cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
-        offset += (flen/8);
+    // uint32_t offset = 0;
+    // for (auto i : htof[UDP_PHDR]) {
+    //     uint32_t flen = fields[i].len;
+    //     uint64_t val = fields[i].value;
+    //     cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
+    //     offset += (flen/8);
+    // }
+
+    vector<uint32_t>nseq;
+    for (auto i: htof[UDP_PHDR]) {
+        nseq.push_back(i);
     }
+    uint32_t offset = splice_fields(nseq, scratchpad);
+
     // copy payload
     memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
     return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
@@ -1028,10 +1036,51 @@ uint32_t cea_stream::compute_tcp_csum() {
         cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
         offset += (flen/8);
     }
+
+    // vector<uint32_t>nseq;
+    // for (auto i: htof[TCP_PHDR]) {
+    //     nseq.push_back(i);
+    // }
+    // uint32_t offset = splice_fields(nseq, scratchpad);
     CEA_DBG("offset: " << offset);
     CEA_DBG("total_len: " << payload_offset+offset);
+    CEA_DBG("tcp total_len: " << get_value(TCP_Total_Len));
+
     memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
     return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
+}
+
+// concatenate all fields reuired by the frame spec
+uint32_t cea_stream::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
+    uint32_t offset = 0;
+    uint64_t merged = 0;
+    uint64_t len = 0;
+    uint64_t mlen = 0;
+
+    for (uint32_t i=0; i<seq.size(); i++) {
+        uint32_t idx = fields[seq[i]].id;
+        if (fields[idx].merge != 0) {
+            merged = fields[idx].value; // first field
+            mlen += fields[idx].len;
+            for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
+                uint32_t xidx = fields[seq[x]].id;
+                len = fields[xidx].len;
+                merged = (merged << len) | fields[xidx].value;
+                mlen += len;
+            }
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
+            offset += mlen/8;
+            i += fields[idx].merge; // skip mergable entries
+        } else {
+            uint64_t tmp = fields[idx].value;
+            uint64_t len = fields[idx].len;
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&tmp, len/8);
+            offset += len/8;
+            mlen = 0; // TODO fix this
+            merged = 0; // TODO fix this
+        }
+    }
+    return offset;
 }
 
 void cea_stream::build_base_frame() {
@@ -1085,6 +1134,8 @@ void cea_stream::build_base_frame() {
     // compute length field in UDP header
     uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) + get_len(MAC_Preamble);
     set(UDP_Len, udplen);
+
+    // splice_fields(fseq, base_frame);
 
     for (uint32_t i=0; i<fseq.size(); i++) {
         uint32_t idx = fields[fseq[i]].id;
@@ -1184,7 +1235,6 @@ void cea_stream::set(cea_field_id id, uint64_t value) {
             }
         }
     }
-
     // process if vlan
     bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
     if (vlan) {
@@ -1196,7 +1246,6 @@ void cea_stream::set(cea_field_id id, uint64_t value) {
                 fields[idx].added = true;
         }
     }
-
     fields[id].value = value;
     fields[id].touched = true;
 }
@@ -1214,7 +1263,6 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
                 fields[idx].added = true;
         }
     }
-
     // process if vlan
     bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
     if (vlan) {
@@ -1243,7 +1291,6 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
                 fields[idx].added = true;
         }
     }
-
     // process if vlan
     bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
     if (vlan) {
@@ -1255,7 +1302,6 @@ void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
                 fields[idx].added = true;
         }
     }
-
     fields[id].touched = true;
     fields[id].gen_type = mspec;
     fields[id].value = vspec.value;
