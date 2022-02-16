@@ -949,7 +949,7 @@ void cea_stream::arrange_fields_in_sequence() {
         if (fields[idx].added) {
             fseq.push_back(idx);
         }
-        set(MAC_Ether_Type, 0x8847);
+        // set(MAC_Ether_Type, 0x8847);
     }
 
     // ARP does not contain IP or TCP/UDP headers
@@ -1008,7 +1008,7 @@ uint32_t cea_stream::compute_udp_csum() {
     return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
 }
 
-void cea_stream::print_cdata (unsigned char* tmp, int len) {
+void print_cdata (unsigned char* tmp, int len) {
     stringstream s;
     s.str("");
     uint32_t idx = 0;
