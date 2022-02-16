@@ -23,8 +23,6 @@ int main() {
     // s->set(VLAN_01_Tpi, 1);
     // s->set(VLAN_01_Vid, 1);
 
-    // s->set(MAC_Ether_Type, 0x8847); // move to build_base_frame
-    
     // add stream to proxy queue
     p->add_stream(s);
 

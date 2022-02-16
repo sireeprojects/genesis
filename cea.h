@@ -467,6 +467,7 @@ private:
     unsigned char *scratchpad;
     uint32_t payload_len;
     uint32_t payload_offset;
+    void print_cdata (unsigned char* tmp, int len);
 
     friend class cea_proxy;
 };

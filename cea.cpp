@@ -148,7 +148,6 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    IPv6_Hop_Limit           ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         "},
 {  false,  0,  false,   0,    IPv6_Src_Addr            ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          "},
 {  false,  0,  false,   0,    IPv6_Dest_Addr           ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         "},
-
 {  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   1234,                   0,    0,   0,   0,  "TCP_Src_Port           "},
 {  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   5678,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
 {  false,  0,  false,   0,    TCP_Seq_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            "},
@@ -159,9 +158,9 @@ vector<cea_field> flds = {
 {  false,  1,  false,   0,    TCP_Ack                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack                "},
 {  false,  1,  false,   0,    TCP_Psh                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Psh                "},
 {  false,  1,  false,   0,    TCP_Rst                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Rst                "},
-{  false,  1,  false,   0,    TCP_Syn                  ,1,        0,     Fixed,   1,                   0,    0,   0,   0,  "TCP_Syn                "},
+{  false,  1,  false,   0,    TCP_Syn                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Syn                "},
 {  false,  1,  false,   0,    TCP_Fin                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Fin                "},
-{  false,  0,  false,   0,    TCP_Window               ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Window             "},
+{  false,  0,  false,   0,    TCP_Window               ,16,       0,     Fixed,   64,                  0,    0,   0,   0,  "TCP_Window             "},
 {  false,  0,  false,   0,    TCP_Csum                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Csum               "},
 {  false,  0,  false,   0,    TCP_Urg_Ptr              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg_Ptr            "},
 {  false,  0,  false,   0,    TCP_Opts                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Opts               "},
@@ -280,7 +279,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    Pause_Quanta_6           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_6         "},
 {  false,  0,  false,   0,    Pause_Quanta_7           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_7         "},
 {  false,  0,  false,   0,    Zeros_8Bit               ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "Zeros_8Bit             "},
-{  false,  0,  false,   0,    TCP_Total_Len            ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Total_Len          "}
+{  false,  0,  false,   0,    TCP_Total_Len            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Total_Len          "}
 };
 
 // header to fields map
@@ -394,21 +393,21 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
                IPv4_Protocol,
                TCP_Total_Len,
                //
-               TCP_Src_Port,
-               TCP_Dest_Port,
-               TCP_Seq_Num,
-               TCP_Ack_Num,
-               TCP_Data_Offset,
-               TCP_Reserved,
-               TCP_Urg,
-               TCP_Ack,
-               TCP_Psh,
-               TCP_Rst,
-               TCP_Syn,
-               TCP_Fin,
-               TCP_Window,
-               TCP_Csum,
-               TCP_Urg_Ptr,
+               // TCP_Src_Port,
+               // TCP_Dest_Port,
+               // TCP_Seq_Num,
+               // TCP_Ack_Num,
+               // TCP_Data_Offset,
+               // TCP_Reserved,
+               // TCP_Urg,
+               // TCP_Ack,
+               // TCP_Psh,
+               // TCP_Rst,
+               // TCP_Syn,
+               // TCP_Fin,
+               // TCP_Window,
+               // TCP_Csum,
+               // TCP_Urg_Ptr,
                }}
 };
 
@@ -613,9 +612,7 @@ string cea_trim(string s) {
     return cea_ltrim(cea_rtrim(s));
 }
 
-//  break a long string to a multiline string by breaking 
-//  the input string to an approximate length of line_width
-//  characters adding four leading spaces before each break
+//  break a long string to a multiline string
 string cea_wordwrap(string msg, uint32_t line_width=100) {
     stringstream wrapped_msg;
     string leading_spaces = "    ";
@@ -671,7 +668,7 @@ string to_str(cea_frame_type t) {
         case ETH_V2   : { name = "ETH_V2  "; break; }
         case ETH_LLC  : { name = "ETH_LLC "; break; }
         case ETH_SNAP : { name = "ETH_SNAP"; break; }
-        default            : { name = "undefined    "; break; }
+        default       : { name = "undefined"; break; }
     }
     return cea_trim(name);
 }
@@ -680,17 +677,19 @@ string to_str(cea_frame_type t) {
 string to_str(cea_hdr_type t) {
     string name;
     switch(t) {
-        case MAC    : { name = "MAC  "; break; }
-        case LLC    : { name = "LLC  "; break; }
-        case SNAP   : { name = "SNAP "; break; }
-        case IPv4   : { name = "IPv4 "; break; }
-        case IPv6   : { name = "IPv6 "; break; }
-        case ARP    : { name = "ARP  "; break; }
-        case TCP    : { name = "TCP  "; break; }
-        case UDP    : { name = "UDP  "; break; }
-        case PAUSE  : { name = "PAUSE"; break; }
-        case PFC    : { name = "PFC  "; break; }
-        default     : { name = "undefined"; break; }
+        case MAC      : { name = "MAC     "; break; }
+        case LLC      : { name = "LLC     "; break; }
+        case SNAP     : { name = "SNAP    "; break; }
+        case IPv4     : { name = "IPv4    "; break; }
+        case IPv6     : { name = "IPv6    "; break; }
+        case ARP      : { name = "ARP     "; break; }
+        case TCP      : { name = "TCP     "; break; }
+        case UDP      : { name = "UDP     "; break; }
+        case PAUSE    : { name = "PAUSE   "; break; }
+        case PFC      : { name = "PFC     "; break; }
+        case UDP_PHDR : { name = "UDP_PHDR"; break; }
+        case TCP_PHDR : { name = "TCP_PHDR"; break; }
+        default       : { name = "undefined"; break; }
     }
     return cea_trim(name);
 }
@@ -731,7 +730,7 @@ string to_str(cea_field_generation_type t) {
         case Percentage        : { name = "Percentage       "; break; }                             
         case Pkts_Per_Sec      : { name = "Pkts_Per_Sec     "; break; }                               
         case Bit_Rate          : { name = "Bit_Rate         "; break; }                           
-        default                : { name = "UNDEFINED        "; break; }
+        default                : { name = "undefined        "; break; }
     }
     return cea_trim(name);
 }
@@ -827,7 +826,7 @@ void cea_proxy::worker() {
     extract_traffic_parameters();
     cur_stm->prune();
     cur_stm->build_base_frame();
-    // begin_mutation();
+    begin_mutation();
 }
 
 void cea_proxy::read_next_stream_from_stmq() {
@@ -904,9 +903,9 @@ void cea_stream::print_base_frame() {
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
     buf << endl;
-    buf << cea_formatted_hdr("Baseline Frame");
+    buf << cea_formatted_hdr("Base Frame");
     
-    for (uint32_t idx=0; idx<get_value(FRAME_Len); idx++) {
+    for (uint32_t idx=0; idx<(get_value(FRAME_Len) + get_len(MAC_Preamble)); idx++) {
         buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_frame[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
@@ -950,6 +949,7 @@ void cea_stream::arrange_fields_in_sequence() {
         if (fields[idx].added) {
             fseq.push_back(idx);
         }
+        set(MAC_Ether_Type, 0x8847);
     }
 
     // ARP does not contain IP or TCP/UDP headers
@@ -972,17 +972,19 @@ void cea_stream::arrange_fields_in_sequence() {
             htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
     }
 
-    #ifdef CEA_DEBUG
-    uint32_t cntr=0;
-    for (auto i : fseq) {
-        CEA_DBG(       setw(20)<< left << cea_trim(fields[i].name) 
-            << " (" << setw(2) << right << cntr << ')' 
-            << " (" << setw(2) << right << fields[i].id<< ')'
-            << " (" << setw(2) << right << fields[i].len<< ')'
-            );
-        cntr++;
-    }
-    #endif
+    // #ifdef CEA_DEBUG
+    // uint32_t cntr=0;
+    // for (auto i : fseq) {
+    //     if (fields[i].len > 0) {
+    //         CEA_DBG(setw(20)<< left << cea_trim(fields[i].name) 
+    //             << " (" << setw(2) << right << cntr << ')' 
+    //             << " (" << setw(2) << right << fields[i].id<< ')'
+    //             << " (" << setw(2) << right << fields[i].len<< ')'
+    //             );
+    //         cntr++;
+    //     }
+    // }
+    // #endif
 }
 
 void cea_stream::purge_static_fields() {
@@ -991,30 +993,10 @@ void cea_stream::purge_static_fields() {
             cseq.push_back(i);
         }
     }
-    CEA_DBG("Total Number of fields: " << fseq.size());
-    CEA_DBG("Total Number of mutable fields: " << cseq.size());
-
-    #ifdef CEA_DEBUG
-    uint32_t cntr=0;
-    for (auto i : cseq) {
-        CEA_DBG(setw(20) << left << cea_trim(fields[i].name) 
-            << '(' << cntr << ')' 
-            << " (" << fields[i].id<< ')');
-        cntr++;
-    }
-    #endif
 }
 
 // TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::compute_udp_csum() {
-    // uint32_t offset = 0;
-    // for (auto i : htof[UDP_PHDR]) {
-    //     uint32_t flen = fields[i].len;
-    //     uint64_t val = fields[i].value;
-    //     cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
-    //     offset += (flen/8);
-    // }
-
     vector<uint32_t>nseq;
     for (auto i: htof[UDP_PHDR]) {
         nseq.push_back(i);
@@ -1026,28 +1008,40 @@ uint32_t cea_stream::compute_udp_csum() {
     return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
 }
 
+void cea_stream::print_cdata (unsigned char* tmp, int len) {
+    stringstream s;
+    s.str("");
+    uint32_t idx = 0;
+
+    for (int x=0; x<len/16; x++) {
+        for (int y=0; y<16; y++) {
+            s <<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
+            idx++;
+        }
+        s << endl;
+    }
+    for (int x=idx; x<len; x++) {
+       s<<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
+       idx++;
+    }
+    cout << "PKT Data :" << endl << s.str()<<endl;
+    fflush (stdout);
+}
+
+
 // TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::compute_tcp_csum() {
     set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len));
-    uint32_t offset = 0;
-    for (auto i : htof[TCP_PHDR]) {
-        uint32_t flen = fields[i].len;
-        uint64_t val = fields[i].value;
-        cea_memcpy_ntw_byte_order(scratchpad+offset, (char*)&val, flen/8);
-        offset += (flen/8);
+
+    vector<uint32_t>nseq;
+    for (auto i: htof[TCP_PHDR]) {
+        nseq.push_back(i);
     }
+    uint32_t offset = splice_fields(nseq, scratchpad);
 
-    // vector<uint32_t>nseq;
-    // for (auto i: htof[TCP_PHDR]) {
-    //     nseq.push_back(i);
-    // }
-    // uint32_t offset = splice_fields(nseq, scratchpad);
-    CEA_DBG("offset: " << offset);
-    CEA_DBG("total_len: " << payload_offset+offset);
-    CEA_DBG("tcp total_len: " << get_value(TCP_Total_Len));
-
-    memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
-    return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
+    // copy tcp header and payload
+    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), get_value(TCP_Total_Len));
+    return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
 }
 
 // concatenate all fields reuired by the frame spec
@@ -1084,26 +1078,16 @@ uint32_t cea_stream::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
 }
 
 void cea_stream::build_base_frame() {
-    // find length of frame (in bits) minus payload
+    // total length of all headers (in bits) includes preamble 
+    // but minus payload
     for (auto i : fseq) {
         base_frame_len += fields[i].len;
     }
     base_frame_len /= 8; // in bytes
 
-    CEA_DBG("Original base_frame_len: " 
-            << base_frame_len << " bytes");
-
-    // remove len of preamble for proper calculation
-    base_frame_len = base_frame_len - get_len(MAC_Preamble);
-
-    CEA_DBG("base_frame_len w/o preamble: " 
-            << base_frame_len << " bytes");
-
-    CEA_DBG("Frame len: " 
-            << get_value(FRAME_Len) << " bytes");
-
     // throw error if base_frame_len is greater than user specified FRAME_Len 
-    if (base_frame_len > get_value(FRAME_Len)) {
+    // TODO: consider CRC also
+    if ((base_frame_len - get_len(MAC_Preamble)) > get_value(FRAME_Len)) {
         CEA_MSG(BOLD(FRED("ERROR: "))
             << "Final frame lenght is greater then the length specified via FRAME_Len. "
             << "Final Frame Length: " << base_frame_len << "  "
@@ -1111,22 +1095,9 @@ void cea_stream::build_base_frame() {
             )
         exit(1);
     }
-
-    payload_len = get_value(FRAME_Len) - base_frame_len;
-    payload_offset = base_frame_len+8;
+    payload_len = get_value(FRAME_Len) - (base_frame_len - get_len(MAC_Preamble));
+    payload_offset = base_frame_len;
         
-    CEA_DBG("Payload length: " << payload_len << " bytes");
-    CEA_DBG("Payload offset: " << payload_offset << " bytes");
-
-    CEA_DBG("Final length of the frame with payload: "
-        << get_value(FRAME_Len) << " bytes");
-    
-    uint32_t offset = 0;
-    uint64_t merged = 0;
-    uint64_t tmp =  0;
-    uint64_t len = 0;
-    uint64_t mlen = 0;
-
     // compute length field in IPv4 header
     uint32_t iplen = get_value(FRAME_Len) - get_offset(IPv4_Version) + get_len(MAC_Preamble);
     set(IPv4_Total_Len, iplen);
@@ -1135,48 +1106,22 @@ void cea_stream::build_base_frame() {
     uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) + get_len(MAC_Preamble);
     set(UDP_Len, udplen);
 
-    // splice_fields(fseq, base_frame);
-
-    for (uint32_t i=0; i<fseq.size(); i++) {
-        uint32_t idx = fields[fseq[i]].id;
-        if (fields[idx].merge != 0) {
-            merged = fields[idx].value; // first field
-            mlen += fields[idx].len;
-            for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
-                uint32_t xidx = fields[fseq[x]].id;
-                len = fields[xidx].len;
-                merged = (merged << len) | fields[xidx].value;
-                mlen += len;
-            }
-            cea_memcpy_ntw_byte_order(base_frame+offset, (char*)&merged, mlen/8);
-            offset += mlen/8;
-            i += fields[idx].merge; // skip mergable entries
-        } else {
-            uint64_t tmp = fields[idx].value;
-            uint64_t len = fields[idx].len;
-            cea_memcpy_ntw_byte_order(base_frame+offset, (char*)&tmp, len/8);
-            offset += len/8;
-            mlen = 0; // TODO fix this
-            merged = 0; // TODO fix this
-        }
-    }
-
+    splice_fields(fseq, base_frame);
+    
     // fill dummy payload value
-    for (uint32_t i=0; i<payload_len; i++)
+    for (uint32_t i=0; i<payload_len; i++) {
         memcpy(base_frame+(payload_offset+i), (char*)&i, 1);
-
+    }
     // find ipv4 csum and overlay on the base frame
     if (get_value(Network_Hdr) == IPv4) {
         uint16_t ip_csum = compute_ipv4_csum(base_frame+get_offset(IPv4_Version), 20);
         memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
     }
-
     // find udp csum and overlay on the base frame
     if (get_value(Transport_Hdr) == UDP) {
         uint16_t udp_csum = compute_udp_csum();
         memcpy(base_frame+get_offset(UDP_Csum), (char*)&udp_csum, 2);
     }
-
     // find tcp csum and overlay on the base frame
     if (get_value(Transport_Hdr) == TCP) {
         uint16_t tcp_csum = compute_tcp_csum();
@@ -1184,8 +1129,15 @@ void cea_stream::build_base_frame() {
     }
 
     #ifdef CEA_DEBUG
+    cealog << endl << cea_formatted_hdr("Base Frame Properties");
+    cealog << setw(20) << left << "Frame len: " << get_value(FRAME_Len) << endl;
+    cealog << setw(20) << left << "Preamble len: " << get_len(MAC_Preamble) << endl;
+    cealog << setw(20) << left << "Headers len: " << base_frame_len - get_len(MAC_Preamble) << endl;
+    cealog << setw(20) << left << "Payload len: " << payload_len << endl;
+    cealog << setw(20) << left << "Payload offset: " << payload_offset << endl;
     print_base_frame();
-    write_pcap(base_frame+8, get_value(FRAME_Len)); // skip preamble
+    write_pcap((base_frame + get_len(MAC_Preamble)),
+        get_value(FRAME_Len));
     #endif
 }
 
