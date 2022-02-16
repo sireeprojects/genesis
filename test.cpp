@@ -19,7 +19,6 @@ int main() {
 
     // s->set(MPLS_01_Stack, 1);
     // s->set(MPLS_02_Label, 1);
-    // s->set(MPLS_03_Label, 1);
     // s->set(VLAN_01_Tpi, 1);
     // s->set(VLAN_01_Vid, 1);
 
