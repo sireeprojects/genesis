@@ -28,8 +28,16 @@ THINGS TO DO:
               idea: store context in stream itself instead of storing 
                     in proxy. then context switch means just pointing to 
                     other stream
+
 - Optimize compute_ udp and tcp csum calculation. avoid payload copy
 
+- dump python script
+        how to use python to start test
+        in 3p mode, the test is first started and then the tcl script is run
+        python mode should be like c++ mode where the test should be invoked
+        by python script. it should not be like, first start the c++ test and
+        then run the python script. if this is the case python script cannot
+        be added to regression
 */
 
 #include <thread>
@@ -82,12 +90,14 @@ THINGS TO DO:
 // Messaging 
 //------------------------------------------------------------------------------
 
+// Used for mandatory messages. Cannot be disabled in debug mode
 #define CEA_MSG(msg) { \
     stringstream s; \
     s << msg; \
     cealog << msg_prefix << string(__FUNCTION__) << ": " <<  s.str() << endl; \
 }
 
+// Enabled only in debug mode
 #ifdef CEA_DEBUG
     #define CEA_DBG(msg) { CEA_MSG(msg) }
 #else
@@ -201,35 +211,35 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    UDF7                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF7                   "},
 {  false,  0,  false,   0,    UDF8                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF8                   "},
 {  false,  2,  false,   1,    MPLS_01_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Label          "},
-{  false,  1,  false,   1,    MPLS_01_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Cos            "},
+{  false,  1,  false,   1,    MPLS_01_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Exp            "},
 {  false,  1,  false,   1,    MPLS_01_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Stack          "},
 {  false,  0,  false,   1,    MPLS_01_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Ttl            "},
 {  false,  2,  false,   2,    MPLS_02_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Label          "},
-{  false,  1,  false,   2,    MPLS_02_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Cos            "},
+{  false,  1,  false,   2,    MPLS_02_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Exp            "},
 {  false,  1,  false,   2,    MPLS_02_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Stack          "},
 {  false,  0,  false,   2,    MPLS_02_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Ttl            "},
 {  false,  2,  false,   3,    MPLS_03_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Label          "},
-{  false,  1,  false,   3,    MPLS_03_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Cos            "},
+{  false,  1,  false,   3,    MPLS_03_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Exp            "},
 {  false,  1,  false,   3,    MPLS_03_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Stack          "},
 {  false,  0,  false,   3,    MPLS_03_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Ttl            "},
 {  false,  2,  false,   4,    MPLS_04_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Label          "},
-{  false,  1,  false,   4,    MPLS_04_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Cos            "},
+{  false,  1,  false,   4,    MPLS_04_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Exp            "},
 {  false,  1,  false,   4,    MPLS_04_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Stack          "},
 {  false,  0,  false,   4,    MPLS_04_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Ttl            "},
 {  false,  2,  false,   5,    MPLS_05_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Label          "},
-{  false,  1,  false,   5,    MPLS_05_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Cos            "},
+{  false,  1,  false,   5,    MPLS_05_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Exp            "},
 {  false,  1,  false,   5,    MPLS_05_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Stack          "},
 {  false,  0,  false,   5,    MPLS_05_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Ttl            "},
 {  false,  2,  false,   6,    MPLS_06_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Label          "},
-{  false,  1,  false,   6,    MPLS_06_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Cos            "},
+{  false,  1,  false,   6,    MPLS_06_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Exp            "},
 {  false,  1,  false,   6,    MPLS_06_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Stack          "},
 {  false,  0,  false,   6,    MPLS_06_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Ttl            "},
 {  false,  2,  false,   7,    MPLS_07_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Label          "},
-{  false,  1,  false,   7,    MPLS_07_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Cos            "},
+{  false,  1,  false,   7,    MPLS_07_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Exp            "},
 {  false,  1,  false,   7,    MPLS_07_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Stack          "},
 {  false,  0,  false,   7,    MPLS_07_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Ttl            "},
 {  false,  2,  false,   8,    MPLS_08_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Label          "},
-{  false,  1,  false,   8,    MPLS_08_Cos              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Cos            "},
+{  false,  1,  false,   8,    MPLS_08_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Exp            "},
 {  false,  1,  false,   8,    MPLS_08_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Stack          "},
 {  false,  0,  false,   8,    MPLS_08_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Ttl            "},
 {  false,  0,  false,   1,    VLAN_01_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_01_Tpi            "},

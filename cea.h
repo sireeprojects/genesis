@@ -10,12 +10,16 @@ using namespace std;
 
 namespace cea {
 
-// custom output stream
 class outbuf : public streambuf {
 protected:
     virtual int overflow(int c) ;
 };
 outbuf ob;
+
+// A custom output stream. Usage is similar to cout except that cout writes
+// messages only to the screen, but cealog writes the message to the screen
+// as well as the log file. Usage example:
+//     cealog << "Frame recevied: " << frm_count << endl;
 ostream cealog(&ob);
 
 enum cea_msg_verbosity {
@@ -126,35 +130,35 @@ enum cea_field_id {
     UDF7,
     UDF8,
     MPLS_01_Label,
-    MPLS_01_Cos,
+    MPLS_01_Exp,
     MPLS_01_Stack,
     MPLS_01_Ttl,
     MPLS_02_Label,
-    MPLS_02_Cos,
+    MPLS_02_Exp,
     MPLS_02_Stack,
     MPLS_02_Ttl,
     MPLS_03_Label,
-    MPLS_03_Cos,
+    MPLS_03_Exp,
     MPLS_03_Stack,
     MPLS_03_Ttl,
     MPLS_04_Label,
-    MPLS_04_Cos,
+    MPLS_04_Exp,
     MPLS_04_Stack,
     MPLS_04_Ttl,
     MPLS_05_Label,
-    MPLS_05_Cos,
+    MPLS_05_Exp,
     MPLS_05_Stack,
     MPLS_05_Ttl,
     MPLS_06_Label,
-    MPLS_06_Cos,
+    MPLS_06_Exp,
     MPLS_06_Stack,
     MPLS_06_Ttl,
     MPLS_07_Label,
-    MPLS_07_Cos,
+    MPLS_07_Exp,
     MPLS_07_Stack,
     MPLS_07_Ttl,
     MPLS_08_Label,
-    MPLS_08_Cos,
+    MPLS_08_Exp,
     MPLS_08_Stack,
     MPLS_08_Ttl,
     VLAN_01_Tpi,
