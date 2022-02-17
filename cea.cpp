@@ -28,9 +28,8 @@ THINGS TO DO:
               idea: store context in stream itself instead of storing 
                     in proxy. then context switch means just pointing to 
                     other stream
-- ip/tcp/udp checksum
+- Optimize compute_ udp and tcp csum calculation. avoid payload copy
 
-Terminologies: prune purge mutate probe 
 */
 
 #include <thread>
@@ -393,11 +392,7 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
                IPv4_Dest_Addr,
                Zeros_8Bit,
                IPv4_Protocol,
-               UDP_Len,
-               UDP_Src_Port,   // TODO: remove udp header
-               UDP_Dest_Port,  // and use the one already in
-               UDP_Len,        // base_frame
-               UDP_Csum
+               UDP_Len
                }},
     {TCP_PHDR, {
                IPv4_Src_Addr,
@@ -824,11 +819,20 @@ public:
     // build a string to be prefixed in all messages generated from this class
     string msg_prefix;
 
+    // calculate udp checksum along with the conceptual pseudoheader
     uint32_t compute_udp_csum();
+
+    // calculate tcp checksum along with the conceptual pseudoheader
     uint32_t compute_tcp_csum();
 
+    // if at any point of time a char array is required, scratchpad can be used
+    // it is created during stream constructor, it should never be freed 
     unsigned char *scratchpad;
+
+    // length of payload after removing headers and preamble
     uint32_t payload_len;
+
+    // offset of the payload from preamble to the last field of the last header 
     uint32_t payload_offset;
 };
 
@@ -864,7 +868,8 @@ void cea_stream::core::build_offsets() {
             fields[i].offset = 0;
         } else {
             auto prev_offset = fseq.begin() + (cntr-1);
-            fields[i].offset = floor((double)fields[*prev_offset].len/8) + fields[*prev_offset].offset;
+            fields[i].offset = floor((double)fields[*prev_offset].len/8) + 
+                fields[*prev_offset].offset;
         }
         cntr++;
     }
@@ -877,8 +882,10 @@ void cea_stream::core::print_base_frame() {
     buf << endl;
     buf << cea_formatted_hdr("Base Frame");
     
-    for (uint32_t idx=0; idx<(get_value(FRAME_Len) + get_len(MAC_Preamble)); idx++) {
-        buf << setw(2) << right << setfill('0')<< hex << (uint16_t) base_frame[idx] << " ";
+    for (uint32_t idx=0; idx<(get_value(FRAME_Len) + get_len(MAC_Preamble)); 
+            idx++) {
+        buf << setw(2) << right << setfill('0')<< hex << 
+            (uint16_t) base_frame[idx] << " ";
         if (idx%8==7) buf << " ";
         if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
     }
@@ -921,7 +928,6 @@ void cea_stream::core::arrange_fields_in_sequence() {
         if (fields[idx].added) {
             fseq.push_back(idx);
         }
-        // set(MAC_Ether_Type, 0x8847);
     }
 
     // ARP does not contain IP or TCP/UDP headers
@@ -943,20 +949,6 @@ void cea_stream::core::arrange_fields_in_sequence() {
             htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
             htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
     }
-
-    // #ifdef CEA_DEBUG
-    // uint32_t cntr=0;
-    // for (auto i : fseq) {
-    //     if (fields[i].len > 0) {
-    //         CEA_DBG(setw(20)<< left << cea_trim(fields[i].name) 
-    //             << " (" << setw(2) << right << cntr << ')' 
-    //             << " (" << setw(2) << right << fields[i].id<< ')'
-    //             << " (" << setw(2) << right << fields[i].len<< ')'
-    //             );
-    //         cntr++;
-    //     }
-    // }
-    // #endif
 }
 
 void cea_stream::core::purge_static_fields() {
@@ -967,7 +959,6 @@ void cea_stream::core::purge_static_fields() {
     }
 }
 
-// TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::core::compute_udp_csum() {
     vector<uint32_t>nseq;
     for (auto i: htof[UDP_PHDR]) {
@@ -975,12 +966,11 @@ uint32_t cea_stream::core::compute_udp_csum() {
     }
     uint32_t offset = splice_fields(nseq, scratchpad);
 
-    // copy payload
-    memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
-    return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
+    memcpy(scratchpad+offset, base_frame+get_offset(UDP_Src_Port), 
+        get_value(UDP_Len));
+    return (compute_ipv4_csum(scratchpad, (offset+get_value(UDP_Len))));
 }
 
-// TODO: Optimize, try to avoid copying the hdr and payload again
 uint32_t cea_stream::core::compute_tcp_csum() {
     set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len));
 
@@ -991,7 +981,8 @@ uint32_t cea_stream::core::compute_tcp_csum() {
     uint32_t offset = splice_fields(nseq, scratchpad);
 
     // copy tcp header and payload
-    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), get_value(TCP_Total_Len));
+    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), 
+        get_value(TCP_Total_Len));
     return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
 }
 
@@ -1008,7 +999,7 @@ void print_cdata (unsigned char* tmp, int len) {
         s << endl;
     }
     for (int x=idx; x<len; x++) {
-       s<<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
+       s<<noshowbase<<setw(2)<<setfill('0') <<hex<<uint16_t(tmp[idx])<<" ";
        idx++;
     }
     cout << "PKT Data :" << endl << s.str()<<endl;
@@ -1016,7 +1007,8 @@ void print_cdata (unsigned char* tmp, int len) {
 }
 
 // concatenate all fields reuired by the frame spec
-uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
+uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, 
+        unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t merged = 0;
     uint64_t len = 0;
@@ -1060,21 +1052,28 @@ void cea_stream::core::build_base_frame() {
     // TODO: consider CRC also
     if ((base_frame_len - get_len(MAC_Preamble)) > get_value(FRAME_Len)) {
         CEA_MSG(BOLD(FRED("ERROR: "))
-            << "Final frame lenght is greater then the length specified via FRAME_Len. "
+            << "Final frame lenght is greater then the length "
+            << "specified via FRAME_Len. "
             << "Final Frame Length: " << base_frame_len << "  "
             << "Desired Frame Length: " << get_value(FRAME_Len)
             )
         exit(1);
     }
-    payload_len = get_value(FRAME_Len) - (base_frame_len - get_len(MAC_Preamble));
+    payload_len = get_value(FRAME_Len) -
+        (base_frame_len - get_len(MAC_Preamble));
+
     payload_offset = base_frame_len;
         
     // compute length field in IPv4 header
-    uint32_t iplen = get_value(FRAME_Len) - get_offset(IPv4_Version) + get_len(MAC_Preamble);
+    uint32_t iplen = get_value(FRAME_Len) - get_offset(IPv4_Version) +
+        get_len(MAC_Preamble);
+
     set(IPv4_Total_Len, iplen);
 
     // compute length field in UDP header
-    uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) + get_len(MAC_Preamble);
+    uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) +
+        get_len(MAC_Preamble);
+
     set(UDP_Len, udplen);
 
     splice_fields(fseq, base_frame);
@@ -1085,7 +1084,9 @@ void cea_stream::core::build_base_frame() {
     }
     // find ipv4 csum and overlay on the base frame
     if (get_value(Network_Hdr) == IPv4) {
-        uint16_t ip_csum = compute_ipv4_csum(base_frame+get_offset(IPv4_Version), 20);
+        uint16_t ip_csum = compute_ipv4_csum(
+                base_frame+get_offset(IPv4_Version), 20);
+
         memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
     }
     // find udp csum and overlay on the base frame
@@ -1101,11 +1102,21 @@ void cea_stream::core::build_base_frame() {
 
     #ifdef CEA_DEBUG
     cealog << endl << cea_formatted_hdr("Base Frame Properties");
-    cealog << setw(20) << left << "Frame len: " << get_value(FRAME_Len) << endl;
-    cealog << setw(20) << left << "Preamble len: " << get_len(MAC_Preamble) << endl;
-    cealog << setw(20) << left << "Headers len: " << base_frame_len - get_len(MAC_Preamble) << endl;
-    cealog << setw(20) << left << "Payload len: " << payload_len << endl;
-    cealog << setw(20) << left << "Payload offset: " << payload_offset << endl;
+    cealog << setw(20) << left << "Frame len: " 
+        << get_value(FRAME_Len) << endl;
+
+    cealog << setw(20) << left << "Preamble len: "
+        << get_len(MAC_Preamble) << endl;
+
+    cealog << setw(20) << left << "Headers len: " 
+        << base_frame_len - get_len(MAC_Preamble) << endl;
+
+    cealog << setw(20) << left << "Payload len: "
+        << payload_len << endl;
+
+    cealog << setw(20) << left << "Payload offset: "
+        << payload_offset << endl;
+
     print_base_frame();
     write_pcap((base_frame + get_len(MAC_Preamble)),
         get_value(FRAME_Len));
@@ -1312,7 +1323,6 @@ string cea_stream::core::describe() const {
             << fields[id].name;
             buf << endl;
     }
-
     for (uint32_t id = cea::Network_Hdr; id <cea::VLAN_Tag; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
@@ -1329,7 +1339,6 @@ string cea_stream::core::describe() const {
             << fields[id].name;
             buf << endl;
     }
-
     for (uint32_t id = VLAN_Tag; id<cea::Num_Fields; id++) {
         buf << setw(CEA_FLDWIDTH) << fields[id].touched 
             << setw(CEA_FLDWIDTH) << fields[id].merge    
@@ -1393,7 +1402,7 @@ public:
     void begin_mutation();
 
     // buffer to store the generated frames
-    void *pbuf;
+    void *fbuf;
     void create_frame_buffer();
     void release_frame_buffer();
 
@@ -1406,7 +1415,6 @@ cea_proxy::~cea_proxy() = default;
 cea_proxy::cea_proxy(string name) : impl(new core(name)){
 }
 
-// TODO: print stream properties after adding in debug mode
 void cea_proxy::add_stream(cea_stream *stm) {
     impl->stmq.push_back(stm);
 }
@@ -1428,7 +1436,6 @@ cea_proxy::core::core(string name) {
     CEA_MSG("Proxy created with name=" << name << " and id=" << proxy_id);
 }
 
-// TODO: print stream properties after adding in debug mode
 void cea_proxy::core::add_stream(cea_stream *stm) {
     stmq.push_back(stm);
 }
@@ -1481,22 +1488,22 @@ void cea_proxy::core::extract_traffic_parameters() {
 }
 
 void cea_proxy::core::begin_mutation() {
-    // write to pbuf
+    // write to fbuf
     // *(addr + i) = (char)i;
-    // read from pbuf
+    // read from fbuf
     // if (*(addr + i) != (char)i)
 }
 
 void cea_proxy::core::create_frame_buffer() {
-    pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
-    if (pbuf == MAP_FAILED) {
+    fbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
+    if (fbuf == MAP_FAILED) {
         CEA_MSG("Error: Memory map failed");
         exit(1);
     }
 }
 
 void cea_proxy::core::release_frame_buffer() {
-    if (munmap(pbuf, LENGTH)) {
+    if (munmap(fbuf, LENGTH)) {
         CEA_MSG("Error: Memory unmap failed");
         exit(1);
     }
@@ -1547,7 +1554,6 @@ void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
     impl->exec_cmd(stm, pxy);
 }
 
-//----------------------------------------------------------------------------------------------
 void cea_manager::core::add_proxy(cea_proxy *pxy) {
     proxies.push_back(pxy);
 }
