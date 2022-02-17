@@ -33,23 +33,7 @@ THINGS TO DO:
 Terminologies: prune purge mutate probe 
 */
 
-#include <thread>
-#include <iomanip>
-#include <algorithm>
-#include <cstring>
-#include <map>
-#include <cmath>
-#include <fstream>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <netinet/in.h>
-#include <unistd.h>
-
 #include "cea.h"
-
-//------------------------------------------------------------------------------
-// Escape codes to colorize message output
-//------------------------------------------------------------------------------
 
 #define RST     "\x1B[0m"
 #define KRED    "\x1B[31m"
@@ -70,16 +54,6 @@ Terminologies: prune purge mutate probe
 #define UNDL(x) "\x1B[4m" x RST
 
 //------------------------------------------------------------------------------
-// Global properties
-//------------------------------------------------------------------------------
-
-// maximum supported frame size from mac dest addr to mac crc (16KB)
-#define CEA_MAX_FRAME_SIZE 16384
-
-// size of scratchpad buffer
-#define CEA_SCRATCHPAD_SIZE 256
-
-//------------------------------------------------------------------------------
 // Messaging 
 //------------------------------------------------------------------------------
 
@@ -94,10 +68,6 @@ Terminologies: prune purge mutate probe
 #else
     #define CEA_DBG(msg) {}
 #endif
-
-//------------------------------------------------------------------------------
-// Hugepage shared memory for frame buffer
-//------------------------------------------------------------------------------
 
 // 1GB frame buffer with read and write capabilities
 #define LENGTH (1UL*1024*1024*1024)
@@ -115,6 +85,23 @@ Terminologies: prune purge mutate probe
 #define ADDR (void *)(0x0UL)
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 #endif
+
+// maximum frame size from mac dest addr to mac crc (16KB)
+#define CEA_MAX_FRAME_SIZE 16384
+
+#define CEA_SCRATCHPAD_SIZE 256
+
+// stringize a printf like formatted output 
+template<typename ... Args>
+string string_format(const string& format, Args ... args) {
+    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
+    if (size <= 0) {
+        throw runtime_error("Error during formatting.");
+    }
+    unique_ptr<char[]> buf(new char[size]);
+    snprintf(buf.get(), size, format.c_str(), args ...);
+    return string(buf.get(), buf.get() + size - 1);
+}
 
 namespace cea {
 
@@ -147,7 +134,7 @@ vector<cea_field> flds = {
 {  false,  1,  false,   0,    IPv4_Flags               ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             "},
 {  false,  1,  false,   0,    IPv4_Frag_Offset         ,13,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       "},
 {  false,  0,  false,   0,    IPv4_TTL                 ,8,        0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               "},
-{  false,  0,  false,   0,    IPv4_Protocol            ,8,        0,     Fixed,   6,                   0,    0,   0,   0,  "IPv4_Protocol          "},
+{  false,  0,  false,   0,    IPv4_Protocol            ,8,        0,     Fixed,   6,                  0,    0,   0,   0,  "IPv4_Protocol          "},
 {  false,  0,  false,   0,    IPv4_Hdr_Csum            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          "},
 {  false,  0,  false,   0,    IPv4_Src_Addr            ,32,       0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          "},
 {  false,  0,  false,   0,    IPv4_Dest_Addr           ,32,       0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         "},
@@ -161,8 +148,8 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    IPv6_Hop_Limit           ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         "},
 {  false,  0,  false,   0,    IPv6_Src_Addr            ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          "},
 {  false,  0,  false,   0,    IPv6_Dest_Addr           ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         "},
-{  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   1234,                0,    0,   0,   0,  "TCP_Src_Port           "},
-{  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   5678,                0,    0,   0,   0,  "TCP_Dest_Port          "},
+{  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   1234,                   0,    0,   0,   0,  "TCP_Src_Port           "},
+{  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   5678,                   0,    0,   0,   0,  "TCP_Dest_Port          "},
 {  false,  0,  false,   0,    TCP_Seq_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            "},
 {  false,  0,  false,   0,    TCP_Ack_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            "},
 {  false,  7,  false,   0,    TCP_Data_Offset          ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "TCP_Data_Offset        "},
@@ -394,9 +381,9 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
                Zeros_8Bit,
                IPv4_Protocol,
                UDP_Len,
-               UDP_Src_Port,   // TODO: remove udp header
-               UDP_Dest_Port,  // and use the one already in
-               UDP_Len,        // base_frame
+               UDP_Src_Port,
+               UDP_Dest_Port,
+               UDP_Len,
                UDP_Csum
                }},
     {TCP_PHDR, {
@@ -405,6 +392,22 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
                Zeros_8Bit,
                IPv4_Protocol,
                TCP_Total_Len,
+               //
+               // TCP_Src_Port,
+               // TCP_Dest_Port,
+               // TCP_Seq_Num,
+               // TCP_Ack_Num,
+               // TCP_Data_Offset,
+               // TCP_Reserved,
+               // TCP_Urg,
+               // TCP_Ack,
+               // TCP_Psh,
+               // TCP_Rst,
+               // TCP_Syn,
+               // TCP_Fin,
+               // TCP_Window,
+               // TCP_Csum,
+               // TCP_Urg_Ptr,
                }}
 };
 
@@ -732,114 +735,139 @@ string to_str(cea_field_generation_type t) {
     return cea_trim(name);
 }
 
-// global variable to track proxy and stream id
-uint32_t proxy_id = 0;
-uint32_t stream_id = 0;
-
 //------------------------------------------------------------------------------
-// Stream implementation
+// Manager
 //------------------------------------------------------------------------------
 
-class cea_stream::core {
-public:    
-    // constructor
-    core(string name);
+cea_manager::cea_manager() {
+}
 
-    // fucntion to set the field to a fixed value
-    void set(cea_field_id id, uint64_t value);
+void cea_manager::add_proxy(cea_proxy *pxy) {
+    proxies.push_back(pxy);
+}
 
-    // function to assign a field to an inbuilt value generator
-    // with default specifications
-    void set(cea_field_id id, cea_field_generation_type spec);
+void cea_manager::add_proxy(cea_proxy *pxy, uint32_t cnt) {
+    CEA_DBG(cnt << " Proxies added");
+    for (uint32_t idx=0; idx<cnt; idx++)
+        proxies.push_back(&pxy[idx]);
+}
 
-    // function to assign a field to an inbuilt value generator
-    // with custom specifications
-    void set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec);
+void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
+    if (pxy != NULL) {
+        vector<cea_proxy*>::iterator it;
+        for (it = proxies.begin(); it != proxies.end(); it++) {
+            if ((*it)->proxy_id == pxy->proxy_id) {
+                uint32_t idx = distance(proxies.begin(), it);
+                proxies[idx]->add_stream(stm);
+            }
+        }
+    } else {
+        for (uint32_t idx=0; idx<proxies.size(); idx++) {
+            proxies[idx]->add_stream(stm);
+        }
+    }
+}
 
-    // set when the proxy object is created
-    string stream_name;
+void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
+    add_stream(stm, pxy);
+}
 
-    // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
-    uint32_t stream_id;
+void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
+}
 
-    // (container2) a list of all the field ids (in sequence) of the 
-    // selected frame type and headers output of arrange_fields_in_sequence
-    vector<uint32_t> fseq;
+//------------------------------------------------------------------------------
+// Proxy
+//------------------------------------------------------------------------------
 
-    // (container3) a sequence of all the fields ids that needs 
-    // generation of values output of purge_static_fields
-    vector<uint32_t> cseq;
+// constructor
+cea_proxy::cea_proxy(string name) {
+    proxy_id = cea::proxy_id;
+    cea::proxy_id++;
+    proxy_name = name + ":" + to_string(proxy_id);
+    reset();
+    CEA_MSG("Proxy created with name=" << name << " and id=" << proxy_id);
+}
 
-    // (container4) field matrix
-    vector<cea_field> fields;
+// TODO: print stream properties after adding in debug mode
+void cea_proxy::add_stream(cea_stream *stm) {
+    stmq.push_back(stm);
+}
 
-    // based on user specification of the frame, build a vector of 
-    // field ids in the sequence required by the specification
-    void arrange_fields_in_sequence();
+void cea_proxy::add_cmd(cea_stream *stm) {
+    stmq.push_back(stm);
+}
 
-    // build cseq by parsing fseq and adding only mutable fields
-    void purge_static_fields();
+void cea_proxy::exec_cmd(cea_stream *stm) {
+}
 
-    // calls arrange and purge
-    void prune();
+void cea_proxy::reset() {
+    msg_prefix = '(' + proxy_name + ") ";
+}
 
-    // build the principal frame using fseq
-    void build_base_frame();
+// start stream processing and generate frames
+void cea_proxy::start() {
+    start_worker();
+    join_threads();
+}
 
-    // concatenate all fields reuired by the frame spec
-    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
+void cea_proxy::join_threads() {
+    worker_tid.join();
+}
 
-    // base frame buffer
-    unsigned char *base_frame;
+void cea_proxy::start_worker() {
+    worker_tid = thread(&cea_proxy::worker, this);
+    char name[16];
+    sprintf(name, "worker_%d", proxy_id);
+    pthread_setname_np(worker_tid.native_handle(), name);
+}
 
-    // total or initial len of the principal frame
-    uint32_t base_frame_len;
+void cea_proxy::worker() {
+    read_next_stream_from_stmq();
+    extract_traffic_parameters();
+    cur_stm->prune();
+    cur_stm->build_base_frame();
+    begin_mutation();
+}
 
-    // (debug only) print all the bytes of the principal frame in hex
-    void print_base_frame();
+void cea_proxy::read_next_stream_from_stmq() {
+    cur_stm = stmq[0];
+}
 
-    // reset stream to factory settings
-    void reset();
+void cea_proxy::extract_traffic_parameters() {
+}
 
-    // overload =
-    void do_copy(const cea_stream *rhs);
+void cea_proxy::begin_mutation() {
+    // write to pbuf
+    // *(addr + i) = (char)i;
+    // read from pbuf
+    // if (*(addr + i) != (char)i)
+}
 
-    // overload <<
-    string describe() const;
+void cea_proxy::create_frame_buffer() {
+    pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
+    if (pbuf == MAP_FAILED) {
+        CEA_MSG("Error: Memory map failed");
+        exit(1);
+    }
+}
 
-    // calculate offset in fseq
-    void build_offsets();
+void cea_proxy::release_frame_buffer() {
+    if (munmap(pbuf, LENGTH)) {
+        CEA_MSG("Error: Memory unmap failed");
+        exit(1);
+    }
+}
 
-    // get offset of a particular field by parsing fseq
-    uint32_t get_offset(cea_field_id id);
+//------------------------------------------------------------------------------
+// Stream
+//------------------------------------------------------------------------------
 
-    // get length (in bits) of a field from fields
-    uint32_t get_len(cea_field_id id);
-
-    // get current value of a field from fields
-    uint64_t get_value(cea_field_id id);
-
-    // build a string to be prefixed in all messages generated from this class
-    string msg_prefix;
-
-    uint32_t compute_udp_csum();
-    uint32_t compute_tcp_csum();
-
-    unsigned char *scratchpad;
-    uint32_t payload_len;
-    uint32_t payload_offset;
-};
-
-cea_stream::~cea_stream() = default;
-
-void cea_stream::core::prune() {
+void cea_stream::prune() {
     arrange_fields_in_sequence();
     purge_static_fields();
 }
 
-uint32_t cea_stream::core::get_offset(cea_field_id id) {
+uint32_t cea_stream::get_offset(cea_field_id id) {
     uint32_t total_bits = 0;
     for (auto i: fseq) {
         if (fields[i].id == id)
@@ -849,15 +877,15 @@ uint32_t cea_stream::core::get_offset(cea_field_id id) {
     return (total_bits/8);
 }
 
-uint32_t cea_stream::core::get_len(cea_field_id id) {
+uint32_t cea_stream::get_len(cea_field_id id) {
     return (fields[id].len/8);
 }
 
-uint64_t cea_stream::core::get_value(cea_field_id id) {
+uint64_t cea_stream::get_value(cea_field_id id) {
     return (fields[id].value);
 }
 
-void cea_stream::core::build_offsets() {
+void cea_stream::build_offsets() {
     uint32_t cntr = 0;
     for (auto i: fseq) {
         if (cntr==0) {
@@ -870,7 +898,7 @@ void cea_stream::core::build_offsets() {
     }
 }
 
-void cea_stream::core::print_base_frame() {
+void cea_stream::print_base_frame() {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
@@ -888,7 +916,7 @@ void cea_stream::core::print_base_frame() {
 }
 
 // algorithm to arrange the frame fields
-void cea_stream::core::arrange_fields_in_sequence() {
+void cea_stream::arrange_fields_in_sequence() {
     
     fseq.push_back(MAC_Preamble);
 
@@ -959,7 +987,7 @@ void cea_stream::core::arrange_fields_in_sequence() {
     // #endif
 }
 
-void cea_stream::core::purge_static_fields() {
+void cea_stream::purge_static_fields() {
     for (auto i: fseq) {
         if (fields[i].touched) {
             cseq.push_back(i);
@@ -968,7 +996,7 @@ void cea_stream::core::purge_static_fields() {
 }
 
 // TODO: Optimize, try to avoid copying the hdr and payload again
-uint32_t cea_stream::core::compute_udp_csum() {
+uint32_t cea_stream::compute_udp_csum() {
     vector<uint32_t>nseq;
     for (auto i: htof[UDP_PHDR]) {
         nseq.push_back(i);
@@ -978,21 +1006,6 @@ uint32_t cea_stream::core::compute_udp_csum() {
     // copy payload
     memcpy(scratchpad+offset, base_frame+(payload_offset), payload_len);
     return (compute_ipv4_csum(scratchpad, (offset+payload_len)));
-}
-
-// TODO: Optimize, try to avoid copying the hdr and payload again
-uint32_t cea_stream::core::compute_tcp_csum() {
-    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len));
-
-    vector<uint32_t>nseq;
-    for (auto i: htof[TCP_PHDR]) {
-        nseq.push_back(i);
-    }
-    uint32_t offset = splice_fields(nseq, scratchpad);
-
-    // copy tcp header and payload
-    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), get_value(TCP_Total_Len));
-    return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
 }
 
 void print_cdata (unsigned char* tmp, int len) {
@@ -1015,8 +1028,24 @@ void print_cdata (unsigned char* tmp, int len) {
     fflush (stdout);
 }
 
+
+// TODO: Optimize, try to avoid copying the hdr and payload again
+uint32_t cea_stream::compute_tcp_csum() {
+    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len));
+
+    vector<uint32_t>nseq;
+    for (auto i: htof[TCP_PHDR]) {
+        nseq.push_back(i);
+    }
+    uint32_t offset = splice_fields(nseq, scratchpad);
+
+    // copy tcp header and payload
+    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), get_value(TCP_Total_Len));
+    return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
+}
+
 // concatenate all fields reuired by the frame spec
-uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
+uint32_t cea_stream::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t merged = 0;
     uint64_t len = 0;
@@ -1048,7 +1077,7 @@ uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, unsigned char *bu
     return offset;
 }
 
-void cea_stream::core::build_base_frame() {
+void cea_stream::build_base_frame() {
     // total length of all headers (in bits) includes preamble 
     // but minus payload
     for (auto i : fseq) {
@@ -1113,32 +1142,29 @@ void cea_stream::core::build_base_frame() {
 }
 
 // constructor
-cea_stream::core::core(string name) {
+cea_stream::cea_stream(string name) {
     stream_id = cea::stream_id;
     cea::stream_id++;
     stream_name = name + ":" + to_string(stream_id);
     reset();
 }
 
-cea_stream::cea_stream(string name) : impl (new core(name)) {
-}
-
 // copy constructor
 cea_stream::cea_stream(const cea_stream &rhs) {
-    impl->do_copy(&rhs);
+    cea_stream::do_copy(&rhs);
 }
 
 // assign operator overload
 cea_stream& cea_stream::operator = (cea_stream &rhs) {
    if (this != &rhs) {
-      impl->do_copy(&rhs);
+      do_copy(&rhs);
    }
    return *this;
 }
 
 // print operator overload
 ostream& operator << (ostream &os, const cea_stream &f) {
-    os << f.impl->describe();
+    os << f.describe();
     return os;
 }
 
@@ -1147,12 +1173,8 @@ bool in_range(uint32_t low, uint32_t high, uint32_t x) {
     return (low <= x && x <= high);         
 }
 
-void cea_stream::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
 // user api to set fields of the stream
-void cea_stream::core::set(cea_field_id id, uint64_t value) {
+void cea_stream::set(cea_field_id id, uint64_t value) {
     // process if mpls
     bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
     if (mpls) {
@@ -1180,12 +1202,8 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
     fields[id].touched = true;
 }
 
-void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
-    impl->set(id, spec);
-}
-
 // user api to set fields of the stream
-void cea_stream::core::set(cea_field_id id, cea_field_generation_type spec) {
+void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
     // process if mpls
     bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
     if (mpls) {
@@ -1213,11 +1231,6 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_type spec) {
 }
 
 void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec) {
-    impl->set(id, mspec, vspec);
-}
-
-void cea_stream::core::set(cea_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec) {
     // process if mpls
     bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
@@ -1250,10 +1263,10 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_type mspec,
     fields[id].repeat = vspec.repeat_after;
 }
 
-void cea_stream::core::do_copy(const cea_stream *rhs) {
+void cea_stream::do_copy(const cea_stream *rhs) {
 }
 
-void cea_stream::core::reset() {
+void cea_stream::reset() {
     if (!base_frame) {
         CEA_DBG("INFO: base_frame is not null, delete existing buffer");
         delete(base_frame);
@@ -1276,7 +1289,7 @@ void cea_stream::core::reset() {
 }
 
 #define CEA_FLDWIDTH 8
-string cea_stream::core::describe() const {
+string cea_stream::describe() const {
     ostringstream buf("");
     buf.setf(ios::hex, ios::basefield);
     buf.setf(ios_base::left);
@@ -1347,238 +1360,6 @@ string cea_stream::core::describe() const {
             buf << endl;
     }
     return buf.str();
-}
-
-//------------------------------------------------------------------------------
-// Proxy Implementation
-//------------------------------------------------------------------------------
-
-class cea_proxy::core {
-public:
-    // set when the proxy object is created
-    string proxy_name;
-
-    core(string name);
-
-    // add stream to proxy queue
-    void add_stream(cea_stream *stm);
-
-    // add a command (in the form of cea_stream) to proxy queue
-    void add_cmd(cea_stream *stm);
-
-    // execute a command immediately does not add to proxy queue
-    void exec_cmd(cea_stream *stm);
-
-    void start();
-
-    // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
-    uint32_t proxy_id;
-
-    // user's test streams will be pushed into this queue (container1)
-    vector<cea_stream*> stmq;
-
-    // handle to the stream being processed
-    cea_stream *cur_stm;
-
-    // main thread
-    thread worker_tid;
-    void worker();
-    void start_worker();
-    void join_threads();
-
-    // worker modules
-    void read_next_stream_from_stmq();
-    void extract_traffic_parameters();
-    void begin_mutation();
-
-    // buffer to store the generated frames
-    void *pbuf;
-    void create_frame_buffer();
-    void release_frame_buffer();
-
-    void reset();
-    string msg_prefix;
-};
-
-cea_proxy::~cea_proxy() = default;
-
-cea_proxy::cea_proxy(string name) : impl(new core(name)){
-}
-
-// TODO: print stream properties after adding in debug mode
-void cea_proxy::add_stream(cea_stream *stm) {
-    impl->stmq.push_back(stm);
-}
-
-void cea_proxy::add_cmd(cea_stream *stm) {
-    impl->stmq.push_back(stm);
-}
-
-void cea_proxy::exec_cmd(cea_stream *stm) {
-    impl->exec_cmd(stm);
-}
-
-// constructor
-cea_proxy::core::core(string name) {
-    proxy_id = cea::proxy_id;
-    cea::proxy_id++;
-    proxy_name = name + ":" + to_string(proxy_id);
-    reset();
-    CEA_MSG("Proxy created with name=" << name << " and id=" << proxy_id);
-}
-
-// TODO: print stream properties after adding in debug mode
-void cea_proxy::core::add_stream(cea_stream *stm) {
-    stmq.push_back(stm);
-}
-
-void cea_proxy::core::add_cmd(cea_stream *stm) {
-    stmq.push_back(stm);
-}
-
-void cea_proxy::core::exec_cmd(cea_stream *stm) {
-}
-
-void cea_proxy::core::reset() {
-    msg_prefix = '(' + proxy_name + ") ";
-}
-
-void cea_proxy::start() {
-    impl->start();
-}
-
-// start stream processing and generate frames
-void cea_proxy::core::start() {
-    start_worker();
-    join_threads();
-}
-
-void cea_proxy::core::join_threads() {
-    worker_tid.join();
-}
-
-void cea_proxy::core::start_worker() {
-    worker_tid = thread(&cea_proxy::core::worker, this);
-    char name[16];
-    sprintf(name, "worker_%d", proxy_id);
-    pthread_setname_np(worker_tid.native_handle(), name);
-}
-
-void cea_proxy::core::worker() {
-    read_next_stream_from_stmq();
-    extract_traffic_parameters();
-    cur_stm->impl->prune();
-    cur_stm->impl->build_base_frame();
-    begin_mutation();
-}
-
-void cea_proxy::core::read_next_stream_from_stmq() {
-    cur_stm = stmq[0];
-}
-
-void cea_proxy::core::extract_traffic_parameters() {
-}
-
-void cea_proxy::core::begin_mutation() {
-    // write to pbuf
-    // *(addr + i) = (char)i;
-    // read from pbuf
-    // if (*(addr + i) != (char)i)
-}
-
-void cea_proxy::core::create_frame_buffer() {
-    pbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
-    if (pbuf == MAP_FAILED) {
-        CEA_MSG("Error: Memory map failed");
-        exit(1);
-    }
-}
-
-void cea_proxy::core::release_frame_buffer() {
-    if (munmap(pbuf, LENGTH)) {
-        CEA_MSG("Error: Memory unmap failed");
-        exit(1);
-    }
-}
-
-//------------------------------------------------------------------------------
-// Manager Implementation
-//------------------------------------------------------------------------------
-
-class cea_manager::core {
-public:
-    core();
-    ~core();
-    void add_proxy(cea_proxy *pxy);
-    void add_proxy(cea_proxy *pxy, uint32_t cnt);
-    void add_stream(cea_stream *stm, cea_proxy *pxy=NULL);
-    void add_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    vector<cea_proxy*> proxies;
-    string msg_prefix;
-};
-
-cea_manager::core::~core() = default;
-
-cea_manager::cea_manager() : impl (new core) {
-}
-
-cea_manager::core::core() {
-}
-
-void cea_manager::add_proxy(cea_proxy *pxy) {
-    impl->add_proxy(pxy);
-}
-
-void cea_manager::add_proxy(cea_proxy *pxy, uint32_t cnt) {
-    impl->add_proxy(pxy, cnt);
-}
-
-void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
-    impl->add_stream(stm, pxy);
-}
-
-void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
-    impl->add_cmd(stm, pxy);
-}
-
-void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
-    impl->exec_cmd(stm, pxy);
-}
-
-//----------------------------------------------------------------------------------------------
-void cea_manager::core::add_proxy(cea_proxy *pxy) {
-    proxies.push_back(pxy);
-}
-
-void cea_manager::core::add_proxy(cea_proxy *pxy, uint32_t cnt) {
-    CEA_DBG(cnt << " Proxies added");
-    for (uint32_t idx=0; idx<cnt; idx++)
-        proxies.push_back(&pxy[idx]);
-}
-
-void cea_manager::core::add_stream(cea_stream *stm, cea_proxy *pxy) {
-    if (pxy != NULL) {
-        vector<cea_proxy*>::iterator it;
-        for (it = proxies.begin(); it != proxies.end(); it++) {
-            if ((*it)->impl->proxy_id == pxy->impl->proxy_id) {
-                uint32_t idx = distance(proxies.begin(), it);
-                proxies[idx]->add_stream(stm);
-            }
-        }
-    } else {
-        for (uint32_t idx=0; idx<proxies.size(); idx++) {
-            proxies[idx]->add_stream(stm);
-        }
-    }
-}
-
-void cea_manager::core::add_cmd(cea_stream *stm, cea_proxy *pxy) {
-    add_stream(stm, pxy);
-}
-
-void cea_manager::core::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
 }
 
 } // namespace

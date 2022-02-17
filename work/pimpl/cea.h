@@ -8,8 +8,18 @@ public:
     void init();
     ~cea();
 private:
-    class cea_implementation;
-    unique_ptr<cea_implementation> impl;
-    // cea_implementation *impl;
+    class core;
+    unique_ptr<core> impl;
+    // core *impl;
 };
 
+class proxy {
+public:
+    proxy();
+    void init();
+    ~proxy();
+private:
+    class core;
+    unique_ptr<core> impl;
+    // core *impl;
+};

@@ -2,17 +2,17 @@
 using namespace std;
 
 
-class cea::cea_implementation {
+class cea::core {
 public:
-    cea_implementation();
+    core();
     void init();
 };
 
-cea::cea_implementation::cea_implementation() {
+cea::core::core() {
 }
 
-void cea::cea_implementation::init() {
-    cout << "Welcome to pimpl" << endl;
+void cea::core::init() {
+    cout << "CEA: Welcome to pimpl" << endl;
 }
 
 void cea::init() {
@@ -21,7 +21,7 @@ void cea::init() {
 
 // using unique_ptr ------------------------------------------------------------
 
-cea::cea() : impl(new cea_implementation) {
+cea::cea() : impl(new core) {
 }
 
 cea::~cea() = default;
@@ -29,9 +29,33 @@ cea::~cea() = default;
 // using raw pointer -----------------------------------------------------------
 
 // cea::cea() {
-//     impl = new cea_implementation;
+//     impl = new core;
 // }
 
 // cea::~cea() {
 //     delete impl;
 // }
+
+
+class proxy::core {
+public:
+    core();
+    void init();
+};
+
+proxy::core::core() {
+}
+
+void proxy::core::init() {
+    cout << "PXY: Welcome to pimpl" << endl;
+}
+
+proxy::proxy() : impl(new core) {
+}
+
+proxy::~proxy() = default;
+
+void proxy::init() {
+    impl->init();
+}
+

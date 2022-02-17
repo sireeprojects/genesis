@@ -14,8 +14,8 @@ int main() {
     s->set(MAC_Dest_Addr, 0x112233445566UL);
     s->set(MAC_Src_Addr, 0xaabbccddeeffUL);
     s->set(Network_Hdr, IPv4);
-    // s->set(Transport_Hdr, TCP);
-    s->set(Transport_Hdr, UDP);
+    s->set(Transport_Hdr, TCP);
+    // s->set(Transport_Hdr, UDP);
 
     // s->set(MPLS_01_Stack, 1);
     // s->set(MPLS_02_Label, 1);

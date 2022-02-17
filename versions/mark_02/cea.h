@@ -1,8 +1,20 @@
 #include <iostream>
 #include <vector>
+#include <thread>
 #include <cstdint>
-#include <string>
-#include <memory>
+#include <sys/mman.h>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <algorithm>
+#include <cstring>
+#include <map>
+#include <cmath>
+#include <mutex>
+#include <bitset>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
 
 #define CEA_PACKED __attribute__((packed))
 
@@ -215,6 +227,7 @@ enum cea_field_id {
     Pause_Quanta_5,
     Pause_Quanta_6,
     Pause_Quanta_7,
+    // helper fields
     Zeros_8Bit,
     TCP_Total_Len,
     Num_Fields
@@ -287,8 +300,8 @@ public:
     void add_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
     void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
 private:
-    class core;
-    unique_ptr<core> impl;
+    vector<cea_proxy*> proxies;
+    string msg_prefix;
 };
 
 //------------------------------------------------------------------------------
@@ -308,16 +321,48 @@ public:
     // execute a command immediately does not add to proxy queue
     void exec_cmd(cea_stream *stm);
 
-    ~cea_proxy();
-
     // TODO: move to private before sharing
     void start();
 
 private:
-    class core;
-    unique_ptr<core> impl;
+
+    // set when the proxy object is created
+    string proxy_name;
+
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t proxy_id;
+
+    // user's test streams will be pushed into this queue (container1)
+    vector<cea_stream*> stmq;
+
+    // handle to the stream being processed
+    cea_stream *cur_stm;
+
+    // main thread
+    thread worker_tid;
+    void worker();
+    void start_worker();
+    void join_threads();
+
+    // worker modules
+    void read_next_stream_from_stmq();
+    void extract_traffic_parameters();
+    void begin_mutation();
+
+    // buffer to store the generated frames
+    void *pbuf;
+    void create_frame_buffer();
+    void release_frame_buffer();
+
+    void reset();
+    string msg_prefix;
     friend class cea_manager;
 };
+
+// global variable to track proxy and stream id
+uint32_t proxy_id = 0;
+uint32_t stream_id = 0;
 
 //------------------------------------------------------------------------------
 // Stream
@@ -348,11 +393,81 @@ public:
     // overload <<
     friend ostream& operator << (ostream& os, const cea_stream& cmd);
 
-    ~cea_stream();
-
 private:
-    class core;
-    unique_ptr<core> impl;
+    // set when the proxy object is created
+    string stream_name;
+
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t stream_id;
+
+    // (container2) a list of all the field ids (in sequence) of the 
+    // selected frame type and headers output of arrange_fields_in_sequence
+    vector<uint32_t> fseq;
+
+    // (container3) a sequence of all the fields ids that needs 
+    // generation of values output of purge_static_fields
+    vector<uint32_t> cseq;
+
+    // (container4) field matrix
+    vector<cea_field> fields;
+
+    // based on user specification of the frame, build a vector of 
+    // field ids in the sequence required by the specification
+    void arrange_fields_in_sequence();
+
+    // build cseq by parsing fseq and adding only mutable fields
+    void purge_static_fields();
+
+    // calls arrange and purge
+    void prune();
+
+    // build the principal frame using fseq
+    void build_base_frame();
+
+    // concatenate all fields reuired by the frame spec
+    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
+
+    // base frame buffer
+    unsigned char *base_frame;
+
+    // total or initial len of the principal frame
+    uint32_t base_frame_len;
+
+    // (debug only) print all the bytes of the principal frame in hex
+    void print_base_frame();
+
+    // reset stream to factory settings
+    void reset();
+
+    // overload =
+    void do_copy(const cea_stream *rhs);
+
+    // overload <<
+    string describe() const;
+
+    // calculate offset in fseq
+    void build_offsets();
+
+    // get offset of a particular field by parsing fseq
+    uint32_t get_offset(cea_field_id id);
+
+    // get length (in bits) of a field from fields
+    uint32_t get_len(cea_field_id id);
+
+    // get current value of a field from fields
+    uint64_t get_value(cea_field_id id);
+
+    // build a string to be prefixed in all messages generated from this class
+    string msg_prefix;
+
+    uint32_t compute_udp_csum();
+    uint32_t compute_tcp_csum();
+
+    unsigned char *scratchpad;
+    uint32_t payload_len;
+    uint32_t payload_offset;
+
     friend class cea_proxy;
 };
 
