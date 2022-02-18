@@ -338,7 +338,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
 {  false,  0,  false,   0,    STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
 {  false,  0,  false,   0,    STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
-{  false,  0,  false,   0,    STREAM_Crc_Enable        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Crc_Enable      "},
+{  false,  0,  false,   0,    STREAM_Crc_Enable        ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Crc_Enable      "},
 {  false,  0,  false,   0,    STREAM_Timestamp_Enable  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Timestamp_Enable"},
 {  false,  0,  false,   0,    MAC_Control              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control            "},
 {  false,  0,  false,   0,    MAC_Control_Opcode       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control_Opcode     "},
@@ -901,9 +901,28 @@ public:
     uint32_t compute_crc32(unsigned char *data, uint32_t len);
 
     void print_stream_properties();
+    void print_base_frame_properties();
 };
 
 cea_stream::~cea_stream() = default;
+
+void cea_stream::core::print_base_frame_properties() {
+    cealog << endl << cea_formatted_hdr("Base Frame Properties");
+    cealog << setw(20) << left << "Frame len: " 
+        << get_value(FRAME_Len) << endl;
+
+    cealog << setw(20) << left << "Preamble len: "
+        << get_len(MAC_Preamble) << endl;
+
+    cealog << setw(20) << left << "Headers len: " 
+        << base_frame_len - get_len(MAC_Preamble) << endl;
+
+    cealog << setw(20) << left << "Payload len: "
+        << payload_len << endl;
+
+    cealog << setw(20) << left << "Payload offset: "
+        << payload_offset << endl;
+}
 
 void cea_stream::core::print_stream_properties() {
     cealog << endl << cea_formatted_hdr("Stream Properties");
@@ -1058,9 +1077,7 @@ uint32_t cea_stream::core::compute_udp_csum() {
     return (compute_ipv4_csum(scratchpad, (offset+get_value(UDP_Len))));
 }
 
-uint32_t cea_stream::core::compute_tcp_csum() { // -4 for CRC32
-    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len - 4));
-
+uint32_t cea_stream::core::compute_tcp_csum() {
     vector<uint32_t>nseq;
     for (auto i: htof[TCP_PHDR]) {
         nseq.push_back(i);
@@ -1135,6 +1152,8 @@ void cea_stream::core::build_base_frame() {
     }
     base_frame_len /= 8; // in bytes
 
+    uint32_t crc_len = (get_value(STREAM_Crc_Enable)? 4:0);
+
     // throw error if base_frame_len is greater than user specified FRAME_Len 
     // TODO: consider CRC also
     if ((base_frame_len - get_len(MAC_Preamble)) > get_value(FRAME_Len)) {
@@ -1153,16 +1172,17 @@ void cea_stream::core::build_base_frame() {
         
     // compute length field in IPv4 header
     uint32_t iplen = get_value(FRAME_Len) - get_offset(IPv4_Version) +
-        get_len(MAC_Preamble) - 4; // -4 for CRC32
-
+        get_len(MAC_Preamble) - crc_len;
     set(IPv4_Total_Len, iplen);
 
     // compute length field in UDP header
     uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) +
-        get_len(MAC_Preamble) - 4; // -4 for CRC32
-
+        get_len(MAC_Preamble) - crc_len;
     set(UDP_Len, udplen);
 
+    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len - crc_len));
+
+    // build the frame
     splice_fields(fseq, base_frame);
     
     // fill dummy payload value
@@ -1186,33 +1206,19 @@ void cea_stream::core::build_base_frame() {
         uint16_t tcp_csum = compute_tcp_csum();
         memcpy(base_frame+get_offset(TCP_Csum), (char*)&tcp_csum, 2);
     }
-
     // insert CRC32
-    uint32_t crc = compute_crc32(base_frame+get_len(MAC_Preamble), (get_value(FRAME_Len)-4));
-    memcpy(base_frame+(get_value(FRAME_Len)+get_len(MAC_Preamble)-4), (char*)&crc, 4);
+    if (get_value(STREAM_Crc_Enable)) {
+        uint32_t crc = compute_crc32(base_frame+get_len(MAC_Preamble), 
+            (get_value(FRAME_Len)-crc_len));
 
-    print_stream_properties();
-
+        memcpy(base_frame+(get_value(FRAME_Len)+get_len(MAC_Preamble)-crc_len),
+            (char*)&crc, crc_len);
+    }
     #ifdef CEA_DEBUG
-    cealog << endl << cea_formatted_hdr("Base Frame Properties");
-    cealog << setw(20) << left << "Frame len: " 
-        << get_value(FRAME_Len) << endl;
-
-    cealog << setw(20) << left << "Preamble len: "
-        << get_len(MAC_Preamble) << endl;
-
-    cealog << setw(20) << left << "Headers len: " 
-        << base_frame_len - get_len(MAC_Preamble) << endl;
-
-    cealog << setw(20) << left << "Payload len: "
-        << payload_len << endl;
-
-    cealog << setw(20) << left << "Payload offset: "
-        << payload_offset << endl;
-
+    print_stream_properties();
+    print_base_frame_properties();
     print_base_frame();
-    write_pcap((base_frame + get_len(MAC_Preamble)),
-        get_value(FRAME_Len));
+    write_pcap((base_frame + get_len(MAC_Preamble)), get_value(FRAME_Len));
     #endif
 }
 
