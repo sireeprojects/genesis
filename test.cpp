@@ -12,8 +12,8 @@ int main() {
     s->set(FRAME_Len, 100);
     s->set(FRAME_Type, ETH_V2);
     s->set(Network_Hdr, IPv4);
-    // s->set(Transport_Hdr, TCP);
-    s->set(Transport_Hdr, UDP);
+    // s->set(Transport_Hdr, UDP);
+    s->set(Transport_Hdr, TCP);
 
     s->set(MPLS_01_Stack, 1);
     // s->set(MPLS_02_Label, 1);
