@@ -207,6 +207,8 @@ enum cea_field_id {
     STREAM_Percentage,
     STREAM_Pkts_Per_Sec,
     STREAM_Bit_Rate,
+    STREAM_Crc_Enable,
+    STREAM_Timestamp_Enable,
     MAC_Control,
     MAC_Control_Opcode,
     Pause_Quanta,

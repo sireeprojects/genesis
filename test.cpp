@@ -22,6 +22,8 @@ int main() {
     
     s->set(MAC_Ether_Type, 0x8847);
 
+    s->set(STREAM_Pkts_Per_Burst, 100);
+
     // add stream to proxy queue
     p->add_stream(s);
 

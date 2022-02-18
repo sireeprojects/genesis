@@ -338,6 +338,8 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      "},
 {  false,  0,  false,   0,    STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    "},
 {  false,  0,  false,   0,    STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        "},
+{  false,  0,  false,   0,    STREAM_Crc_Enable        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Crc_Enable      "},
+{  false,  0,  false,   0,    STREAM_Timestamp_Enable  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Timestamp_Enable"},
 {  false,  0,  false,   0,    MAC_Control              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control            "},
 {  false,  0,  false,   0,    MAC_Control_Opcode       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control_Opcode     "},
 {  false,  0,  false,   0,    Pause_Quanta             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta           "},
@@ -897,9 +899,23 @@ public:
 
     // slow crc method
     uint32_t compute_crc32(unsigned char *data, uint32_t len);
+
+    void print_stream_properties();
 };
 
 cea_stream::~cea_stream() = default;
+
+void cea_stream::core::print_stream_properties() {
+    cealog << endl << cea_formatted_hdr("Stream Properties");
+    for (uint32_t idx=STREAM_Type; idx<=STREAM_Timestamp_Enable; idx++) {
+        cealog << left
+            << cea_trim(fields[idx].name)
+            << string((30 - cea_trim(fields[idx].name).length()), '.') 
+            << " " << fields[idx].value << " "
+            << ((fields[idx].touched)? "(user)" : "")
+            << endl;
+    }
+}
 
 uint32_t cea_stream::core::compute_crc32(unsigned char *data, uint32_t len) {
     uint32_t crc;
@@ -1174,6 +1190,8 @@ void cea_stream::core::build_base_frame() {
     // insert CRC32
     uint32_t crc = compute_crc32(base_frame+get_len(MAC_Preamble), (get_value(FRAME_Len)-4));
     memcpy(base_frame+(get_value(FRAME_Len)+get_len(MAC_Preamble)-4), (char*)&crc, 4);
+
+    print_stream_properties();
 
     #ifdef CEA_DEBUG
     cealog << endl << cea_formatted_hdr("Base Frame Properties");
