@@ -891,17 +891,23 @@ public:
     // it is created during stream constructor, it should never be freed 
     unsigned char *scratchpad;
 
+
+    // slow crc method
+    uint32_t compute_crc32(unsigned char *data, uint32_t len);
+
+    // print functions
+    void print_stream_properties();
+    void print_base_frame_properties();
+
+    // cache variables
+
     // length of payload after removing headers and preamble
     uint32_t payload_len;
 
     // offset of the payload from preamble to the last field of the last header 
     uint32_t payload_offset;
 
-    // slow crc method
-    uint32_t compute_crc32(unsigned char *data, uint32_t len);
-
-    void print_stream_properties();
-    void print_base_frame_properties();
+    uint32_t crc_len;
 };
 
 cea_stream::~cea_stream() = default;
@@ -1152,7 +1158,7 @@ void cea_stream::core::build_base_frame() {
     }
     base_frame_len /= 8; // in bytes
 
-    uint32_t crc_len = (get_value(STREAM_Crc_Enable)? 4:0);
+    crc_len = (get_value(STREAM_Crc_Enable)? 4:0);
 
     // throw error if base_frame_len is greater than user specified FRAME_Len 
     // TODO: consider CRC also
@@ -1381,6 +1387,7 @@ void cea_stream::core::reset() {
     base_frame_len = 0;
     payload_len = 0;
     payload_offset = 0;
+    crc_len = 0;
     fields = flds;
     msg_prefix = '(' + stream_name + ") ";
 }
@@ -1399,7 +1406,7 @@ string cea_stream::core::describe() const {
         << setw(CEA_FLDWIDTH)   << "Len  "  
         << setw(CEA_FLDWIDTH)   << "Offset"  
         << setw(CEA_FLDWIDTH+2)   << "Modifier" 
-        << setw(CEA_FLDWIDTH+6) << "Value"  
+        << setw(CEA_FLDWIDTH+10) << "Value"  
         << setw(CEA_FLDWIDTH)   << "Start"  
         << setw(CEA_FLDWIDTH)   << "Stop "  
         << setw(CEA_FLDWIDTH)   << "Step "  
@@ -1414,7 +1421,7 @@ string cea_stream::core::describe() const {
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
             << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+6) << to_str((cea_frame_type) fields[id].value)
+            << setw(CEA_FLDWIDTH+10) << to_str((cea_frame_type) fields[id].value)
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
             << setw(CEA_FLDWIDTH) << fields[id].step     
@@ -1430,7 +1437,7 @@ string cea_stream::core::describe() const {
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
             << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+6) << to_str((cea_hdr_type) fields[id].value)
+            << setw(CEA_FLDWIDTH+10) << to_str((cea_hdr_type) fields[id].value)
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
             << setw(CEA_FLDWIDTH) << fields[id].step     
@@ -1446,7 +1453,7 @@ string cea_stream::core::describe() const {
             << setw(CEA_FLDWIDTH) << fields[id].len      
             << setw(CEA_FLDWIDTH) << fields[id].offset    
             << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+6) << fields[id].value    
+            << setw(CEA_FLDWIDTH+10) << fields[id].value    
             << setw(CEA_FLDWIDTH) << fields[id].start    
             << setw(CEA_FLDWIDTH) << fields[id].stop     
             << setw(CEA_FLDWIDTH) << fields[id].step     

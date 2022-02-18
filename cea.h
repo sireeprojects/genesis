@@ -352,7 +352,7 @@ public:
     cea_stream& operator = (cea_stream& rhs);
 
     // overload <<
-    friend ostream& operator << (ostream& os, const cea_stream& cmd);
+    friend ostream& operator << (ostream& os, const cea_stream &cmd);
 
     ~cea_stream();
 

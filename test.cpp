@@ -28,6 +28,8 @@ int main() {
     // add stream to proxy queue
     p->add_stream(s);
 
+    // cealog << *s;
+
     // start stream processing
     p->start();
 
