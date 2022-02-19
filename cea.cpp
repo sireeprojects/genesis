@@ -38,6 +38,8 @@ THINGS TO DO:
         by python script. it should not be like, first start the c++ test and
         then run the python script. if this is the case python script cannot
         be added to regression
+
+- Unix socket class, IP Socket class and socker server class
 */
 
 #include <thread>

@@ -1,0 +1,8 @@
+find timediff between two points in the program using chrono lib
+hugepage shared memory application
+    share mem info using auxillary messages of unix socket
+Thread pinning and naming functions
+PCAP read/write library
+packet decode logic to print frame in tree format
+vector packet processing experiments
+redo genesis gui project
