@@ -766,7 +766,7 @@ uint32_t proxy_id = 0;
 uint32_t stream_id = 0;
 
 //------------------------------------------------------------------------------
-// Timer class for performance measurement
+// Timer class for runtime performance measurement
 //------------------------------------------------------------------------------
 
 class cea_timer {
@@ -910,6 +910,7 @@ public:
     uint32_t payload_offset;
 
     uint32_t crc_len;
+    void *fbuf;
 };
 
 cea_stream::~cea_stream() = default;
@@ -1144,7 +1145,7 @@ void cea_stream::core::arrange_fields_in_sequence() {
     
         if (get_value(Transport_Hdr)==UDP)
             set(IPv4_Protocol, 17);
-        else if (get_value(Transport_Hdr)==UDP)
+        else if (get_value(Transport_Hdr)==TCP)
             set(IPv4_Protocol, 6);
 
         fseq.insert(fseq.end(), 
@@ -1167,6 +1168,9 @@ void cea_stream::core::arrange_fields_in_sequence() {
 }
 
 void cea_stream::core::build_base_frame() {
+
+    base_frame_len = 0;
+
     // total length of all headers (in bits) includes preamble 
     // but minus payload
     for (auto i : fseq) {
@@ -1216,7 +1220,6 @@ void cea_stream::core::build_base_frame() {
     if (get_value(Network_Hdr) == IPv4) {
         uint16_t ip_csum = compute_ipv4_csum(
             base_frame+get_offset(IPv4_Version), 20);
-
         memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
     }
     // find udp csum and overlay on the base frame
@@ -1601,10 +1604,7 @@ void cea_proxy::core::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->impl->prune();
-    timer.start();
     cur_stm->impl->build_base_frame();
-    cealog << "Timer taken by build_base_frame: " 
-        << timer.elapsed_in_string() << endl;
     begin_mutation();
 }
 
@@ -1616,31 +1616,69 @@ void cea_proxy::core::extract_traffic_parameters() {
 }
 
 void cea_proxy::core::begin_mutation() {
+    create_frame_buffer();
+    cur_stm->impl->fbuf = fbuf;
+
     // write to fbuf
     // *(addr + i) = (char)i;
     // read from fbuf
     // if (*(addr + i) != (char)i)
 
+    uint32_t frm_offset = 0;
     uint32_t nof_frames = cur_stm->impl->get_value(STREAM_Pkts_Per_Burst);
-    CEA_DBG("Number of frame in the stream: " << nof_frames);
+    uint32_t frm_size = cur_stm->impl->get_value(FRAME_Len);
+    CEA_MSG("Number of frame in the stream: " << nof_frames);
+    CEA_MSG("Frame size: " << frm_size);
 
+    // write frames
+    timer.start();
     for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
-        CEA_DBG("Generating frame: " << cnt);
+        CEA_DBG("Generating frame: " << cnt << " offset: " << frm_offset);
+        // cur_stm->impl->build_base_frame();
+        // cur_stm->impl->set(TCP_Csum, 0);
+
+        memcpy(cur_stm->impl->base_frame+9, (char*)&cnt, 1);
+        memcpy((((char*)fbuf)+frm_offset), (cur_stm->impl->base_frame+8), frm_size);
+        frm_offset += frm_size;
     }
+    cealog << "Write Runtime: " << timer.elapsed_in_string(3) << endl;
+
+    // // check frames
+    // timer.start();
+    // frm_offset = 0;
+    // for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
+    //     // memcpy((((char*)fbuf)+frm_offset), (cur_stm->impl->base_frame+8), frm_size);
+    //     // print_cdata(((unsigned char*)fbuf)+frm_offset, 64);
+    //     // if (*((char*)fbuf+frm_offset) != (char)cnt) {
+    //     //     CEA_MSG("***ERROR: Readback failed at index:" << cnt);
+    //     //     CEA_MSG("value : "  << atoi(*((char*)fbuf+frm_offset)));
+    //     //     release_frame_buffer();
+    //     //     exit(0);
+    //     // }
+    //     frm_offset += frm_size;
+    // }
+    // cealog << "Check Runtime: " << timer.elapsed_in_string(3) << endl;
+
+    release_frame_buffer();
+    cur_stm->impl->fbuf = NULL;
 }
 
 void cea_proxy::core::create_frame_buffer() {
     fbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
     if (fbuf == MAP_FAILED) {
         CEA_MSG("***ERROR: Memory map failed");
-        exit(1);
+        exit(0);
+    } else {
+        CEA_DBG("Hugepage created successfully");
     }
 }
 
 void cea_proxy::core::release_frame_buffer() {
     if (munmap(fbuf, LENGTH)) {
-        CEA_MSG("Error: Memory unmap failed");
+        CEA_MSG("***ERROR: Memory unmap failed");
         exit(1);
+    } else {
+        CEA_DBG("Hugepage released successfully");
     }
 }
 
