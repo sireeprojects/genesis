@@ -1,30 +1,22 @@
-#include <iostream>
-#include <iomanip>
-#include <chrono>
+#include "../utils.h"
 #include <thread>
 
 using namespace std;
 using namespace chrono;
-  
+
 class runtime {
 public:    
     runtime() = default;
     thread tid;
+    cea_timer timer;
 
     void worker() {
-
-        auto start = high_resolution_clock::now();
-
+        timer.start();
         for (int i=0; i<1'000'000'000ull; i++) {
         }
-
-        auto end = high_resolution_clock::now();
-        // Calculating total time taken by the program.
-        double time_taken = duration_cast<nanoseconds>(end - start).count();
-        time_taken *= 1e-9;
-
         cout << "Time taken by program is : " << fixed << setprecision(3) 
-            << time_taken  << " sec" << endl;
+            << timer.elapsed()  << " sec" << endl;
+        cout << timer.elapsed_in_string() << endl;
     }
 
     void start() {

@@ -53,8 +53,12 @@ THINGS TO DO:
 #include <sys/mman.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <chrono>
 
 #include "cea.h"
+
+using namespace std;
+using namespace chrono;
 
 //------------------------------------------------------------------------------
 // Escape codes to colorize message output
@@ -796,6 +800,37 @@ uint32_t proxy_id = 0;
 uint32_t stream_id = 0;
 
 //------------------------------------------------------------------------------
+// Timer class for performance measurement
+//------------------------------------------------------------------------------
+
+class cea_timer {
+public:
+    cea_timer() = default;
+    void start();
+    double elapsed();
+    string elapsed_in_string(int precision=9);
+private:
+    time_point<high_resolution_clock> begin;
+    time_point<high_resolution_clock> end;
+};
+
+void cea_timer::start() {
+   begin = high_resolution_clock::now();
+}
+
+double cea_timer::elapsed() {
+    end = high_resolution_clock::now();
+    double delta = duration<double>(end-begin).count();
+    return delta;
+}
+
+string cea_timer::elapsed_in_string(int precision) {
+    stringstream ss;
+    ss << fixed << setprecision(precision) << elapsed() << " sec";
+    return ss.str();
+}
+
+//------------------------------------------------------------------------------
 // Stream implementation
 //------------------------------------------------------------------------------
 
@@ -1516,6 +1551,8 @@ public:
 
     void reset();
     string msg_prefix;
+
+    cea_timer timer;
 };
 
 cea_proxy::~cea_proxy() = default;
@@ -1584,7 +1621,10 @@ void cea_proxy::core::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->impl->prune();
+    timer.start();
     cur_stm->impl->build_base_frame();
+    cealog << "Timer taken by build_base_frame: " 
+        << timer.elapsed_in_string() << endl;
     begin_mutation();
 }
 
