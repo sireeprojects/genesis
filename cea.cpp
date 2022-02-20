@@ -61,32 +61,10 @@ using namespace std;
 using namespace chrono;
 
 //------------------------------------------------------------------------------
-// Escape codes to colorize message output
-//------------------------------------------------------------------------------
-
-#define RST     "\x1B[0m"
-#define KRED    "\x1B[31m"
-#define KGRN    "\x1B[32m"
-#define KYEL    "\x1B[33m"
-#define KBLU    "\x1B[34m"
-#define KMAG    "\x1B[35m"
-#define KCYN    "\x1B[36m"
-#define KWHT    "\x1B[37m"
-#define FRED(x) KRED x RST
-#define FGRN(x) KGRN x RST
-#define FYEL(x) KYEL x RST
-#define FBLU(x) KBLU x RST
-#define FMAG(x) KMAG x RST
-#define FCYN(x) KCYN x RST
-#define FWHT(x) KWHT x RST
-#define BOLD(x) "\x1B[1m" x RST
-#define UNDL(x) "\x1B[4m" x RST
-
-//------------------------------------------------------------------------------
 // Global properties
 //------------------------------------------------------------------------------
 
-// maximum supported frame size from mac dest addr to mac crc (16KB)
+// maximum supported frame size from MAC dest addr to MAC crc (16KB)
 #define CEA_MAX_FRAME_SIZE 16384
 
 // size of scratchpad buffer
@@ -111,25 +89,13 @@ using namespace chrono;
 #endif
 
 //------------------------------------------------------------------------------
-// Hugepage shared memory for frame buffer
+// 1GB Hugepage for frame buffer (shared memory)
 //------------------------------------------------------------------------------
 
-// 1GB frame buffer with read and write capabilities
 #define LENGTH (1UL*1024*1024*1024)
 #define PROTECTION (PROT_READ | PROT_WRITE)
-
-#ifndef MAP_HUGETLB
-#define MAP_HUGETLB 0x40000 /* arch specific */
-#endif
-
-// Only ia64 requires this 
-#ifdef __ia64__
-#define ADDR (void *)(0x8000000000000000UL)
-#define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_FIXED)
-#else
 #define ADDR (void *)(0x0UL)
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
-#endif
 
 //------------------------------------------------------------------------------
 // CRC32
@@ -928,7 +894,6 @@ public:
     // it is created during stream constructor, it should never be freed 
     unsigned char *scratchpad;
 
-
     // slow crc method
     uint32_t compute_crc32(unsigned char *data, uint32_t len);
 
@@ -1200,13 +1165,13 @@ void cea_stream::core::build_base_frame() {
     // throw error if base_frame_len is greater than user specified FRAME_Len 
     // TODO: consider CRC also
     if ((base_frame_len - get_len(MAC_Preamble)) > get_value(FRAME_Len)) {
-        CEA_MSG(BOLD(FRED("ERROR: "))
+        CEA_MSG("*** ERROR: "
             << "Final frame lenght is greater then the length "
             << "specified via FRAME_Len. "
             << "Final Frame Length: " << base_frame_len << "  "
             << "Desired Frame Length: " << get_value(FRAME_Len)
             )
-        exit(1);
+        exit(0);
     }
     payload_len = get_value(FRAME_Len) -
         (base_frame_len - get_len(MAC_Preamble));
@@ -1235,7 +1200,7 @@ void cea_stream::core::build_base_frame() {
     // find ipv4 csum and overlay on the base frame
     if (get_value(Network_Hdr) == IPv4) {
         uint16_t ip_csum = compute_ipv4_csum(
-                base_frame+get_offset(IPv4_Version), 20);
+            base_frame+get_offset(IPv4_Version), 20);
 
         memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
     }
@@ -1278,7 +1243,7 @@ cea_stream::cea_stream(string name) : impl (new core(name)) {
 
 // copy constructor
 cea_stream::cea_stream(const cea_stream &rhs) {
-    impl->do_copy(&rhs);
+    // impl->do_copy(&rhs); // TODO
 }
 
 // assign operator overload
@@ -1645,7 +1610,7 @@ void cea_proxy::core::begin_mutation() {
 void cea_proxy::core::create_frame_buffer() {
     fbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
     if (fbuf == MAP_FAILED) {
-        CEA_MSG("Error: Memory map failed");
+        CEA_MSG("***ERROR: Memory map failed");
         exit(1);
     }
 }
