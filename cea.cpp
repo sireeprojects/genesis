@@ -524,15 +524,15 @@ void write_pcap(unsigned char *frame, uint32_t len) {
 
     ofstream pcapfile;
 
-    // TODO: what if the run.pcap was present from a previous run
+    // TODO: what if the frames.pcap was present from a previous run
     // the file will exist and hence the pcapfile handle will not be created
     // make sure the old file is deleted
     // move the file_exists check to a constructor of the stream
-    if (!file_exists("run.pcap")) {
-        pcapfile.open("run.pcap", ofstream::app);
+    if (!file_exists("frames.pcap")) {
+        pcapfile.open("frames.pcap", ofstream::app);
         pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
     } else {
-        pcapfile.open("run.pcap", ofstream::app);
+        pcapfile.open("frames.pcap", ofstream::app);
     }
 
     memcpy(buf+offset, (char*)&ph, sizeof(pcap_frame_hdr));
@@ -916,20 +916,21 @@ cea_stream::~cea_stream() = default;
 
 void cea_stream::core::print_base_frame_properties() {
     cealog << endl << cea_formatted_hdr("Base Frame Properties");
-    cealog << setw(20) << left << "Frame len: " 
-        << get_value(FRAME_Len) << endl;
-
-    cealog << setw(20) << left << "Preamble len: "
-        << get_len(MAC_Preamble) << endl;
-
-    cealog << setw(20) << left << "Headers len: " 
-        << base_frame_len - get_len(MAC_Preamble) << endl;
-
-    cealog << setw(20) << left << "Payload len: "
-        << payload_len << endl;
-
-    cealog << setw(20) << left << "Payload offset: "
-        << payload_offset << endl;
+    cealog << left << "Frame len"
+        << string((30 - cea_trim("Frame len").length()), '.') 
+        << " " << dec << get_value(FRAME_Len) << endl;
+    cealog << left << "Preamble len"
+        << string((30 - cea_trim("Preamble len").length()), '.') 
+        << " " << dec << get_len(MAC_Preamble) << endl;
+    cealog << left << "Headers len" 
+        << string((30 - cea_trim("Headers len").length()), '.')
+        << " " << dec << (base_frame_len-get_len(MAC_Preamble)) << endl;
+    cealog << left << "Payload len" 
+        << string((30 - cea_trim("Payload len").length()), '.') 
+        << " " << dec << payload_len << endl;
+    cealog << left << "Payload offset" 
+        << string((30 - cea_trim("Payload offset").length()), '.') 
+        << " " << dec << payload_offset << endl;
 }
 
 void cea_stream::core::print_stream_properties() {
@@ -1006,63 +1007,6 @@ void cea_stream::core::print_base_frame() {
     buf << endl << endl;
 
     cealog << buf.str();
-}
-
-// algorithm to arrange the frame fields
-void cea_stream::core::arrange_fields_in_sequence() {
-    
-    fseq.push_back(MAC_Preamble);
-
-    fseq.insert(fseq.end(),
-        htof[MAC].begin(),
-        htof[MAC].end());
-
-    for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
-        if (fields[idx].added) {
-            fseq.push_back(idx);
-        }
-    }
-
-    if (fields[FRAME_Type].value == ETH_V2) {
-        fseq.push_back(MAC_Ether_Type);
-    } else {
-        fseq.push_back(MAC_Len);
-    }
-
-    if (fields[FRAME_Type].value == ETH_LLC) {
-        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
-    }
-
-    if (fields[FRAME_Type].value == ETH_SNAP) {
-        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
-        fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
-    }
-
-    for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
-        if (fields[idx].added) {
-            fseq.push_back(idx);
-        }
-    }
-
-    // ARP does not contain IP or TCP/UDP headers
-    if (fields[Network_Hdr].value == ARP) {
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
-    } else {
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
-    
-        if (get_value(Transport_Hdr)==UDP)
-            set(IPv4_Protocol, 17);
-        else if (get_value(Transport_Hdr)==UDP)
-            set(IPv4_Protocol, 6);
-
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
-    }
 }
 
 void cea_stream::core::purge_static_fields() {
@@ -1152,6 +1096,76 @@ uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq,
     return offset;
 }
 
+// algorithm to arrange the frame fields
+void cea_stream::core::arrange_fields_in_sequence() {
+    
+    fseq.push_back(MAC_Preamble);
+
+    fseq.insert(fseq.end(),
+        htof[MAC].begin(),
+        htof[MAC].end());
+
+    for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
+        if (fields[idx].added) {
+            fseq.push_back(idx);
+        }
+    }
+
+    if (fields[FRAME_Type].value == ETH_V2) {
+        fseq.push_back(MAC_Ether_Type);
+    } else {
+        fseq.push_back(MAC_Len);
+    }
+
+    if (fields[FRAME_Type].value == ETH_LLC) {
+        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
+    }
+
+    if (fields[FRAME_Type].value == ETH_SNAP) {
+        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
+        fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
+    }
+
+    for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
+        if (fields[idx].added) {
+            fseq.push_back(idx);
+        }
+    }
+
+    // ARP does not contain IP or TCP/UDP headers
+    if (fields[Network_Hdr].value == ARP) {
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
+    } else {
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
+    
+        if (get_value(Transport_Hdr)==UDP)
+            set(IPv4_Protocol, 17);
+        else if (get_value(Transport_Hdr)==UDP)
+            set(IPv4_Protocol, 6);
+
+        fseq.insert(fseq.end(), 
+            htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
+            htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
+    }
+
+    // print fseq
+    #ifdef CEA_DEBUG
+    cealog << endl << cea_formatted_hdr("Frame Properties");
+    for (auto idx : fseq) {
+        cealog << left
+            << cea_trim(fields[idx].name)
+            << string((30 - cea_trim(fields[idx].name).length()), '.') 
+            << " " << hex << fields[idx].value << " "
+            << ((fields[idx].touched)? "(user)" : "")
+            << endl;
+    }
+    #endif
+}
+
 void cea_stream::core::build_base_frame() {
     // total length of all headers (in bits) includes preamble 
     // but minus payload
@@ -1197,6 +1211,7 @@ void cea_stream::core::build_base_frame() {
     for (uint32_t i=0; i<payload_len; i++) {
         memcpy(base_frame+(payload_offset+i), (char*)&i, 1);
     }
+
     // find ipv4 csum and overlay on the base frame
     if (get_value(Network_Hdr) == IPv4) {
         uint16_t ip_csum = compute_ipv4_csum(
@@ -1605,6 +1620,13 @@ void cea_proxy::core::begin_mutation() {
     // *(addr + i) = (char)i;
     // read from fbuf
     // if (*(addr + i) != (char)i)
+
+    uint32_t nof_frames = cur_stm->impl->get_value(STREAM_Pkts_Per_Burst);
+    CEA_DBG("Number of frame in the stream: " << nof_frames);
+
+    for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
+        CEA_DBG("Generating frame: " << cnt);
+    }
 }
 
 void cea_proxy::core::create_frame_buffer() {
