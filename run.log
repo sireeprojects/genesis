@@ -1,0 +1,79 @@
+(pxy:0) core: Proxy created with name=pxy and id=0
+
+---{ Frame Properties }---------------------------------------------------------
+MAC_Preamble.................. 55555555555555d5 
+MAC_Dest_Addr................. 112233445566 
+MAC_Src_Addr.................. aabbccddeeff 
+MAC_Ether_Type................ 800 
+IPv4_Version.................. 4 
+IPv4_IHL...................... 5 
+IPv4_Tos...................... c0 
+IPv4_Total_Len................ 33 
+IPv4_Id....................... aabb 
+IPv4_Flags.................... 0 
+IPv4_Frag_Offset.............. 0 
+IPv4_TTL...................... a 
+IPv4_Protocol................. 6 (user)
+IPv4_Hdr_Csum................. 0 
+IPv4_Src_Addr................. 11223344 
+IPv4_Dest_Addr................ aabbccdd 
+IPv4_Opts..................... 0 
+IPv4_Pad...................... 0 
+TCP_Src_Port.................. 4d2 
+TCP_Dest_Port................. 162e 
+TCP_Seq_Num................... 0 
+TCP_Ack_Num................... 0 
+TCP_Data_Offset............... 5 
+TCP_Reserved.................. 0 
+TCP_Urg....................... 0 
+TCP_Ack....................... 0 
+TCP_Psh....................... 0 
+TCP_Rst....................... 0 
+TCP_Syn....................... 0 
+TCP_Fin....................... 0 
+TCP_Window.................... 40 
+TCP_Csum...................... 0 
+TCP_Urg_Ptr................... 0 
+TCP_Opts...................... 0 
+TCP_Pad....................... 0 
+
+---{ Stream Properties }--------------------------------------------------------
+STREAM_Type................... 0 
+STREAM_Pkts_Per_Burst......... a (user)
+STREAM_Burst_Per_Stream....... 0 
+STREAM_Inter_Burst_Gap........ 0 
+STREAM_Inter_Stream_Gap....... 0 
+STREAM_Start_Delay............ 0 
+STREAM_Rate_Type.............. 0 
+STREAM_Rate................... 0 
+STREAM_Ipg.................... 0 
+STREAM_Percentage............. 0 
+STREAM_Pkts_Per_Sec........... 0 
+STREAM_Bit_Rate............... 0 
+STREAM_Crc_Enable............. 1 (user)
+STREAM_Timestamp_Enable....... 0 
+
+---{ Base Frame Properties }----------------------------------------------------
+Frame len..................... 64
+Preamble len.................. 8
+Headers len................... 54
+Payload len................... 10
+Payload offset................ 62
+
+---{ Base Frame }---------------------------------------------------------------
+55 55 55 55 55 55 55 d5  11 22 33 44 55 66 aa bb  (16)
+cc dd ee ff 08 00 45 c0  00 2e aa bb 00 00 0a 06  (32)
+49 50 11 22 33 44 aa bb  cc dd 04 d2 16 2e 00 00  (48)
+00 00 00 00 00 00 50 00  00 40 d2 96 00 00 00 01  (64)
+02 03 04 05 e9 03 7f 33  
+
+(pxy:0) create_frame_buffer: Hugepage created successfully
+
+---{ Performance Statistics }---------------------------------------------------
+Number of Frames.............. 10 B
+Frame size.................... 64
+Runtime....................... 0.08 secs
+Bytes written................. 640 B
+Bytes/sec..................... 8 K
+Frames/sec.................... 124 B
+(pxy:0) release_frame_buffer: Hugepage released successfully

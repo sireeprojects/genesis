@@ -676,14 +676,14 @@ enum cea_readable_type {
 string cea_readable_fs(double size, cea_readable_type type) {
     int i = 0;
     ostringstream buf("");
-    const char *units[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+    const char *units[] = {"B", "K", "M", "G", "T", "P", "E", "Z", "Y"};
     int divider = type;
 
     while (size > (divider-1)) {
       size /= divider;
       i++;
     }
-    buf << fixed << setprecision(2) << size << " " << units[i] << endl; 
+    buf << fixed << setprecision(0) << size << " " << units[i]; 
     return buf.str();
 }
 
@@ -1627,13 +1627,11 @@ void cea_proxy::core::begin_mutation() {
     uint32_t frm_offset = 0;
     uint32_t nof_frames = cur_stm->impl->get_value(STREAM_Pkts_Per_Burst);
     uint32_t frm_size = cur_stm->impl->get_value(FRAME_Len);
-    CEA_MSG("Number of frame in the stream: " << nof_frames);
-    CEA_MSG("Frame size: " << frm_size);
 
     // write frames
     timer.start();
     for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
-        CEA_DBG("Generating frame: " << cnt << " offset: " << frm_offset);
+        // CEA_DBG("Generating frame: " << cnt << " offset: " << frm_offset);
         // cur_stm->impl->build_base_frame();
         // cur_stm->impl->set(TCP_Csum, 0);
 
@@ -1641,23 +1639,33 @@ void cea_proxy::core::begin_mutation() {
         memcpy((((char*)fbuf)+frm_offset), (cur_stm->impl->base_frame+8), frm_size);
         frm_offset += frm_size;
     }
-    cealog << "Write Runtime: " << timer.elapsed_in_string(3) << endl;
+    double rt = timer.elapsed();
 
-    // // check frames
-    // timer.start();
-    // frm_offset = 0;
-    // for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
-    //     // memcpy((((char*)fbuf)+frm_offset), (cur_stm->impl->base_frame+8), frm_size);
-    //     // print_cdata(((unsigned char*)fbuf)+frm_offset, 64);
-    //     // if (*((char*)fbuf+frm_offset) != (char)cnt) {
-    //     //     CEA_MSG("***ERROR: Readback failed at index:" << cnt);
-    //     //     CEA_MSG("value : "  << atoi(*((char*)fbuf+frm_offset)));
-    //     //     release_frame_buffer();
-    //     //     exit(0);
-    //     // }
-    //     frm_offset += frm_size;
-    // }
-    // cealog << "Check Runtime: " << timer.elapsed_in_string(3) << endl;
+    cealog << endl << cea_formatted_hdr("Performance Statistics");
+    cealog << left << "Number of Frames" 
+        << string((30 - cea_trim("Number of Frames").length()), '.')
+        << " " << cea_readable_fs(nof_frames, KIS1000) << endl;
+    cealog << left << "Frame size" 
+        << string((30 - cea_trim("Frame size").length()), '.')
+        << " " << dec << frm_size << endl;
+    cealog << left << "Runtime" 
+        << string((30 - cea_trim("Runtime").length()), '.') 
+        << " " << dec << fixed << setprecision(2) << rt << " secs" << endl;
+    cealog << left << "Bytes written" 
+        << string((30 - cea_trim("Bytes written").length()), '.') 
+        << " " << dec 
+        << fixed << setprecision(0) 
+        << cea_readable_fs((nof_frames*64), KIS1000)  << endl;
+    cealog << left << "Bytes/sec" 
+        << string((30 - cea_trim("Bytes/sec").length()), '.') 
+        << " " << dec 
+        << fixed << setprecision(0) 
+        << cea_readable_fs((nof_frames*64)/rt, KIS1000)  << endl;
+    cealog << left << "Frames/sec" 
+        << string((30 - cea_trim("Frames/sec").length()), '.') 
+        << " " << dec 
+        << fixed << setprecision(0) 
+        << cea_readable_fs(nof_frames/rt, KIS1000)  << endl;
 
     release_frame_buffer();
     cur_stm->impl->fbuf = NULL;
