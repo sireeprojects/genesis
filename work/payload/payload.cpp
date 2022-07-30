@@ -8,34 +8,36 @@ uint32_t fcs_size = 4;
 uint32_t frm_size = 64;
 uint32_t pl_size = 0;
 
-void randomize_frame_buf() {
-    random_device rd; // obtain a random number from hardware
-    mt19937 gen(rd()); // seed the generator
-    uniform_int_distribution<> distr(0, 255); // define the range
-    for(int idx=0; idx<ONE_MB; idx++) {
-        buf[idx] =  static_cast<char>(distr(gen));
-    }
-}
+cea_field_id gen_field;
+cea_field_generation_type gen_type;
+cea_field_generation_spec gen_spec;
 
-void create_frame_buffer() {
-    buf = new unsigned char[ONE_MB];
-}
+uint32_t *size_idx;
+uint32_t *start_idx;
+
 
 int main() {
-    create_frame_buffer();
-    randomize_frame_buf();
+    // create the 1 MByte frame buffer
+    buf = new unsigned char[ONE_MB];
 
     // find payload size
     pl_size = frm_size - (hdr_size + fcs_size);
 
-    cout << cea_formatted_hdr("Parameters");
+    cout << endl << cea_formatted_hdr("Frame Dimensions");
     cealog << toc(30, "Configured Frame Size") << frm_size << endl;
     cealog << toc(30, "Header size") << hdr_size << endl;
     cealog << toc(30, "FCS size") << fcs_size << endl;
-    cealog << toc(30, "Payload size") << pl_size << endl;;
-    
-    print_frame(buf, frm_size);
+    cealog << toc(30, "Payload size") << pl_size << endl;
 
+    // test specification
+    gen_type = Random_in_Range;
+    gen_spec = {0, 70, 100, 0, 0, 0};
+
+    // display the test specification
+    cealog << endl << cea_formatted_hdr("Payload Specification");
+    cealog << toc(30, "Payload Type") << to_str(gen_type) << endl;
+    cealog << to_str(gen_spec) << endl;
+    
     delete(buf);
     return 0;
 }
