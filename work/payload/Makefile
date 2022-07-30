@@ -1,8 +1,8 @@
 f ?= payload.cpp
 
 default:
-	@g++ -o run.x $(f)
-	@time ./run.x;
+	@clear; g++ -o run.x $(f)
+	@./run.x;
 
 clean:
-	@rm -rf *.x *.out
+	@rm -rf *.x *.out *.log
