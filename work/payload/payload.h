@@ -6,6 +6,8 @@
 #include <random>
 #include <iomanip>
 
+#define ONE_MB (1024*1024)
+
 using namespace std;
 
 enum cea_field_id {
@@ -37,6 +39,7 @@ enum cea_field_generation_type {
     Bit_Rate
 };
 
+// use designated initializers
 struct cea_field_generation_spec {
     uint64_t value;
     uint32_t range_start;
@@ -88,12 +91,12 @@ string cea_formatted_hdr(string s) {
     return ss.str();
 }
 
-void print_frame(unsigned char *buf, uint32_t len, bool single=false) {
+void print_char_array(unsigned char *buf, uint32_t len, bool single=false) {
     ostringstream b("");
     b.setf(ios::hex, ios::basefield);
     b.setf(ios_base::left);
     b << endl;
-    b << cea_formatted_hdr("Base Frame");
+    b << cea_formatted_hdr("Char Array");
     
     for (uint32_t idx=0; idx<len; idx++) {
         b << setw(2) << right << setfill('0')<< hex << 
@@ -103,13 +106,11 @@ void print_frame(unsigned char *buf, uint32_t len, bool single=false) {
             if (idx%16==15) b  << "(" << dec << (idx+1) << ")" << endl;
         }
     }
-    b << endl << endl;
-
+    b << endl;
     cealog << b.str();
 }
 
-
-void print_uint(uint32_t *buf, uint32_t len, bool single=false) {
+void print_uint_array(uint32_t *buf, uint32_t len, bool single=false) {
     ostringstream b("");
     b.setf(ios::dec, ios::basefield);
     b.setf(ios_base::left);
@@ -123,8 +124,7 @@ void print_uint(uint32_t *buf, uint32_t len, bool single=false) {
             if (idx%16==15) b  << "(" << dec << (idx+1) << ")" << endl;
         }
     }
-    b << endl << endl;
-
+    b << endl;
     cealog << b.str();
 }
 void fill_frame(unsigned char *buf, uint32_t start, uint32_t len, uint8_t pattern) {
@@ -155,7 +155,7 @@ string toc(uint32_t len, string msg) {
     return s;
 }
 
-void randomize_frame_buf(unsigned char *b, uint32_t min, uint32_t max, uint32_t len) {
+void randomize_char_array(unsigned char *b, uint32_t min, uint32_t max, uint32_t len) {
     random_device rd; // obtain a random number from hardware
     mt19937 gen(rd()); // seed the generator
     uniform_int_distribution<> distr(min, max); // define the range
@@ -164,7 +164,7 @@ void randomize_frame_buf(unsigned char *b, uint32_t min, uint32_t max, uint32_t 
     }
 }
 
-void randomize_uint_buf(uint32_t *b, uint32_t min, uint32_t max, uint32_t len) {
+void randomize_uint_array(uint32_t *b, uint32_t min, uint32_t max, uint32_t len) {
     random_device rd; // obtain a random number from hardware
     mt19937 gen(rd()); // seed the generator
     uniform_int_distribution<> distr(min, max); // define the range
@@ -228,11 +228,105 @@ string to_str(cea_field_generation_type t) {
 }
 
     // fill frame buffer with random values
-    // randomize_frame_buf(buf, 0, 255, ONE_MB);
+    // randomize_char_array(buf, 0, 255, ONE_MB);
 
 
     // prepare a dummy frame
     // fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
     // fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
-    // print_frame(buf, frm_size, true);
+    // print_char_array(buf, frm_size, true);
 
+class payload {
+public:
+    cea_field_id gen_field;
+    cea_field_generation_type gen_type;
+    cea_field_generation_spec gen_spec;
+
+    void create_1mb_buffer();
+    void release_1mb_buffer();
+    void find_payload_sz();
+    void print_dimensions();
+    void print_specification();
+    void find_size_array();
+
+private:    
+    unsigned char *buf;
+    uint32_t hdr_size = 14;
+    uint32_t fcs_size = 4;
+    uint32_t frm_size = 64;
+    uint32_t pl_size = 0;
+    uint32_t *size_idx;
+    uint32_t *start_idx;
+};
+
+void payload::find_size_array() {
+    switch (gen_type) {
+        case Fixed: {
+             size_idx = new uint32_t;
+             // store only single value
+             *size_idx = gen_spec.value;
+             frm_size = gen_spec.value;
+             uint32_t nof_sizes = 1;
+             print_uint_array(size_idx, nof_sizes);
+             break;
+             }
+        case Random_in_Range: {
+             // determine the number of sizes allowed
+             // and allocate memeory
+             uint32_t nof_sizes = (gen_spec.range_stop - gen_spec.range_start);
+             size_idx = new uint32_t[nof_sizes];
+            
+             // generate and store random sizes from the given range
+             // TODO include stop value also
+             randomize_uint_array(size_idx, gen_spec.range_start, gen_spec.range_stop+1, nof_sizes);
+             print_uint_array(size_idx, nof_sizes);
+             break;
+             }
+        case Increment: {
+             // determine the number of sizes allowed
+             // and allocate memeory
+             uint32_t nof_sizes = 
+                 ((gen_spec.range_stop - gen_spec.range_start) / gen_spec.range_step) + 1;
+             size_idx = new uint32_t[nof_sizes];
+
+             uint32_t idx=0;
+             for (uint32_t val=gen_spec.range_start; val<=gen_spec.range_stop; val+=2) {
+                 size_idx[idx] = val;
+                 idx++;
+             }
+             print_uint_array(size_idx, nof_sizes);
+             break;
+             }
+        default:{
+            cealog << "***ERROR: Illegal gen specification" << endl;
+            abort();
+        }
+    }
+    delete(size_idx);
+}
+
+void payload::create_1mb_buffer() {
+    buf = new unsigned char[ONE_MB];
+}
+
+void payload::release_1mb_buffer() {
+    delete(buf);
+}
+
+void payload::find_payload_sz() {
+    pl_size = frm_size - (hdr_size + fcs_size);
+}
+
+void payload::print_dimensions() {
+    cout << cea_formatted_hdr("Frame Dimensions");
+    cealog << toc(30, "Configured Frame Size") << frm_size << endl;
+    cealog << toc(30, "Header size") << hdr_size << endl;
+    cealog << toc(30, "FCS size") << fcs_size << endl;
+    cealog << toc(30, "Payload size") << pl_size << endl;
+}
+
+void payload::print_specification() {
+    cealog << endl << cea_formatted_hdr("Payload Specification");
+    cealog << toc(30, "Payload Type") << to_str(gen_type) << endl;
+    cealog << to_str(gen_spec) << endl;
+}

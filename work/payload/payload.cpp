@@ -1,77 +1,70 @@
 #include "payload.h"
 using namespace std;
 
-#define ONE_MB (1024*1024)
-unsigned char *buf;
-uint32_t hdr_size = 14;
-uint32_t fcs_size = 4;
-uint32_t frm_size = 64;
-uint32_t pl_size = 0;
 
-cea_field_id gen_field;
-cea_field_generation_type gen_type;
-cea_field_generation_spec gen_spec;
 
-uint32_t *size_idx;
-uint32_t *start_idx;
 
 
 int main() {
-    // create the 1 MByte frame buffer
-    buf = new unsigned char[ONE_MB];
 
-    // find payload size
-    pl_size = frm_size - (hdr_size + fcs_size);
+    payload *p = new payload();
 
-    cout << endl << cea_formatted_hdr("Frame Dimensions");
-    cealog << toc(30, "Configured Frame Size") << frm_size << endl;
-    cealog << toc(30, "Header size") << hdr_size << endl;
-    cealog << toc(30, "FCS size") << fcs_size << endl;
-    cealog << toc(30, "Payload size") << pl_size << endl;
+    p->create_1mb_buffer();
+    p->find_payload_sz();
+    p->print_dimensions();
 
-    // test specification
-    gen_type = Random_in_Range;
-    gen_spec = {0, 70, 100, 0, 0, 0};
+//------------------------------------------------------------------------------
+// test specification (1
+//------------------------------------------------------------------------------
+    p->gen_type = Increment;
+    cea_field_generation_spec inc_spec = {
+        .value        = 0,
+        .range_start  = 70,
+        .range_stop   = 100,
+        .range_step   = 2,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->gen_spec = inc_spec;
 
-    // display the test specification
-    cealog << endl << cea_formatted_hdr("Payload Specification");
-    cealog << toc(30, "Payload Type") << to_str(gen_type) << endl;
-    cealog << to_str(gen_spec) << endl;
+    p->print_specification();
+    p->find_size_array();
+
+//------------------------------------------------------------------------------
+// test specification (2)
+//------------------------------------------------------------------------------
+    p->gen_type = Random_in_Range;
+    cea_field_generation_spec rnd_spec = {
+        .value        = 0,
+        .range_start  = 70,
+        .range_stop   = 100,
+        .range_step   = 0,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->gen_spec = rnd_spec;
+
+    p->print_specification();
+    p->find_size_array();
+
+//------------------------------------------------------------------------------
+// test specification (3)
+//------------------------------------------------------------------------------
+    p->gen_type = Fixed;
+    cea_field_generation_spec fxd_spec = {
+        .value        = 100,
+        .range_start  = 0,
+        .range_stop   = 0,
+        .range_step   = 0,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->gen_spec = fxd_spec;
+
+    p->print_specification();
+    p->find_size_array();
     
-    // process size and generate size_idx
-    switch (gen_type) {
-        case Fixed: {
-             size_idx = new uint32_t;
-             // store only single value
-             *size_idx = frm_size;
-             break;
-             }
-        case Random_in_Range: {
-             // determine the number of sizes allowed
-             // and allocate memeory
-             uint32_t nof_sizes = gen_spec.range_stop - gen_spec.range_start;
-             size_idx = new uint32_t[nof_sizes];
-            
-             // generate and store random sizes from the given range
-             randomize_uint_buf(size_idx, gen_spec.range_start, gen_spec.range_stop, nof_sizes);
-             print_uint(size_idx, nof_sizes);
-             break;
-             }
-        case Increment: {
-             // determine the number of sizes allowed
-             // and allocate memeory
-             uint32_t nof_sizes = (gen_spec.range_stop - gen_spec.range_start) / gen_spec.range_step;
-             size_idx = new uint32_t[nof_sizes];
-             break;
-             }
-        default:{
-            cealog << "***ERROR: Illegal gen specification" << endl;
-            abort();
-        }
-    }
-    
-    // release ONE_MB buffer
-    delete(buf);
+    p->release_1mb_buffer();
     return 0;
 }
 
