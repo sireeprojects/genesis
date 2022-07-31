@@ -4,55 +4,45 @@ using namespace std;
 int main() {
     payload *p = new payload();
 
+//------------------------------------------------------------------------------
+// test specification (1)
+//------------------------------------------------------------------------------
+    p->sztype = Increment;
+    cea_gen_spec inc_spec = {
+        .value        = 0,
+        .range_start  = 70,
+        .range_stop   = 100,
+        .range_step   = 2,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->szspec = inc_spec;
+    p->print_spec();
+    p->compute_size_start();
     p->reset();
-    p->create_1mb_buffer();
-    p->find_payload_sz();
-    p->print_dimensions();
 
-// //------------------------------------------------------------------------------
-// // test specification (1
-// //------------------------------------------------------------------------------
-//     p->gen_type = Increment;
-//     cea_field_generation_spec inc_spec = {
-//         .value        = 0,
-//         .range_start  = 70,
-//         .range_stop   = 100,
-//         .range_step   = 2,
-//         .repeat_after = 0,
-//         .step         = 0
-//     }; 
-//     p->gen_spec = inc_spec;
-// 
-//     p->print_specification();
-//     p->find_size_array();
-//     p->mutate();
-//     p->reset();
-// 
-// //------------------------------------------------------------------------------
-// // test specification (2)
-// //------------------------------------------------------------------------------
-//     p->reset();
-//     p->gen_type = Random_in_Range;
-//     cea_field_generation_spec rnd_spec = {
-//         .value        = 0,
-//         .range_start  = 70,
-//         .range_stop   = 100,
-//         .range_step   = 0,
-//         .repeat_after = 0,
-//         .step         = 0
-//     }; 
-//     p->gen_spec = rnd_spec;
-// 
-//     p->print_specification();
-//     p->find_size_array();
-//     p->mutate();
+//------------------------------------------------------------------------------
+// test specification (2)
+//------------------------------------------------------------------------------
+    p->sztype = Random_in_Range;
+    cea_gen_spec rnd_spec = {
+        .value        = 0,
+        .range_start  = 70,
+        .range_stop   = 100,
+        .range_step   = 0,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->szspec = rnd_spec;
+    p->print_spec();
+    p->compute_size_start();
+    p->reset();
 
 //------------------------------------------------------------------------------
 // test specification (3)
 //------------------------------------------------------------------------------
-    p->reset();
-    p->gen_type = Fixed;
-    cea_field_generation_spec fxd_spec = {
+    p->sztype = Fixed;
+    cea_gen_spec fxd_spec = {
         .value        = 100,
         .range_start  = 0,
         .range_stop   = 0,
@@ -60,12 +50,10 @@ int main() {
         .repeat_after = 0,
         .step         = 0
     }; 
-    p->gen_spec = fxd_spec;
-
-    p->print_specification();
-    p->find_size_array();
-    // p->mutate();
+    p->szspec = fxd_spec;
+    p->print_spec();
+    p->compute_size_start();
+    p->reset();
     
     return 0;
 }
-

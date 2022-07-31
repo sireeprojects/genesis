@@ -18,7 +18,7 @@ enum cea_field_id {
     FRAME_Len
 };
 
-enum cea_field_generation_type {
+enum cea_gen_type {
     Fixed,            
     Random,           
     Random_in_Range,  
@@ -43,7 +43,7 @@ enum cea_field_generation_type {
 };
 
 // use designated initializers
-struct cea_field_generation_spec {
+struct cea_gen_spec {
     uint64_t value;
     uint32_t range_start;
     uint32_t range_stop;
@@ -176,7 +176,7 @@ void randomize_uint_array(uint32_t *b, uint32_t min, uint32_t max, uint32_t len)
     }
 }
 
-string to_str(cea_field_generation_spec t) {
+string to_str(cea_gen_spec t) {
     ostringstream b("");
     b.setf(ios::dec, ios::basefield);
     b.setf(ios_base::left);
@@ -201,7 +201,7 @@ string to_str(cea_field_id t) {
     return cea_trim(name);
 }
 
-string to_str(cea_field_generation_type t) {
+string to_str(cea_gen_type t) {
     string name;
     switch(t) {
         case Fixed             : { name = "Fixed            "; break; }                                    
@@ -230,20 +230,23 @@ string to_str(cea_field_generation_type t) {
     return cea_trim(name);
 }
 
-
 class payload {
 public:
-    cea_field_id gen_field;
-    cea_field_generation_type gen_type;
-    cea_field_generation_spec gen_spec;
+    // frame size
+    cea_gen_type sztype;
+    cea_gen_spec szspec;
+    
+    // payload type
+    cea_gen_type ptype;
+    cea_gen_spec pspec;
 
-    void create_1mb_buffer();
-    void find_payload_sz();
     void print_dimensions();
-    void print_specification();
-    void find_size_array();
+    void print_spec();
+    void compute_size_start();
     void mutate();
     void reset();
+    payload();
+    ~payload();
 
 private:    
     unsigned char *buf;
@@ -253,18 +256,22 @@ private:
     uint32_t pl_size;
     uint32_t *size_idx;
     uint32_t *start_idx;
+
+    // rt values
+    uint32_t nof_sizes;
 };
 
-void payload::mutate() {
-    // fill frame buffer with random values
-    randomize_char_array(buf, 0, 255, ONE_MB);
+payload::payload() {
+    buf = new unsigned char[ONE_MB];
+    size_idx = new uint32_t[1024*16]; // 16K
+    start_idx = new uint32_t[1024*16]; // 16K
+    reset();
+}
 
-    // prepare a dummy frame
-    fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
-    fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
-
-
-    // print_char_array(buf, frm_size);
+payload::~payload() {
+    delete buf;
+    delete size_idx;
+    delete start_idx;
 }
 
 void payload::reset() {
@@ -272,36 +279,28 @@ void payload::reset() {
     fcs_size = 4;
     frm_size = 64;
     pl_size = 0;
-    if (!buf) delete buf;
-    if (!size_idx) delete size_idx;
-    if (!start_idx) delete start_idx;
 }
 
-void payload::find_size_array() {
-    switch (gen_type) {
+void payload::compute_size_start() {
+    switch (sztype) {
         case Fixed: {
-             size_idx = new uint32_t;
-             // store only single value
-             *size_idx = gen_spec.value;
-             frm_size = gen_spec.value;
-             uint32_t nof_sizes = 1;
+             *size_idx = szspec.value;
+             frm_size = szspec.value;
+             nof_sizes = 1;
              print_uint_array("Fixed: Size Array", size_idx, nof_sizes);
 
-             start_idx = new uint32_t;
              *start_idx = 0;
              cealog << endl << toc(30, "Start Index") << *start_idx << endl;
              break;
              }
         case Random_in_Range: {
              // determine the number of sizes allowed and allocate memeory
-             uint32_t nof_sizes = (gen_spec.range_stop - gen_spec.range_start);
-             size_idx = new uint32_t[nof_sizes];
+             nof_sizes = (szspec.range_stop - szspec.range_start);
             
              // generate and store random sizes from the given range
-             randomize_uint_array(size_idx, gen_spec.range_start, gen_spec.range_stop+1, nof_sizes);
+             randomize_uint_array(size_idx, szspec.range_start, szspec.range_stop+1, nof_sizes);
              print_uint_array("Random_in_Range: Size Array", size_idx, nof_sizes);
 
-             start_idx = new uint32_t[nof_sizes];
              for (uint32_t idx=0; idx<=nof_sizes; idx++) {
                  start_idx[idx] = idx;
              }
@@ -310,18 +309,16 @@ void payload::find_size_array() {
              }
         case Increment: {
              // determine the number of sizes allowed and allocate memeory
-             uint32_t nof_sizes = 
-                 ((gen_spec.range_stop - gen_spec.range_start) / gen_spec.range_step) + 1;
-             size_idx = new uint32_t[nof_sizes];
+             nof_sizes = 
+                 ((szspec.range_stop - szspec.range_start) / szspec.range_step) + 1;
 
              uint32_t idx=0;
-             for (uint32_t val=gen_spec.range_start; val<=gen_spec.range_stop; val+=2) {
+             for (uint32_t val=szspec.range_start; val<=szspec.range_stop; val+= szspec.range_step) {
                  size_idx[idx] = val;
                  idx++;
              }
              print_uint_array("Increment: Size Array", size_idx, nof_sizes);
 
-             start_idx = new uint32_t;
              *start_idx = 0;
              cealog << toc(30, "Start Index") << *start_idx << endl;
              break;
@@ -333,14 +330,6 @@ void payload::find_size_array() {
     }
 }
 
-void payload::create_1mb_buffer() {
-    buf = new unsigned char[ONE_MB];
-}
-
-void payload::find_payload_sz() {
-    pl_size = frm_size - (hdr_size + fcs_size);
-}
-
 void payload::print_dimensions() {
     cout << cea_formatted_hdr("Frame Dimensions");
     cealog << toc(30, "Configured Frame Size") << frm_size << endl;
@@ -349,8 +338,19 @@ void payload::print_dimensions() {
     cealog << toc(30, "Payload size") << pl_size << endl;
 }
 
-void payload::print_specification() {
+void payload::print_spec() {
     cealog << endl << cea_formatted_hdr("Payload Specification");
-    cealog << toc(30, "Payload Type") << to_str(gen_type) << endl;
-    cealog << to_str(gen_spec) << endl;
+    cealog << toc(30, "Payload Type") << to_str(sztype) << endl;
+    cealog << to_str(szspec) << endl;
+}
+
+void payload::mutate() {
+    // fill frame buffer with random values
+    randomize_char_array(buf, 0, 255, ONE_MB);
+
+    // prepare a dummy frame
+    fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
+    fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
+
+    // print_char_array(buf, frm_size);
 }
