@@ -108,6 +108,25 @@ void print_frame(unsigned char *buf, uint32_t len, bool single=false) {
     cealog << b.str();
 }
 
+
+void print_uint(uint32_t *buf, uint32_t len, bool single=false) {
+    ostringstream b("");
+    b.setf(ios::dec, ios::basefield);
+    b.setf(ios_base::left);
+    b << endl;
+    b << cea_formatted_hdr("Integer array");
+    
+    for (uint32_t idx=0; idx<len; idx++) {
+        b << setw(3) << right << (uint16_t) buf[idx] << " ";
+        if (!single) {
+            if (idx%8==7) b << " ";
+            if (idx%16==15) b  << "(" << dec << (idx+1) << ")" << endl;
+        }
+    }
+    b << endl << endl;
+
+    cealog << b.str();
+}
 void fill_frame(unsigned char *buf, uint32_t start, uint32_t len, uint8_t pattern) {
     for (uint32_t idx=start; idx<(start+len); idx++) {
         buf[idx] = pattern;
@@ -217,25 +236,3 @@ string to_str(cea_field_generation_type t) {
     // fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
     // print_frame(buf, frm_size, true);
 
-    // switch (gen_type) {
-    //     case Fixed: {
-    //          size_idx = new uint32_t;
-    //          break;
-    //          }
-    //     case Random_in_Range: {
-    //          uint32_t nof_sizes = gen_spec.range_stop - gen_spec.range_start;
-    //          size_idx = new uint32_t[nof_sizes];
-    //          randomize_uint_buf(size_idx, gen_spec.range_start, gen_spec.range_stop, nof_sizes);
-    //          for(int idx=0; idx<nof_sizes; idx++) {
-    //             // cealog << size_idx[idx] << " ";
-    //          }
-    //          break;
-    //          }
-    //     case Increment: {
-    //          break;
-    //          }
-    //     default:{
-    //         cealog << "***ERROR: Illegal gen specification" << endl;
-    //         abort();
-    //     }
-    // }

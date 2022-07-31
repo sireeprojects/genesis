@@ -38,6 +38,39 @@ int main() {
     cealog << toc(30, "Payload Type") << to_str(gen_type) << endl;
     cealog << to_str(gen_spec) << endl;
     
+    // process size and generate size_idx
+    switch (gen_type) {
+        case Fixed: {
+             size_idx = new uint32_t;
+             // store only single value
+             *size_idx = frm_size;
+             break;
+             }
+        case Random_in_Range: {
+             // determine the number of sizes allowed
+             // and allocate memeory
+             uint32_t nof_sizes = gen_spec.range_stop - gen_spec.range_start;
+             size_idx = new uint32_t[nof_sizes];
+            
+             // generate and store random sizes from the given range
+             randomize_uint_buf(size_idx, gen_spec.range_start, gen_spec.range_stop, nof_sizes);
+             print_uint(size_idx, nof_sizes);
+             break;
+             }
+        case Increment: {
+             // determine the number of sizes allowed
+             // and allocate memeory
+             uint32_t nof_sizes = (gen_spec.range_stop - gen_spec.range_start) / gen_spec.range_step;
+             size_idx = new uint32_t[nof_sizes];
+             break;
+             }
+        default:{
+            cealog << "***ERROR: Illegal gen specification" << endl;
+            abort();
+        }
+    }
+    
+    // release ONE_MB buffer
     delete(buf);
     return 0;
 }
