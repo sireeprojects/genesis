@@ -1,3 +1,6 @@
+// TODO
+// check if start and stop values are included in randomization
+
 #include <iostream>
 #include <cstdint>
 #include <cstring>
@@ -110,12 +113,12 @@ void print_char_array(unsigned char *buf, uint32_t len, bool single=false) {
     cealog << b.str();
 }
 
-void print_uint_array(uint32_t *buf, uint32_t len, bool single=false) {
+void print_uint_array(string title, uint32_t *buf, uint32_t len, bool single=false) {
     ostringstream b("");
     b.setf(ios::dec, ios::basefield);
     b.setf(ios_base::left);
     b << endl;
-    b << cea_formatted_hdr("Integer array");
+    b << cea_formatted_hdr(title);
     
     for (uint32_t idx=0; idx<len; idx++) {
         b << setw(3) << right << (uint16_t) buf[idx] << " ";
@@ -227,14 +230,6 @@ string to_str(cea_field_generation_type t) {
     return cea_trim(name);
 }
 
-    // fill frame buffer with random values
-    // randomize_char_array(buf, 0, 255, ONE_MB);
-
-
-    // prepare a dummy frame
-    // fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
-    // fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
-    // print_char_array(buf, frm_size, true);
 
 class payload {
 public:
@@ -243,21 +238,44 @@ public:
     cea_field_generation_spec gen_spec;
 
     void create_1mb_buffer();
-    void release_1mb_buffer();
     void find_payload_sz();
     void print_dimensions();
     void print_specification();
     void find_size_array();
+    void mutate();
+    void reset();
 
 private:    
     unsigned char *buf;
-    uint32_t hdr_size = 14;
-    uint32_t fcs_size = 4;
-    uint32_t frm_size = 64;
-    uint32_t pl_size = 0;
+    uint32_t hdr_size;
+    uint32_t fcs_size;
+    uint32_t frm_size;
+    uint32_t pl_size;
     uint32_t *size_idx;
     uint32_t *start_idx;
 };
+
+void payload::mutate() {
+    // fill frame buffer with random values
+    randomize_char_array(buf, 0, 255, ONE_MB);
+
+    // prepare a dummy frame
+    fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
+    fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
+
+
+    // print_char_array(buf, frm_size);
+}
+
+void payload::reset() {
+    hdr_size = 14;
+    fcs_size = 4;
+    frm_size = 64;
+    pl_size = 0;
+    if (!buf) delete buf;
+    if (!size_idx) delete size_idx;
+    if (!start_idx) delete start_idx;
+}
 
 void payload::find_size_array() {
     switch (gen_type) {
@@ -267,24 +285,31 @@ void payload::find_size_array() {
              *size_idx = gen_spec.value;
              frm_size = gen_spec.value;
              uint32_t nof_sizes = 1;
-             print_uint_array(size_idx, nof_sizes);
+             print_uint_array("Fixed: Size Array", size_idx, nof_sizes);
+
+             start_idx = new uint32_t;
+             *start_idx = 0;
+             cealog << endl << toc(30, "Start Index") << *start_idx << endl;
              break;
              }
         case Random_in_Range: {
-             // determine the number of sizes allowed
-             // and allocate memeory
+             // determine the number of sizes allowed and allocate memeory
              uint32_t nof_sizes = (gen_spec.range_stop - gen_spec.range_start);
              size_idx = new uint32_t[nof_sizes];
             
              // generate and store random sizes from the given range
-             // TODO include stop value also
              randomize_uint_array(size_idx, gen_spec.range_start, gen_spec.range_stop+1, nof_sizes);
-             print_uint_array(size_idx, nof_sizes);
+             print_uint_array("Random_in_Range: Size Array", size_idx, nof_sizes);
+
+             start_idx = new uint32_t[nof_sizes];
+             for (uint32_t idx=0; idx<=nof_sizes; idx++) {
+                 start_idx[idx] = idx;
+             }
+             print_uint_array("Random_in_Range: Start Array", start_idx, nof_sizes);
              break;
              }
         case Increment: {
-             // determine the number of sizes allowed
-             // and allocate memeory
+             // determine the number of sizes allowed and allocate memeory
              uint32_t nof_sizes = 
                  ((gen_spec.range_stop - gen_spec.range_start) / gen_spec.range_step) + 1;
              size_idx = new uint32_t[nof_sizes];
@@ -294,7 +319,11 @@ void payload::find_size_array() {
                  size_idx[idx] = val;
                  idx++;
              }
-             print_uint_array(size_idx, nof_sizes);
+             print_uint_array("Increment: Size Array", size_idx, nof_sizes);
+
+             start_idx = new uint32_t;
+             *start_idx = 0;
+             cealog << toc(30, "Start Index") << *start_idx << endl;
              break;
              }
         default:{
@@ -302,15 +331,10 @@ void payload::find_size_array() {
             abort();
         }
     }
-    delete(size_idx);
 }
 
 void payload::create_1mb_buffer() {
     buf = new unsigned char[ONE_MB];
-}
-
-void payload::release_1mb_buffer() {
-    delete(buf);
 }
 
 void payload::find_payload_sz() {
