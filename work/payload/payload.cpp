@@ -19,6 +19,7 @@ int main() {
     }; 
     p->szspec = fxd_spec;
 
+    // p->ptype = Random;
     // p->ptype = Incr_Byte;
     // p->ptype = Incr_Word;
     // p->ptype = Decr_Byte;

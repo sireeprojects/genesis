@@ -254,6 +254,7 @@ public:
 
 private:    
     unsigned char *buf;
+    unsigned char *opbuf;
     uint32_t hdr_size;
     uint32_t fcs_size;
     uint32_t frm_size;
@@ -325,6 +326,12 @@ void payload::gen_frame() {
              print_char_array(buf, 200);
              break;
              }
+        case Random: {
+             randomize_char_array(buf, 0, 255, ONE_MB);
+             // memcpy(buf, hdr, hdr_len); // this is done during mutation
+             print_char_array(buf, 70);
+             break;
+             }
     }
 }
 
@@ -377,6 +384,7 @@ void payload::pregenerate() {
 
 payload::payload() {
     buf = new unsigned char[ONE_MB];
+    opbuf = new unsigned char[ONE_MB*2];
     size_idx = new uint32_t[1024*16]; // 16K
     start_idx = new uint32_t[1024*16]; // 16K
     inc_byte_array = new unsigned char[ONE_MB]; 
@@ -485,7 +493,28 @@ void payload::mutate() {
     for(uint64_t loop=0; loop<loop_cnt; loop+=loop_control) {
         for(uint64_t bps=0; bps<burst_per_stream; bps+=bps_control) {
             for(uint64_t ppb=0; ppb<pkts_per_burst; ppb+=ppb_control) {
-                cealog << "Loop:" << loop << " Bps:" << bps << " Ppb:" << ppb << endl;
+                // cealog << "Loop:" << loop << " Bps:" << bps << " Ppb:" << ppb << endl;
+                //
+                switch(ptype) {
+                    case Incr_Byte:
+                    case Incr_Word:
+                    case Decr_Byte:
+                    case Decr_Word:
+                    case Fixed_Pattern:
+                    case Repeat_Pattern: {
+                        for(uint64_t nsz=0; nsz<nof_sizes; nsz++) {
+                            memcpy(opbuf, buf, size_idx[nsz]);
+                        }
+                        break;
+                        }
+                    case Random: {
+                        memcpy(opbuf, hdr, hdr_len); // copy hdr
+                        for(uint64_t nsz=0; nsz<nof_sizes; nsz++) { // copy random data
+                            memcpy(opbuf+hdr_len, buf+(start_idx[nsz]), size_idx[nsz]);
+                        }
+                        break;
+                        }
+                }
                 nof_pkts++;
             }
             nof_bursts++;
