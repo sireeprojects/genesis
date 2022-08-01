@@ -45,6 +45,7 @@ enum cea_gen_type {
 // use designated initializers
 struct cea_gen_spec {
     uint64_t value;
+    string pattern;
     uint32_t range_start;
     uint32_t range_stop;
     uint32_t range_step;
@@ -259,6 +260,7 @@ public:
     void pregenerate();
     payload();
     ~payload();
+    void gen_frame();
 
 private:    
     unsigned char *buf;
@@ -274,16 +276,59 @@ private:
     unsigned char *inc_word_array;
     unsigned char *dec_word_array;
     uint32_t word_size;
-
-
-    // rt values
     uint32_t nof_sizes;
 
     void pregen_inc_byte();
     void pregen_inc_word();
     void pregen_dec_byte();
     void pregen_dec_word();
+
+    unsigned char *hdr;
+    uint32_t hdr_len;
 };
+
+void payload::gen_frame() {
+    switch(ptype) {
+        case Incr_Byte: {
+             memcpy(buf, hdr, hdr_len);
+             memcpy(buf+hdr_len, inc_byte_array, (ONE_MB-hdr_len));
+             print_char_array(buf, 70);
+             break;
+             }
+        case Incr_Word: {
+             memcpy(buf, hdr, hdr_len);
+             memcpy(buf+hdr_len, inc_word_array, (ONE_MB-hdr_len));
+             print_char_array(buf, 70);
+             break;
+             }
+        case Decr_Byte: {
+             memcpy(buf, hdr, hdr_len);
+             memcpy(buf+hdr_len, dec_byte_array, (ONE_MB-hdr_len));
+             print_char_array(buf, 70);
+             break;
+             }
+        case Decr_Word: {
+             memcpy(buf, hdr, hdr_len);
+             memcpy(buf+hdr_len, dec_word_array, (ONE_MB-hdr_len));
+             print_char_array(buf, 70);
+             break;
+             }
+        case Fixed_Pattern: {
+             memcpy(buf, hdr, hdr_len);
+             memcpy(buf+hdr_len, pspec.pattern.c_str(), pspec.pattern.length());
+             print_char_array(buf, 70);
+             break;
+             }
+        case Repeat_Pattern: {
+             memcpy(buf, hdr, hdr_len);
+             for(uint32_t mb=0; mb<ONE_MB; mb+= pspec.pattern.length()) {
+                memcpy((buf+hdr_len)+mb, pspec.pattern.c_str(), pspec.pattern.length());
+             }
+             print_char_array(buf, 200);
+             break;
+             }
+    }
+}
 
 // Increment byte
 void payload::pregen_inc_byte() {
@@ -322,7 +367,7 @@ void payload::pregen_dec_word() {
             memcpy(dec_word_array+((i*2)+mb), (unsigned char*)&tmp, 2);
         }
     }
-    print_char_array(dec_word_array, 145000);
+    // print_char_array(dec_word_array, 145000);
 }
 
 void payload::pregenerate() {
@@ -340,6 +385,10 @@ payload::payload() {
     dec_byte_array = new unsigned char[ONE_MB]; 
     inc_word_array = new unsigned char[ONE_MB]; 
     dec_word_array = new unsigned char[ONE_MB]; 
+
+    hdr_len = 24; // pre + dst + src + len
+    hdr = new unsigned char[hdr_len];
+    fill_frame(hdr, 0, hdr_len, 0xff); // dummy MAC header
     reset();
 }
 

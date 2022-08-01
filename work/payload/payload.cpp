@@ -5,6 +5,38 @@ int main() {
     payload *p = new payload();
     p->pregenerate();
 
+    //------------------------
+    // test specification (1)
+    //------------------------
+    p->sztype = Fixed;
+    cea_gen_spec fxd_spec = {
+        .value        = 100,
+        .range_start  = 0,
+        .range_stop   = 0,
+        .range_step   = 0,
+        .repeat_after = 0,
+        .step         = 0
+    }; 
+    p->szspec = fxd_spec;
+
+    // p->ptype = Incr_Byte;
+    // p->ptype = Incr_Word;
+    // p->ptype = Decr_Byte;
+    // p->ptype = Decr_Word;
+    //
+    // p->ptype = Fixed_Pattern;
+    // p->pspec.pattern = "aabbccddeeff";
+    // 
+    // p->ptype = Repeat_Pattern;
+    // p->pspec.pattern = "aabbccddeeff";
+
+    p->print_spec();
+    p->compute_size_start();
+    p->gen_frame();
+
+
+    p->reset();
+
 // //------------------------------------------------------------------------------
 // // test specification (1)
 // //------------------------------------------------------------------------------
@@ -39,22 +71,6 @@ int main() {
 //     p->compute_size_start();
 //     p->reset();
 // 
-// //------------------------------------------------------------------------------
-// // test specification (3)
-// //------------------------------------------------------------------------------
-//     p->sztype = Fixed;
-//     cea_gen_spec fxd_spec = {
-//         .value        = 100,
-//         .range_start  = 0,
-//         .range_stop   = 0,
-//         .range_step   = 0,
-//         .repeat_after = 0,
-//         .step         = 0
-//     }; 
-//     p->szspec = fxd_spec;
-//     p->print_spec();
-//     p->compute_size_start();
-//     p->reset();
 //     
 //     return 0;
 }
