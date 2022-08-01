@@ -13,11 +13,6 @@
 
 using namespace std;
 
-enum cea_field_id {
-    PAYLOAD_Type,
-    FRAME_Len
-};
-
 enum cea_gen_type {
     Fixed,            
     Random,           
@@ -192,16 +187,6 @@ string to_str(cea_gen_spec t) {
     return cea_trim(name);
 }
 
-string to_str(cea_field_id t) {
-    string name;
-    switch(t) {
-        case PAYLOAD_Type : { name = "PAYLOAD_Type"; break; }
-        case FRAME_Len    : { name = "FRAME_Len   "; break; }
-        default           : { name = "undefined   "; break; }
-    }
-    return cea_trim(name);
-}
-
 string to_str(cea_gen_type t) {
     string name;
     switch(t) {
@@ -262,6 +247,11 @@ public:
     ~payload();
     void gen_frame();
 
+    // mutate
+    uint64_t loop_cnt;
+    uint64_t pkts_per_burst;
+    uint64_t burst_per_stream;
+
 private:    
     unsigned char *buf;
     uint32_t hdr_size;
@@ -285,6 +275,14 @@ private:
 
     unsigned char *hdr;
     uint32_t hdr_len;
+
+    uint64_t loop_control;
+    uint64_t ppb_control;
+    uint64_t bps_control;
+
+    uint64_t nof_loops;
+    uint64_t nof_bursts;
+    uint64_t nof_pkts;
 };
 
 void payload::gen_frame() {
@@ -404,6 +402,18 @@ void payload::reset() {
     frm_size = 64;
     pl_size = 0;
     word_size = 1;
+
+    loop_cnt = 1;
+    pkts_per_burst = 1;
+    burst_per_stream = 1;
+
+    loop_control = 1;
+    ppb_control = 1;
+    bps_control = 1;
+
+    nof_loops = 0;
+    nof_bursts = 0;
+    nof_pkts = 0;
 }
 
 void payload::compute_size_start() {
@@ -470,12 +480,19 @@ void payload::print_spec() {
 }
 
 void payload::mutate() {
-    // fill frame buffer with random values
-    randomize_char_array(buf, 0, 255, ONE_MB);
+    cealog << endl;
 
-    // prepare a dummy frame
-    fill_frame(buf, 0, hdr_size, 0xff); // dummy MAC header
-    fill_frame(buf, (frm_size-fcs_size), fcs_size, 0x00); // dummy FCS
-
-    // print_char_array(buf, frm_size);
+    for(uint64_t loop=0; loop<loop_cnt; loop+=loop_control) {
+        for(uint64_t bps=0; bps<burst_per_stream; bps+=bps_control) {
+            for(uint64_t ppb=0; ppb<pkts_per_burst; ppb+=ppb_control) {
+                cealog << "Loop:" << loop << " Bps:" << bps << " Ppb:" << ppb << endl;
+                nof_pkts++;
+            }
+            nof_bursts++;
+        }
+        nof_loops++;
+    }
+    cealog << endl <<toc(30, "Nof Loops") << nof_loops << endl;
+    cealog << toc(30, "Nof Bursts") << nof_bursts << endl;
+    cealog << toc(30, "Nof Packets") << nof_pkts << endl;
 }
