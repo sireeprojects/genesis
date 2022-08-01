@@ -230,6 +230,17 @@ string to_str(cea_gen_type t) {
     return cea_trim(name);
 }
 
+void *cea_memcpy_ntw_byte_order(void *dest, const void *src, size_t len) {
+    if (len==0) return dest;
+    char *d = (char*)dest;
+    const char *s = (char*)src;
+    int i = 0;
+    for (i=(len-1); i>=0; i--) {
+        *d++ = s[i];
+    }
+    return dest;
+}
+
 class payload {
 public:
     // frame size
@@ -245,6 +256,7 @@ public:
     void compute_size_start();
     void mutate();
     void reset();
+    void pregenerate();
     payload();
     ~payload();
 
@@ -257,14 +269,77 @@ private:
     uint32_t *size_idx;
     uint32_t *start_idx;
 
+    unsigned char *inc_byte_array;
+    unsigned char *dec_byte_array;
+    unsigned char *inc_word_array;
+    unsigned char *dec_word_array;
+    uint32_t word_size;
+
+
     // rt values
     uint32_t nof_sizes;
+
+    void pregen_inc_byte();
+    void pregen_inc_word();
+    void pregen_dec_byte();
+    void pregen_dec_word();
 };
+
+// Increment byte
+void payload::pregen_inc_byte() {
+    for(uint32_t mb=0; mb<ONE_MB; mb+=256) {
+        for(uint32_t i=0; i<256; i++) {
+            inc_byte_array[i+mb] = i;
+        }
+    }
+    // print_char_array(inc_byte_array, 1000);
+}
+
+// Increment word
+void payload::pregen_inc_word() {
+    for(uint32_t mb=0; mb<ONE_MB; mb+=65536*2) {
+        for(uint32_t i=0; i<65536; i+=1) {
+            memcpy(inc_word_array+((i*2)+mb), (unsigned char*)&i, 2);
+        }
+    }
+    // print_char_array(inc_word_array, 145000);
+}
+
+void payload::pregen_dec_byte() {
+    for(uint32_t mb=0; mb<ONE_MB; mb+=256) {
+        for(uint32_t i=0; i<256; i++) {
+            dec_byte_array[i+mb] = 255-i;
+        }
+    }
+    // print_char_array(dec_byte_array, 1000);
+}
+
+void payload::pregen_dec_word() {
+    uint32_t tmp = 0;
+    for(uint32_t mb=0; mb<ONE_MB; mb+=65536*2) {
+        for(uint32_t i=0; i<65536; i++) {
+            tmp = 65535-i;
+            memcpy(dec_word_array+((i*2)+mb), (unsigned char*)&tmp, 2);
+        }
+    }
+    print_char_array(dec_word_array, 145000);
+}
+
+void payload::pregenerate() {
+    pregen_inc_byte();
+    pregen_inc_word();
+    pregen_dec_byte();
+    pregen_dec_word();
+}
 
 payload::payload() {
     buf = new unsigned char[ONE_MB];
     size_idx = new uint32_t[1024*16]; // 16K
     start_idx = new uint32_t[1024*16]; // 16K
+    inc_byte_array = new unsigned char[ONE_MB]; 
+    dec_byte_array = new unsigned char[ONE_MB]; 
+    inc_word_array = new unsigned char[ONE_MB]; 
+    dec_word_array = new unsigned char[ONE_MB]; 
     reset();
 }
 
@@ -279,6 +354,7 @@ void payload::reset() {
     fcs_size = 4;
     frm_size = 64;
     pl_size = 0;
+    word_size = 1;
 }
 
 void payload::compute_size_start() {
