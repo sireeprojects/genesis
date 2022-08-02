@@ -248,7 +248,6 @@ public:
     void gen_frame();
 
     // mutate
-    uint64_t loop_cnt;
     uint64_t pkts_per_burst;
     uint64_t burst_per_stream;
 
@@ -284,6 +283,7 @@ private:
     uint64_t nof_loops;
     uint64_t nof_bursts;
     uint64_t nof_pkts;
+    uint64_t frm_cnt;
 };
 
 void payload::gen_frame() {
@@ -411,7 +411,6 @@ void payload::reset() {
     pl_size = 0;
     word_size = 1;
 
-    loop_cnt = 1;
     pkts_per_burst = 1;
     burst_per_stream = 1;
 
@@ -422,6 +421,7 @@ void payload::reset() {
     nof_loops = 0;
     nof_bursts = 0;
     nof_pkts = 0;
+    frm_cnt = 0;
 }
 
 void payload::compute_size_start() {
@@ -490,38 +490,68 @@ void payload::print_spec() {
 void payload::mutate() {
     cealog << endl;
 
-    for(uint64_t loop=0; loop<loop_cnt; loop+=loop_control) {
-        for(uint64_t bps=0; bps<burst_per_stream; bps+=bps_control) {
-            for(uint64_t ppb=0; ppb<pkts_per_burst; ppb+=ppb_control) {
-                // cealog << "Loop:" << loop << " Bps:" << bps << " Ppb:" << ppb << endl;
-                //
-                switch(ptype) {
-                    case Incr_Byte:
-                    case Incr_Word:
-                    case Decr_Byte:
-                    case Decr_Word:
-                    case Fixed_Pattern:
-                    case Repeat_Pattern: {
-                        for(uint64_t nsz=0; nsz<nof_sizes; nsz++) {
-                            memcpy(opbuf, buf, size_idx[nsz]);
-                        }
-                        break;
-                        }
-                    case Random: {
-                        memcpy(opbuf, hdr, hdr_len); // copy hdr
-                        for(uint64_t nsz=0; nsz<nof_sizes; nsz++) { // copy random data
-                            memcpy(opbuf+hdr_len, buf+(start_idx[nsz]), size_idx[nsz]);
-                        }
-                        break;
-                        }
-                }
-                nof_pkts++;
+    for(uint64_t bps=0; bps<burst_per_stream; bps+=bps_control) 
+    {
+        for(uint64_t ppb=0; ppb<pkts_per_burst; ppb+=ppb_control) 
+        {
+            switch(ptype) {
+                case Incr_Byte:
+                case Incr_Word:
+                case Decr_Byte:
+                case Decr_Word:
+                case Fixed_Pattern:
+                case Repeat_Pattern: {
+                    memcpy(opbuf, buf, size_idx[frm_cnt%nof_sizes]);
+                    break;
+                    }
+                case Random: {
+                    memcpy(opbuf, hdr, hdr_len); // copy hdr
+                    memcpy(opbuf+hdr_len, buf+(start_idx[frm_cnt%nof_sizes]), size_idx[frm_cnt%nof_sizes]);
+                    break;
+                    }
             }
-            nof_bursts++;
+            frm_cnt++;
+            nof_pkts++;
         }
-        nof_loops++;
+        nof_bursts++;
     }
     cealog << endl <<toc(30, "Nof Loops") << nof_loops << endl;
     cealog << toc(30, "Nof Bursts") << nof_bursts << endl;
     cealog << toc(30, "Nof Packets") << nof_pkts << endl;
 }
+
+// void payload::mutate() {
+//     cealog << endl;
+// 
+//     for(uint64_t bps=0; bps<burst_per_stream; bps+=bps_control) 
+//     {
+//         for(uint64_t ppb=0; ppb<pkts_per_burst; ppb+=ppb_control) 
+//         {
+//             switch(ptype) {
+//                 case Incr_Byte:
+//                 case Incr_Word:
+//                 case Decr_Byte:
+//                 case Decr_Word:
+//                 case Fixed_Pattern:
+//                 case Repeat_Pattern: {
+//                     for(uint64_t nsz=0; nsz<nof_sizes; nsz++) {
+//                         memcpy(opbuf, buf, size_idx[nsz]);
+//                     }
+//                     break;
+//                     }
+//                 case Random: {
+//                     memcpy(opbuf, hdr, hdr_len); // copy hdr
+//                     for(uint64_t nsz=0; nsz<nof_sizes; nsz++) { // copy random data
+//                         memcpy(opbuf+hdr_len, buf+(start_idx[nsz]), size_idx[nsz]);
+//                     }
+//                     break;
+//                     }
+//             }
+//             nof_pkts++;
+//         }
+//         nof_bursts++;
+//     }
+//     cealog << endl <<toc(30, "Nof Loops") << nof_loops << endl;
+//     cealog << toc(30, "Nof Bursts") << nof_bursts << endl;
+//     cealog << toc(30, "Nof Packets") << nof_pkts << endl;
+// }

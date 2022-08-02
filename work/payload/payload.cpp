@@ -35,7 +35,6 @@ int main() {
     p->compute_size_start();
     p->gen_frame();
 
-    p->loop_cnt = 1;
     p->pkts_per_burst = 1;
     p->burst_per_stream = 1;
 
