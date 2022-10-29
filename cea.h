@@ -252,11 +252,10 @@ enum cea_field_generation_type {
 
 struct cea_field_generation_spec {
     uint64_t value;
-    uint32_t range_start;
-    uint32_t range_stop;
-    uint32_t range_step;
-    uint32_t repeat_after;
+    uint32_t start;
+    uint32_t stop;
     uint32_t step;
+    uint32_t repeat;
 };
 
 struct cea_field {

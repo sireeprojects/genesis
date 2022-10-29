@@ -437,6 +437,13 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
                }}
 };
 
+struct cea_field_mutable {
+    uint32_t offset;
+    uint32_t size;
+    cea_field_generation_type type;
+    cea_field_generation_spec spec;
+};
+
 // file stream for cea message logging
 ofstream logfile;
 
@@ -762,6 +769,9 @@ string to_str(cea_field_generation_type t) {
 }
 
 // global variable to track proxy and stream id
+// TODO: This will become a problem in multi-process mode
+//       Every workstation will have a proxy_id and stream_id = 0
+//       Re-design in such a way that these values continue over multiple w/s
 uint32_t proxy_id = 0;
 uint32_t stream_id = 0;
 
@@ -830,7 +840,8 @@ public:
 
     // (container3) a sequence of all the fields ids that needs 
     // generation of values output of purge_static_fields
-    vector<uint32_t> cseq;
+    // vector<uint32_t> cseq;
+    vector<cea_field_mutable> cseq;
 
     // (container4) field matrix
     vector<cea_field> fields;
@@ -937,7 +948,7 @@ void cea_stream::core::print_base_frame_properties() {
 void cea_stream::core::print_stream_properties() {
     cealog << endl << cea_formatted_hdr("Stream Properties");
     for (uint32_t idx=STREAM_Type; idx<=STREAM_Timestamp_Enable; idx++) {
-        cealog << left
+        cealog << left << dec
             << cea_trim(fields[idx].name)
             << string((30 - cea_trim(fields[idx].name).length()), '.') 
             << " " << fields[idx].value << " "
@@ -1013,9 +1024,31 @@ void cea_stream::core::print_base_frame() {
 void cea_stream::core::purge_static_fields() {
     for (auto i: fseq) {
         if (fields[i].touched) {
-            cseq.push_back(i);
+            cea_field_mutable f;
+                f.offset = fields[i].offset;
+                f.size = fields[i].len;
+                f.type = fields[i].gen_type;
+                f.spec.value = fields[i].value;
+                f.spec.start = fields[i].start;
+                f.spec.stop = fields[i].stop;
+                f.spec.step = fields[i].step;
+                f.spec.repeat = fields[i].repeat;
+            cseq.push_back(f);
         }
     }
+// TODO
+//    // print cseq
+//    #ifdef CEA_DEBUG
+//    if (cseq.size() != 0)
+//        cealog << endl << cea_formatted_hdr("Mutable fields");
+//    for (auto idx : cseq) {
+//        cealog << left
+//            << cea_trim(fields[idx].name)
+//            << string((30 - cea_trim(fields[idx].name).length()), '.') 
+//            << " " << hex << fields[idx].value << " "
+//            << endl;
+//    }
+//    #endif
 }
 
 uint32_t cea_stream::core::compute_udp_csum() {
@@ -1100,7 +1133,7 @@ uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq,
 // algorithm to arrange the frame fields
 void cea_stream::core::arrange_fields_in_sequence() {
     
-    fseq.push_back(MAC_Preamble);
+    // fseq.push_back(MAC_Preamble);
 
     fseq.insert(fseq.end(),
         htof[MAC].begin(),
@@ -1313,7 +1346,6 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
         }
     }
     fields[id].value = value;
-    fields[id].touched = true;
 }
 
 void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
@@ -1344,8 +1376,9 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_type spec) {
                 fields[idx].added = true;
         }
     }
-    fields[id].touched = true;
     fields[id].gen_type = spec;
+    if (spec != Fixed)
+        fields[id].touched = true;
 }
 
 void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
@@ -1377,13 +1410,14 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_type mspec,
                 fields[idx].added = true;
         }
     }
-    fields[id].touched = true;
+    if (mspec != Fixed)
+        fields[id].touched = true;
     fields[id].gen_type = mspec;
-    fields[id].value = vspec.value;
-    fields[id].start = vspec.range_start;
-    fields[id].stop = vspec.range_stop;
-    fields[id].step = vspec.range_step;
-    fields[id].repeat = vspec.repeat_after;
+    fields[id].value =  vspec.value;
+    fields[id].start =  vspec.start;
+    fields[id].stop =   vspec.stop;
+    fields[id].step =   vspec.step;
+    fields[id].repeat = vspec.repeat;
 }
 
 void cea_stream::core::do_copy(const cea_stream *rhs) {
@@ -1604,8 +1638,8 @@ void cea_proxy::core::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->impl->prune();
-    cur_stm->impl->build_base_frame();
-    begin_mutation();
+    // cur_stm->impl->build_base_frame();
+    // begin_mutation();
 }
 
 void cea_proxy::core::read_next_stream_from_stmq() {
