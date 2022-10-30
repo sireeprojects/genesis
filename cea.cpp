@@ -54,6 +54,8 @@ THINGS TO DO:
 #include <netinet/in.h>
 #include <unistd.h>
 #include <chrono>
+#include <cassert>
+#include <random>
 
 #include "cea.h"
 
@@ -223,7 +225,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    ARP_Target_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     "},
 {  false,  0,  false,   0,    ARP_Target_Proto_Addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
 {  false,  0,  false,   0,    PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "},
-{  false,  0,  false,   0,    PAYLOAD_Len              ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Len            "},
+{  false,  0,  false,   0,    PAYLOAD_Len              ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Len            "}, // TODO remove
 {  false,  0,  false,   0,    UDF1                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF1                   "},
 {  false,  0,  false,   0,    UDF2                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF2                   "},
 {  false,  0,  false,   0,    UDF3                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF3                   "},
@@ -806,6 +808,26 @@ string cea_timer::elapsed_in_string(int precision) {
     return ss.str();
 }
 
+void print_cdata (unsigned char* tmp, int len) {
+    stringstream s;
+    s.str("");
+    uint32_t idx = 0;
+
+    for (int x=0; x<len/16; x++) {
+        for (int y=0; y<16; y++) {
+            s <<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
+            idx++;
+        }
+        s << endl;
+    }
+    for (int x=idx; x<len; x++) {
+       s<<noshowbase<<setw(2)<<setfill('0') <<hex<<uint16_t(tmp[idx])<<" ";
+       idx++;
+    }
+    cout << "PKT Data :" << endl << s.str()<<endl;
+    fflush (stdout);
+}
+
 //------------------------------------------------------------------------------
 // Stream implementation
 //------------------------------------------------------------------------------
@@ -814,6 +836,9 @@ class cea_stream::core {
 public:    
     // constructor
     core(string name);
+
+    // destructor
+    ~core();
 
     // fucntion to set the field to a fixed value
     void set(cea_field_id id, uint64_t value);
@@ -912,38 +937,210 @@ public:
     void print_stream_properties();
     void print_base_frame_properties();
 
-    // cache variables
-
-    // length of payload after removing headers and preamble
-    uint32_t payload_len;
-
-    // offset of the payload from preamble to the last field of the last header 
-    uint32_t payload_offset;
-
     uint32_t crc_len;
-    void *fbuf;
+    // void *fbuf;
+
+    // generation attributes
+    // TODO: create function to release size array
+    uint32_t meta_size;
+    uint32_t hdr_size;
+    void compute_gen_attributes();
+    void make_arrays();
+    uint32_t *frame_sizes;
+    uint32_t *computed_frame_sizes;
+    uint32_t *payload_sizes;
+    uint32_t nof_sizes;
+    unsigned char *payload_pattern;
 };
 
 cea_stream::~cea_stream() = default;
 
-void cea_stream::core::print_base_frame_properties() {
-    cealog << endl << cea_formatted_hdr("Base Frame Properties");
-    cealog << left << "Frame len"
-        << string((30 - cea_trim("Frame len").length()), '.') 
-        << " " << dec << get_value(FRAME_Len) << endl;
-    cealog << left << "Preamble len"
-        << string((30 - cea_trim("Preamble len").length()), '.') 
-        << " " << dec << get_len(MAC_Preamble) << endl;
-    cealog << left << "Headers len" 
-        << string((30 - cea_trim("Headers len").length()), '.')
-        << " " << dec << (base_frame_len-get_len(MAC_Preamble)) << endl;
-    cealog << left << "Payload len" 
-        << string((30 - cea_trim("Payload len").length()), '.') 
-        << " " << dec << payload_len << endl;
-    cealog << left << "Payload offset" 
-        << string((30 - cea_trim("Payload offset").length()), '.') 
-        << " " << dec << payload_offset << endl;
+cea_stream::core::~core() {
+    delete [] frame_sizes;
+    delete [] computed_frame_sizes;
+    delete [] payload_sizes;
 }
+
+void cea_stream::core::make_arrays() {
+    cea_field_generation_type type;
+    cea_field_generation_spec spec;
+
+    //-------------
+    // size arrays
+    //-------------
+    type =  fields[FRAME_Len].gen_type;
+    spec.value  = fields[FRAME_Len].value;
+    spec.start  = fields[FRAME_Len].start;
+    spec.stop   = fields[FRAME_Len].stop;
+    spec.step   = fields[FRAME_Len].step;
+    spec.repeat = fields[FRAME_Len].repeat;
+
+    nof_sizes = 0;
+
+    switch (type) {
+        case Fixed: {
+            nof_sizes = 1;
+            frame_sizes = new uint32_t(nof_sizes);
+            computed_frame_sizes = new uint32_t(nof_sizes);
+            payload_sizes = new uint32_t(nof_sizes);
+            frame_sizes[0] = spec.value;
+            computed_frame_sizes[0] = frame_sizes[0] + meta_size;
+            payload_sizes[0] = frame_sizes[0] - hdr_size - crc_len;
+            break;
+            }
+        case Increment: {
+            nof_sizes = ((spec.stop - spec.start)/spec.step)+1;
+            frame_sizes = new uint32_t(nof_sizes);
+            computed_frame_sizes = new uint32_t(nof_sizes);
+            payload_sizes = new uint32_t(nof_sizes);
+            uint32_t szidx=0;
+            for (uint32_t i=spec.start; i<=spec.stop; i=i+spec.step) {
+                frame_sizes[szidx] = i;
+                computed_frame_sizes[szidx] = frame_sizes[szidx] + meta_size;
+                payload_sizes[szidx] = frame_sizes[szidx] - hdr_size - crc_len;
+                szidx++;
+            }
+            break;
+            }
+        case Decrement: {
+            nof_sizes = ((spec.start - spec.stop)/spec.step)+1;
+            frame_sizes = new uint32_t(nof_sizes);
+            computed_frame_sizes = new uint32_t(nof_sizes);
+            payload_sizes = new uint32_t(nof_sizes);
+            uint32_t szidx=0;
+            for (uint32_t i=spec.start; i>=spec.stop; i=i-spec.step) {
+                frame_sizes[szidx] = i;
+                computed_frame_sizes[szidx] = frame_sizes[szidx] + meta_size;
+                payload_sizes[szidx] = frame_sizes[szidx] - hdr_size - crc_len;
+                szidx++;
+            }
+            break;
+            }
+        case Random_in_Range: {
+            nof_sizes = (spec.stop - spec.start) + 1;
+            frame_sizes = new uint32_t(nof_sizes);
+            computed_frame_sizes = new uint32_t(nof_sizes);
+            payload_sizes = new uint32_t(nof_sizes);
+            random_device rd; // obtain a random number from hardware
+            mt19937 gen(rd()); // seed the generator
+            uniform_int_distribution<> distr(spec.stop, spec.start); // define the range
+            uint32_t szidx=0;
+            for (uint32_t szidx=spec.start; szidx>spec.stop; szidx++) {
+                frame_sizes[szidx] = distr(gen);
+                computed_frame_sizes[szidx] = frame_sizes[szidx] + meta_size;
+                payload_sizes[szidx] = frame_sizes[szidx] - hdr_size - crc_len;
+            }
+            break;
+            }
+        default:{
+            CEA_MSG("Invalid Generation type Specified for Frame Length");
+            exit(1);
+            }
+    }
+
+    //---------------
+    // payload array
+    //---------------
+    payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
+
+    cea_field_generation_type pltype;
+    cea_field_generation_spec plspec;
+
+    pltype = fields[PAYLOAD_Type].gen_type;
+    plspec.value  = fields[PAYLOAD_Type].value;
+    plspec.start  = fields[PAYLOAD_Type].start;
+    plspec.stop   = fields[PAYLOAD_Type].stop;
+    plspec.step   = fields[PAYLOAD_Type].step;
+    plspec.repeat = fields[PAYLOAD_Type].repeat;
+
+    switch (pltype) {
+        case Fixed_Pattern: {
+            // TODO how to input fixed pattern
+            break;
+            }
+        case Incr_Byte: {
+            uint32_t offset = 0;
+            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+                for (uint16_t val=0; val<256; val++) {
+                    memcpy(payload_pattern+offset, (char*)&val, 1);
+                    offset++;
+                }
+            }
+            print_cdata(payload_pattern, 100);
+            break;
+            }
+        case Incr_Word: {
+            uint32_t offset = 0;
+            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
+                cea_memcpy_ntw_byte_order(payload_pattern+offset, (char*)&idx, 2);
+                offset += 2;
+            }
+            print_cdata(payload_pattern, 1000);
+            break;
+            }
+        case Decr_Byte: {
+            uint32_t offset = 0;
+            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+                for (int16_t val=255; val>=0; val--) {
+                    memcpy(payload_pattern+offset, (char*)&val, 1);
+                    cout << val << endl;
+                    offset++;
+                }
+            }
+            print_cdata(payload_pattern, 258);
+            break;
+            }
+        case Decr_Word: {
+            uint32_t offset = 0;
+            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
+                cea_memcpy_ntw_byte_order(payload_pattern+offset, (char*)&idx, 2);
+                offset += 2;
+            }
+            print_cdata(payload_pattern, 1000);
+            break;
+            }
+        default:{
+            CEA_MSG("Invalid Generation type Specified for Frame payload");
+            exit(1);
+            }
+    }
+    
+    // RESUME
+}
+
+void cea_stream::core::compute_gen_attributes() {
+    meta_size = 64; // redundant assgnment
+
+    // header size: sum of length of all the fields in fseq
+    for (auto i : fseq) {
+        hdr_size += fields[i].len; // len in bits
+    }
+    CEA_DBG("Header size in Bits:     " << dec << hdr_size);
+    CEA_DBG("Header size byte modulo: " << dec << (hdr_size%8));
+    assert((hdr_size%8)==0);
+
+    hdr_size = (hdr_size/8); // convert to bytes
+    CEA_DBG("Header size in Bytes:    " << dec << hdr_size);
+}
+
+// void cea_stream::core::print_base_frame_properties() {
+//     cealog << endl << cea_formatted_hdr("Base Frame Properties");
+//     cealog << left << "Frame len"
+//         << string((30 - cea_trim("Frame len").length()), '.') 
+//         << " " << dec << get_value(FRAME_Len) << endl;
+//     cealog << left << "Preamble len"
+//         << string((30 - cea_trim("Preamble len").length()), '.') 
+//         << " " << dec << get_len(MAC_Preamble) << endl;
+//     cealog << left << "Headers len" 
+//         << string((30 - cea_trim("Headers len").length()), '.')
+//         << " " << dec << (base_frame_len-get_len(MAC_Preamble)) << endl;
+//     cealog << left << "Payload len" 
+//         << string((30 - cea_trim("Payload len").length()), '.') 
+//         << " " << dec << payload_len << endl;
+//     cealog << left << "Payload offset" 
+//         << string((30 - cea_trim("Payload offset").length()), '.') 
+//         << " " << dec << payload_offset << endl;
+// }
 
 void cea_stream::core::print_stream_properties() {
     cealog << endl << cea_formatted_hdr("Stream Properties");
@@ -1036,6 +1233,7 @@ void cea_stream::core::purge_static_fields() {
             cseq.push_back(f);
         }
     }
+    
 // TODO
 //    // print cseq
 //    #ifdef CEA_DEBUG
@@ -1074,26 +1272,6 @@ uint32_t cea_stream::core::compute_tcp_csum() {
     memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), 
         get_value(TCP_Total_Len));
     return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
-}
-
-void print_cdata (unsigned char* tmp, int len) {
-    stringstream s;
-    s.str("");
-    uint32_t idx = 0;
-
-    for (int x=0; x<len/16; x++) {
-        for (int y=0; y<16; y++) {
-            s <<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
-            idx++;
-        }
-        s << endl;
-    }
-    for (int x=idx; x<len; x++) {
-       s<<noshowbase<<setw(2)<<setfill('0') <<hex<<uint16_t(tmp[idx])<<" ";
-       idx++;
-    }
-    cout << "PKT Data :" << endl << s.str()<<endl;
-    fflush (stdout);
 }
 
 // concatenate all fields reuired by the frame spec
@@ -1201,84 +1379,6 @@ void cea_stream::core::arrange_fields_in_sequence() {
 }
 
 void cea_stream::core::build_base_frame() {
-
-    base_frame_len = 0;
-
-    // total length of all headers (in bits) includes preamble 
-    // but minus payload
-    for (auto i : fseq) {
-        base_frame_len += fields[i].len;
-    }
-    base_frame_len /= 8; // in bytes
-
-    crc_len = (get_value(STREAM_Crc_Enable)? 4:0);
-
-    // throw error if base_frame_len is greater than user specified FRAME_Len 
-    // TODO: consider CRC also
-    if ((base_frame_len - get_len(MAC_Preamble)) > get_value(FRAME_Len)) {
-        CEA_MSG("*** ERROR: "
-            << "Final frame lenght is greater then the length "
-            << "specified via FRAME_Len. "
-            << "Final Frame Length: " << base_frame_len << "  "
-            << "Desired Frame Length: " << get_value(FRAME_Len)
-            )
-        exit(0);
-    }
-    payload_len = get_value(FRAME_Len) -
-        (base_frame_len - get_len(MAC_Preamble));
-
-    payload_offset = base_frame_len;
-        
-    // compute length field in IPv4 header
-    uint32_t iplen = get_value(FRAME_Len) - get_offset(IPv4_Version) +
-        get_len(MAC_Preamble) - crc_len;
-    set(IPv4_Total_Len, iplen);
-
-    // compute length field in UDP header
-    uint32_t udplen = get_value(FRAME_Len) - get_offset(UDP_Src_Port) +
-        get_len(MAC_Preamble) - crc_len;
-    set(UDP_Len, udplen);
-
-    set(TCP_Total_Len, ((get_value(TCP_Data_Offset)*4) + payload_len - crc_len));
-
-    // build the frame
-    splice_fields(fseq, base_frame);
-    
-    // fill dummy payload value
-    for (uint32_t i=0; i<payload_len; i++) {
-        memcpy(base_frame+(payload_offset+i), (char*)&i, 1);
-    }
-
-    // find ipv4 csum and overlay on the base frame
-    if (get_value(Network_Hdr) == IPv4) {
-        uint16_t ip_csum = compute_ipv4_csum(
-            base_frame+get_offset(IPv4_Version), 20);
-        memcpy(base_frame+get_offset(IPv4_Hdr_Csum), (char*)&ip_csum, 2);
-    }
-    // find udp csum and overlay on the base frame
-    if (get_value(Transport_Hdr) == UDP) {
-        uint16_t udp_csum = compute_udp_csum();
-        memcpy(base_frame+get_offset(UDP_Csum), (char*)&udp_csum, 2);
-    }
-    // find tcp csum and overlay on the base frame
-    if (get_value(Transport_Hdr) == TCP) {
-        uint16_t tcp_csum = compute_tcp_csum();
-        memcpy(base_frame+get_offset(TCP_Csum), (char*)&tcp_csum, 2);
-    }
-    // insert CRC32
-    if (get_value(STREAM_Crc_Enable)) {
-        uint32_t crc = compute_crc32(base_frame+get_len(MAC_Preamble), 
-            (get_value(FRAME_Len)-crc_len));
-
-        memcpy(base_frame+(get_value(FRAME_Len)+get_len(MAC_Preamble)-crc_len),
-            (char*)&crc, crc_len);
-    }
-    #ifdef CEA_DEBUG
-    print_stream_properties();
-    print_base_frame_properties();
-    print_base_frame();
-    write_pcap((base_frame + get_len(MAC_Preamble)), get_value(FRAME_Len));
-    #endif
 }
 
 // constructor
@@ -1439,11 +1539,12 @@ void cea_stream::core::reset() {
     memset(scratchpad, 0, CEA_SCRATCHPAD_SIZE);
 
     base_frame_len = 0;
-    payload_len = 0;
-    payload_offset = 0;
-    crc_len = 0;
+    crc_len = 4;
     fields = flds;
     msg_prefix = '(' + stream_name + ") ";
+    meta_size = 64;
+    hdr_size = 0;
+    nof_sizes = 0;
 }
 
 #define CEA_FLDWIDTH 8
@@ -1638,6 +1739,8 @@ void cea_proxy::core::worker() {
     read_next_stream_from_stmq();
     extract_traffic_parameters();
     cur_stm->impl->prune();
+    cur_stm->impl->compute_gen_attributes();
+    cur_stm->impl->make_arrays();
     // cur_stm->impl->build_base_frame();
     // begin_mutation();
 }
@@ -1650,59 +1753,6 @@ void cea_proxy::core::extract_traffic_parameters() {
 }
 
 void cea_proxy::core::begin_mutation() {
-    create_frame_buffer();
-    cur_stm->impl->fbuf = fbuf;
-
-    // write to fbuf
-    // *(addr + i) = (char)i;
-    // read from fbuf
-    // if (*(addr + i) != (char)i)
-
-    uint32_t frm_offset = 0;
-    uint32_t nof_frames = cur_stm->impl->get_value(STREAM_Pkts_Per_Burst);
-    uint32_t frm_size = cur_stm->impl->get_value(FRAME_Len);
-
-    // write frames
-    timer.start();
-    for (uint32_t cnt=0; cnt<nof_frames; cnt++) {
-        // CEA_DBG("Generating frame: " << cnt << " offset: " << frm_offset);
-        // cur_stm->impl->build_base_frame();
-        // cur_stm->impl->set(TCP_Csum, 0);
-
-        memcpy(cur_stm->impl->base_frame+9, (char*)&cnt, 1);
-        memcpy((((char*)fbuf)+frm_offset), (cur_stm->impl->base_frame+8), frm_size);
-        frm_offset += frm_size;
-    }
-    double rt = timer.elapsed();
-
-    cealog << endl << cea_formatted_hdr("Performance Statistics");
-    cealog << left << "Number of Frames" 
-        << string((30 - cea_trim("Number of Frames").length()), '.')
-        << " " << cea_readable_fs(nof_frames, KIS1000) << endl;
-    cealog << left << "Frame size" 
-        << string((30 - cea_trim("Frame size").length()), '.')
-        << " " << dec << frm_size << endl;
-    cealog << left << "Runtime" 
-        << string((30 - cea_trim("Runtime").length()), '.') 
-        << " " << dec << fixed << setprecision(2) << rt << " secs" << endl;
-    cealog << left << "Bytes written" 
-        << string((30 - cea_trim("Bytes written").length()), '.') 
-        << " " << dec 
-        << fixed << setprecision(0) 
-        << cea_readable_fs((nof_frames*64), KIS1000)  << endl;
-    cealog << left << "Bytes/sec" 
-        << string((30 - cea_trim("Bytes/sec").length()), '.') 
-        << " " << dec 
-        << fixed << setprecision(0) 
-        << cea_readable_fs((nof_frames*64)/rt, KIS1000)  << endl;
-    cealog << left << "Frames/sec" 
-        << string((30 - cea_trim("Frames/sec").length()), '.') 
-        << " " << dec 
-        << fixed << setprecision(0) 
-        << cea_readable_fs(nof_frames/rt, KIS1000)  << endl;
-
-    release_frame_buffer();
-    cur_stm->impl->fbuf = NULL;
 }
 
 void cea_proxy::core::create_frame_buffer() {
