@@ -226,7 +226,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    ARP_Target_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     "},
 {  false,  0,  false,   0,    ARP_Target_Proto_Addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  "},
 {  false,  0,  false,   0,    PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           "},
-{  false,  0,  false,   0,    PAYLOAD_Pattern          ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Pattern        "}, // TODO remove
+{  false,  0,  false,   0,    PAYLOAD_Pattern          ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Pattern        "},
 {  false,  0,  false,   0,    UDF1                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF1                   "},
 {  false,  0,  false,   0,    UDF2                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF2                   "},
 {  false,  0,  false,   0,    UDF3                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF3                   "},
@@ -860,7 +860,6 @@ public:
 
     // (container3) a sequence of all the fields ids that needs 
     // generation of values output of purge_static_fields
-    // vector<uint32_t> cseq;
     vector<cea_field_mutable> cseq;
 
     // (container4) field matrix
@@ -1019,9 +1018,9 @@ void cea_stream::core::make_arrays() {
             array_of_frame_sizes = new uint32_t(nof_sizes);
             array_of_computed_frame_sizes = new uint32_t(nof_sizes);
             array_of_payload_sizes = new uint32_t(nof_sizes);
-            random_device rd; // obtain a random number from hardware
-            mt19937 gen(rd()); // seed the generator
-            uniform_int_distribution<> distr(spec.stop, spec.start); // define the range
+            random_device rd;
+            mt19937 gen(rd());
+            uniform_int_distribution<> distr(spec.stop, spec.start);
             uint32_t szidx=0;
             for (uint32_t szidx=spec.start; szidx>spec.stop; szidx++) {
                 array_of_frame_sizes[szidx] = distr(gen);
@@ -1042,7 +1041,6 @@ void cea_stream::core::make_arrays() {
     array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
 
     cea_field_generation_spec plspec;
-
     plspec.type   = fields[PAYLOAD_Type].gen_type;
     plspec.value  = fields[PAYLOAD_Type].value;
     plspec.start  = fields[PAYLOAD_Type].start;
@@ -1051,11 +1049,14 @@ void cea_stream::core::make_arrays() {
     plspec.repeat = fields[PAYLOAD_Type].repeat;
 
     switch (plspec.type) {
+        // RESUME
+        case Random : {
+            break;
+            }
         case Fixed_Pattern: {
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
-            // RESUME
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
                     memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
@@ -1065,7 +1066,9 @@ void cea_stream::core::make_arrays() {
             } else {
                 memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
             }
+            #ifdef CEA_DEBUG
             print_cdata(array_of_payload_pattern, 100);
+            #endif
             break;
             }
         case Incr_Byte: {
@@ -1076,7 +1079,9 @@ void cea_stream::core::make_arrays() {
                     offset++;
                 }
             }
+            #ifdef CEA_DEBUG
             print_cdata(array_of_payload_pattern, 100);
+            #endif
             break;
             }
         case Incr_Word: {
@@ -1085,7 +1090,9 @@ void cea_stream::core::make_arrays() {
                 cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
                 offset += 2;
             }
+            #ifdef CEA_DEBUG
             print_cdata(array_of_payload_pattern, 1000);
+            #endif
             break;
             }
         case Decr_Byte: {
@@ -1097,7 +1104,9 @@ void cea_stream::core::make_arrays() {
                     offset++;
                 }
             }
+            #ifdef CEA_DEBUG
             print_cdata(array_of_payload_pattern, 258);
+            #endif
             break;
             }
         case Decr_Word: {
@@ -1106,7 +1115,9 @@ void cea_stream::core::make_arrays() {
                 cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
                 offset += 2;
             }
+            #ifdef CEA_DEBUG
             print_cdata(array_of_payload_pattern, 1000);
+            #endif
             break;
             }
         default:{
@@ -1496,17 +1507,13 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
     fields[id].step = spec.step;
     fields[id].repeat = spec.repeat;
 
-
     string pattern_to_string = spec.pattern;
-    CEA_DBG("Pattern     : " << pattern_to_string);
-    CEA_DBG("Pattern Size: " << pattern_to_string.size());
     stringstream token_stream(pattern_to_string);
 
     // tokenize
     while(getline(token_stream, token, ' ')) {
         tokens_of_payload_pattern.push_back(token);
     }
-    CEA_DBG("Nof Tokens: " << tokens_of_payload_pattern.size());
 
     payload_pattern_size = tokens_of_payload_pattern.size();
     payload_pattern = new unsigned char [payload_pattern_size];
@@ -1516,10 +1523,6 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
         uint32_t val = stoi(s, nullptr, 16);
         memcpy(payload_pattern+i, (char*)&val, 1);
     }
-    
-    // payload_pattern_size = spec.pattern.size();
-    // payload_pattern = new unsigned char [payload_pattern_size];
-    // memcpy(payload_pattern, spec.pattern.data(), payload_pattern_size);
 }
 
 void cea_stream::core::do_copy(const cea_stream *rhs) {
