@@ -56,6 +56,7 @@ THINGS TO DO:
 #include <chrono>
 #include <cassert>
 #include <random>
+// #include <bits/stdc++.h>
 
 #include "cea.h"
 
@@ -945,8 +946,10 @@ public:
     uint32_t *array_of_payload_sizes;
     uint32_t nof_sizes;
     unsigned char *array_of_payload_pattern;
-    unsigned char *payload_pattern;
     uint32_t payload_pattern_size;
+    unsigned char *payload_pattern;
+    string token;
+    vector<string> tokens_of_payload_pattern;
 };
 
 cea_stream::~cea_stream() = default;
@@ -1052,6 +1055,7 @@ void cea_stream::core::make_arrays() {
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
+            // RESUME
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
                     memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
@@ -1061,7 +1065,7 @@ void cea_stream::core::make_arrays() {
             } else {
                 memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
             }
-                print_cdata(array_of_payload_pattern, 100);
+            print_cdata(array_of_payload_pattern, 100);
             break;
             }
         case Incr_Byte: {
@@ -1492,9 +1496,30 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
     fields[id].step = spec.step;
     fields[id].repeat = spec.repeat;
 
-    payload_pattern_size = spec.pattern.size();
+
+    string pattern_to_string = spec.pattern;
+    CEA_DBG("Pattern     : " << pattern_to_string);
+    CEA_DBG("Pattern Size: " << pattern_to_string.size());
+    stringstream token_stream(pattern_to_string);
+
+    // tokenize
+    while(getline(token_stream, token, ' ')) {
+        tokens_of_payload_pattern.push_back(token);
+    }
+    CEA_DBG("Nof Tokens: " << tokens_of_payload_pattern.size());
+
+    payload_pattern_size = tokens_of_payload_pattern.size();
     payload_pattern = new unsigned char [payload_pattern_size];
-    memcpy(payload_pattern, spec.pattern.data(), payload_pattern_size);
+
+    for(uint32_t i=0; i<tokens_of_payload_pattern.size(); i++) {
+        string s = tokens_of_payload_pattern[i];
+        uint32_t val = stoi(s, nullptr, 16);
+        memcpy(payload_pattern+i, (char*)&val, 1);
+    }
+    
+    // payload_pattern_size = spec.pattern.size();
+    // payload_pattern = new unsigned char [payload_pattern_size];
+    // memcpy(payload_pattern, spec.pattern.data(), payload_pattern_size);
 }
 
 void cea_stream::core::do_copy(const cea_stream *rhs) {

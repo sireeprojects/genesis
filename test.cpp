@@ -14,8 +14,8 @@ int main() {
     spec.start = 0;
     spec.stop = 10;
     spec.step = 0;
-    spec.repeat = 0;
-    spec.pattern = "aa bb cc dd ee ff";
+    spec.repeat = 1;
+    spec.pattern = "aa bb cc dd ee ff 11 22 33";
 
     s->set(FRAME_Len, 100);
     s->set(PAYLOAD_Type, spec);
