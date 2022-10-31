@@ -19,19 +19,22 @@ int main() {
 
     cea_field_generation_type ptype;
     cea_field_generation_spec pspec;
-    // ptype =  Fixed_Pattern;
+    ptype =  Fixed_Pattern;
     // ptype =  Incr_Byte;
     // ptype =  Incr_Word;
     // ptype =  Decr_Byte;
-    ptype =  Decr_Word;
-    pspec.value = 64;
+    // ptype =  Decr_Word;
+    pspec.value = 0;
     pspec.start = 0;
     pspec.stop = 10;
     pspec.step = 0;
     pspec.repeat = 0;
+    pspec.pattern = "aabbccddeeff";
 
     s->set(FRAME_Len, lentype);
-    s->set(PAYLOAD_Type, ptype);
+    s->set(PAYLOAD_Type, ptype, pspec);
+
+    // s->set(PAYLOAD_Pattern, "aabbccddeeff");
     // s->set(FRAME_Len, 64);
     
     s->set(FRAME_Type, ETH_V2);

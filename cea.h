@@ -120,7 +120,7 @@ enum cea_field_id {
     ARP_Target_Hw_Addr,
     ARP_Target_Proto_Addr,
     PAYLOAD_Type,
-    PAYLOAD_Len,
+    PAYLOAD_Pattern,
     UDF1,
     UDF2,
     UDF3,
@@ -252,6 +252,7 @@ enum cea_field_generation_type {
 
 struct cea_field_generation_spec {
     uint64_t value;
+    string pattern;
     uint32_t start;
     uint32_t stop;
     uint32_t step;
@@ -343,6 +344,9 @@ public:
     // with custom specifications
     void set(cea_field_id id, cea_field_generation_type mspec,
         cea_field_generation_spec vspec);
+
+    // fucntion to set custom payload pattern
+    // void set(cea_field_id id, string value);
 
     // copy constructor
     cea_stream(const cea_stream &rhs);
