@@ -251,6 +251,7 @@ enum cea_field_generation_type {
 };
 
 struct cea_field_generation_spec {
+    cea_field_generation_type type;
     uint64_t value;
     string pattern;
     uint32_t start;
@@ -337,16 +338,8 @@ public:
     void set(cea_field_id id, uint64_t value);
 
     // function to assign a field to an inbuilt value generator
-    // with default specifications
-    void set(cea_field_id id, cea_field_generation_type spec);
-
-    // function to assign a field to an inbuilt value generator
     // with custom specifications
-    void set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec);
-
-    // fucntion to set custom payload pattern
-    // void set(cea_field_id id, string value);
+    void set(cea_field_id id, cea_field_generation_spec spec);
 
     // copy constructor
     cea_stream(const cea_stream &rhs);

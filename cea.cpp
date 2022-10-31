@@ -442,7 +442,6 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
 struct cea_field_mutable {
     uint32_t offset;
     uint32_t size;
-    cea_field_generation_type type;
     cea_field_generation_spec spec;
 };
 
@@ -844,16 +843,8 @@ public:
     void set(cea_field_id id, uint64_t value);
 
     // function to assign a field to an inbuilt value generator
-    // with default specifications
-    void set(cea_field_id id, cea_field_generation_type spec);
-
-    // function to assign a field to an inbuilt value generator
     // with custom specifications
-    void set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec);
-
-    // fucntion to set custom payload pattern
-    // void set(cea_field_id id, string value);
+    void set(cea_field_id id, cea_field_generation_spec spec);
 
     // set when the proxy object is created
     string stream_name;
@@ -967,13 +958,12 @@ cea_stream::core::~core() {
 }
 
 void cea_stream::core::make_arrays() {
-    cea_field_generation_type type;
-    cea_field_generation_spec spec;
+    cea_field_generation_spec spec = {};
 
     //-------------
     // size arrays
     //-------------
-    type =  fields[FRAME_Len].gen_type;
+    spec.type =  fields[FRAME_Len].gen_type;
     spec.value  = fields[FRAME_Len].value;
     spec.start  = fields[FRAME_Len].start;
     spec.stop   = fields[FRAME_Len].stop;
@@ -982,7 +972,7 @@ void cea_stream::core::make_arrays() {
 
     nof_sizes = 0;
 
-    switch (type) {
+    switch (spec.type) {
         case Fixed: {
             nof_sizes = 1;
             array_of_frame_sizes = new uint32_t(nof_sizes);
@@ -1048,30 +1038,30 @@ void cea_stream::core::make_arrays() {
     //---------------
     array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
 
-    cea_field_generation_type pltype;
     cea_field_generation_spec plspec;
 
-    pltype = fields[PAYLOAD_Type].gen_type;
+    plspec.type   = fields[PAYLOAD_Type].gen_type;
     plspec.value  = fields[PAYLOAD_Type].value;
     plspec.start  = fields[PAYLOAD_Type].start;
     plspec.stop   = fields[PAYLOAD_Type].stop;
     plspec.step   = fields[PAYLOAD_Type].step;
     plspec.repeat = fields[PAYLOAD_Type].repeat;
 
-    switch (pltype) {
+    switch (plspec.type) {
         case Fixed_Pattern: {
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
-            // RESUME
-            // TODO the array is filled with the given pattern, but it should
-            // be done only if the repeat is on
-            for (uint32_t cnt=0; cnt<quotient; cnt++) {
+            if (plspec.repeat) {
+                for (uint32_t cnt=0; cnt<quotient; cnt++) {
+                    memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
+                    offset += payload_pattern_size;
+                }
+                memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
+            } else {
                 memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
-                offset += payload_pattern_size;
             }
-            memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
-            print_cdata(array_of_payload_pattern, 100);
+                print_cdata(array_of_payload_pattern, 100);
             break;
             }
         case Incr_Byte: {
@@ -1238,7 +1228,7 @@ void cea_stream::core::purge_static_fields() {
             cea_field_mutable f;
                 f.offset = fields[i].offset;
                 f.size = fields[i].len;
-                f.type = fields[i].gen_type;
+                f.spec.type = fields[i].gen_type;
                 f.spec.value = fields[i].value;
                 f.spec.start = fields[i].start;
                 f.spec.stop = fields[i].stop;
@@ -1462,46 +1452,11 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
     fields[id].value = value;
 }
 
-void cea_stream::set(cea_field_id id, cea_field_generation_type spec) {
+void cea_stream::set(cea_field_id id, cea_field_generation_spec spec) {
     impl->set(id, spec);
 }
 
-// user api to set fields of the stream
-void cea_stream::core::set(cea_field_id id, cea_field_generation_type spec) {
-    // process if mpls
-    bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
-    if (mpls) {
-        fields[Num_MPLS_Hdrs].value += 1;
-        uint32_t stack = fields[id].stack;
-        // touch all fields of this stack
-        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
-            if (fields[idx].stack == stack)
-                fields[idx].added = true;
-        }
-    }
-    // process if vlan
-    bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
-    if (vlan) {
-        fields[Num_VLAN_Tags].value += 1;
-        uint32_t stack = fields[id].stack;
-        // touch all fields of this stack
-        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
-            if (fields[idx].stack == stack)
-                fields[idx].added = true;
-        }
-    }
-    fields[id].gen_type = spec;
-    if (spec != Fixed)
-        fields[id].touched = true;
-}
-
-void cea_stream::set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec) {
-    impl->set(id, mspec, vspec);
-}
-
-void cea_stream::core::set(cea_field_id id, cea_field_generation_type mspec,
-        cea_field_generation_spec vspec) {
+void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
     // process if mpls
     bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
     if (mpls) {
@@ -1525,26 +1480,22 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_type mspec,
         }
     }
 
-    if (mspec != Fixed) 
+    if (spec.type == Fixed || spec.type == Fixed_Pattern)
+        fields[id].touched = false;
+    else
         fields[id].touched = true;
 
-    fields[id].gen_type = mspec;
-    fields[id].value = vspec.value;
-    fields[id].start = vspec.start;
-    fields[id].stop = vspec.stop;
-    fields[id].step = vspec.step;
-    fields[id].repeat = vspec.repeat;
-}
+    fields[id].gen_type = spec.type;
+    fields[id].value = spec.value;
+    fields[id].start = spec.start;
+    fields[id].stop = spec.stop;
+    fields[id].step = spec.step;
+    fields[id].repeat = spec.repeat;
 
-// void cea_stream::set(cea_field_id id, string value) {
-//     impl->set(id, value);
-// }
-// 
-// void cea_stream::core::set(cea_field_id id, string value) {
-//     payload_pattern_size = value.size();
-//     payload_pattern = new unsigned char [payload_pattern_size];
-//     memcpy(payload_pattern, value.data(), payload_pattern_size);
-// }
+    payload_pattern_size = spec.pattern.size();
+    payload_pattern = new unsigned char [payload_pattern_size];
+    memcpy(payload_pattern, spec.pattern.data(), payload_pattern_size);
+}
 
 void cea_stream::core::do_copy(const cea_stream *rhs) {
 }
