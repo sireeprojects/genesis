@@ -10,6 +10,7 @@ int main() {
 
     spec = {};
     spec.type = Fixed_Pattern;
+    // spec.type = Random;
     spec.value = 0;
     spec.start = 0;
     spec.stop = 10;
@@ -19,7 +20,6 @@ int main() {
 
     s->set(FRAME_Len, 100);
     s->set(PAYLOAD_Type, spec);
-
     s->set(FRAME_Type, ETH_V2);
     s->set(Network_Hdr, IPv4);
     s->set(Transport_Hdr, TCP);

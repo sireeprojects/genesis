@@ -67,6 +67,10 @@ using namespace chrono;
 // Global properties
 //------------------------------------------------------------------------------
 
+// Random data array attributes
+#define CEA_MAX_RND_ARRAYS 16
+#define CEA_RND_ARRAY_SIZE 1000000  // 1M
+
 // maximum supported frame size from MAC dest addr to MAC crc (16KB)
 #define CEA_MAX_FRAME_SIZE 16384
 
@@ -949,6 +953,7 @@ public:
     unsigned char *payload_pattern;
     string token;
     vector<string> tokens_of_payload_pattern;
+    unsigned char *rnd_arrays[CEA_MAX_RND_ARRAYS];
 };
 
 cea_stream::~cea_stream() = default;
@@ -1049,8 +1054,20 @@ void cea_stream::core::make_arrays() {
     plspec.repeat = fields[PAYLOAD_Type].repeat;
 
     switch (plspec.type) {
-        // RESUME
         case Random : {
+            // create random arrays and fill it with random data
+            srand(time(NULL));
+            for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
+                uint32_t array_size = plspec.stop + CEA_RND_ARRAY_SIZE;
+                rnd_arrays[idx] = new unsigned char[array_size];
+                for(uint32_t offset=0; offset<array_size; offset++) {
+                    int num = rand()%255;
+                    memcpy(rnd_arrays[idx]+offset, (unsigned char*)&num, 1);
+                }
+                #ifdef CEA_DEBUG
+                print_cdata(rnd_arrays[idx], 100);
+                #endif
+            }
             break;
             }
         case Fixed_Pattern: {
@@ -1397,7 +1414,9 @@ void cea_stream::core::arrange_fields_in_sequence() {
     #endif
 }
 
+// RESUME
 void cea_stream::core::build_base_frame() {
+
 }
 
 // constructor
@@ -1747,7 +1766,7 @@ void cea_proxy::core::worker() {
     cur_stm->impl->prune();
     cur_stm->impl->compute_gen_attributes();
     cur_stm->impl->make_arrays();
-    // cur_stm->impl->build_base_frame();
+    cur_stm->impl->build_base_frame();
     // begin_mutation();
 }
 
