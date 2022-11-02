@@ -1058,7 +1058,7 @@ void cea_stream::core::make_arrays() {
             // create random arrays and fill it with random data
             srand(time(NULL));
             for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
-                uint32_t array_size = plspec.stop + CEA_RND_ARRAY_SIZE;
+                uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
                 rnd_arrays[idx] = new unsigned char[array_size];
                 for(uint32_t offset=0; offset<array_size; offset++) {
                     int num = rand()%255;
@@ -1416,7 +1416,15 @@ void cea_stream::core::arrange_fields_in_sequence() {
 
 // RESUME
 void cea_stream::core::build_base_frame() {
-
+    // allocate base array
+    //      random data -> metasize + 16K + 1MB
+    //      others      -> metasize + 16K
+    // initialize base array to zeros
+    // copy metadata from metadata struct
+    // copy header from fseq
+    // copy payload from data arrays
+    // calculate checksums (IP/TCP/UDP) and overlay
+    // calculate fcs and copy
 }
 
 // constructor
@@ -1767,7 +1775,7 @@ void cea_proxy::core::worker() {
     cur_stm->impl->compute_gen_attributes();
     cur_stm->impl->make_arrays();
     cur_stm->impl->build_base_frame();
-    // begin_mutation();
+    begin_mutation();
 }
 
 void cea_proxy::core::read_next_stream_from_stmq() {
@@ -1778,6 +1786,10 @@ void cea_proxy::core::extract_traffic_parameters() {
 }
 
 void cea_proxy::core::begin_mutation() {
+    // handle dynamic metadata
+    // store current metadata to a prev_metadata struct
+    // if prev.len != cur.len OR prev.ipg != cur.ipg
+    //      then add metadata to the frame
 }
 
 void cea_proxy::core::create_frame_buffer() {
