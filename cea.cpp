@@ -77,6 +77,9 @@ using namespace chrono;
 // size of scratchpad buffer
 #define CEA_SCRATCHPAD_SIZE 256
 
+// frame metadata (control header) size in bytes
+#define CEA_FRM_METASIZE 64
+
 //------------------------------------------------------------------------------
 // Messaging 
 //------------------------------------------------------------------------------
@@ -335,7 +338,7 @@ vector<cea_field> flds = {
 {  false,  0,  false,   0,    TCP_Total_Len            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Total_Len          "}
 };
 
-// header to fields map
+// header to fields map (field groups)
 map <cea_hdr_type, vector <cea_field_id>> htof = {
     {MAC,   {
             MAC_Dest_Addr,
@@ -448,6 +451,10 @@ struct cea_field_mutable {
     uint32_t offset;
     uint32_t size;
     cea_field_generation_spec spec;
+};
+
+struct CEA_PACKED cea_frm_metadata {
+    unsigned char meta[CEA_FRM_METASIZE];
 };
 
 // file stream for cea message logging
@@ -936,7 +943,6 @@ public:
     void print_base_frame_properties();
 
     uint32_t crc_len;
-    // void *fbuf;
 
     // generation attributes
     // TODO: create function to release size array
@@ -954,6 +960,12 @@ public:
     string token;
     vector<string> tokens_of_payload_pattern;
     unsigned char *rnd_arrays[CEA_MAX_RND_ARRAYS];
+
+    cea_field_generation_spec frm_len_spec;
+    cea_field_generation_spec frm_payload_spec;
+
+    cea_frm_metadata metadata;
+    unsigned char *base_hdr;
 };
 
 cea_stream::~cea_stream() = default;
@@ -1419,12 +1431,29 @@ void cea_stream::core::build_base_frame() {
     // allocate base array
     //      random data -> metasize + 16K + 1MB
     //      others      -> metasize + 16K
-    // initialize base array to zeros
+    if (frm_payload_spec.type == Random) {
+        base_frame = new unsigned char [(CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE+CEA_RND_ARRAY_SIZE)];
+        memset(base_frame, 0, (CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE+CEA_RND_ARRAY_SIZE));
+    } else {
+        base_frame = new unsigned char [(CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE)];
+        memset(base_frame, 0, (CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE));
+    }
     // copy metadata from metadata struct
+    metadata = {};
+    memcpy(base_frame, (char*)&metadata, CEA_FRM_METASIZE);
+
     // copy header from fseq
+    base_hdr = new unsigned char[hdr_size];
+    splice_fields(fseq, base_hdr);
+    memcpy(base_frame+CEA_FRM_METASIZE, base_hdr, hdr_size);
+
     // copy payload from data arrays
     // calculate checksums (IP/TCP/UDP) and overlay
     // calculate fcs and copy
+    
+    #ifdef CEA_DEBUG
+    print_cdata(base_frame, 100);
+    #endif
 }
 
 // constructor
@@ -1533,6 +1562,12 @@ void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
     fields[id].stop = spec.stop;
     fields[id].step = spec.step;
     fields[id].repeat = spec.repeat;
+
+    if (id == FRAME_Len) {
+        frm_len_spec = spec;
+    } else if (id == PAYLOAD_Type) {
+        frm_payload_spec = spec;
+    }
 
     string pattern_to_string = spec.pattern;
     stringstream token_stream(pattern_to_string);
