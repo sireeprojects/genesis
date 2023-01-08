@@ -453,6 +453,9 @@ struct cea_field_mutable {
     cea_field_generation_spec spec;
 };
 
+// TODO
+// include meta fields in fields table and treat it a fields
+// easy to access using set function. it should not be a touch field
 struct CEA_PACKED cea_frm_metadata {
     unsigned char meta[CEA_FRM_METASIZE];
 };
@@ -945,21 +948,23 @@ public:
     uint32_t crc_len;
 
     // generation attributes
-    // TODO: create function to release size array
     uint32_t meta_size;
     uint32_t hdr_size;
-    void compute_gen_attributes();
-    void make_arrays();
+    uint32_t nof_sizes;
+    uint32_t payload_pattern_size;
+
     uint32_t *array_of_frame_sizes;
     uint32_t *array_of_computed_frame_sizes;
     uint32_t *array_of_payload_sizes;
-    uint32_t nof_sizes;
     unsigned char *array_of_payload_pattern;
-    uint32_t payload_pattern_size;
     unsigned char *payload_pattern;
+    unsigned char *rnd_arrays[CEA_MAX_RND_ARRAYS];
+
     string token;
     vector<string> tokens_of_payload_pattern;
-    unsigned char *rnd_arrays[CEA_MAX_RND_ARRAYS];
+
+    void compute_gen_attributes();
+    void make_arrays();
 
     cea_field_generation_spec frm_len_spec;
     cea_field_generation_spec frm_payload_spec;
@@ -1270,14 +1275,14 @@ void cea_stream::core::purge_static_fields() {
     for (auto i: fseq) {
         if (fields[i].touched) {
             cea_field_mutable f;
-                f.offset = fields[i].offset;
-                f.size = fields[i].len;
-                f.spec.type = fields[i].gen_type;
-                f.spec.value = fields[i].value;
-                f.spec.start = fields[i].start;
-                f.spec.stop = fields[i].stop;
-                f.spec.step = fields[i].step;
-                f.spec.repeat = fields[i].repeat;
+            f.offset = fields[i].offset;
+            f.size = fields[i].len;
+            f.spec.type = fields[i].gen_type;
+            f.spec.value = fields[i].value;
+            f.spec.start = fields[i].start;
+            f.spec.stop = fields[i].stop;
+            f.spec.step = fields[i].step;
+            f.spec.repeat = fields[i].repeat;
             cseq.push_back(f);
         }
     }
@@ -1359,6 +1364,9 @@ uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq,
 // algorithm to arrange the frame fields
 void cea_stream::core::arrange_fields_in_sequence() {
     
+    // TODO
+    // To be optionally included in the full version
+    // skip in AVIP version
     // fseq.push_back(MAC_Preamble);
 
     fseq.insert(fseq.end(),
