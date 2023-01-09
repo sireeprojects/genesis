@@ -46,7 +46,8 @@ enum cea_hdr_type {
     PAUSE,
     PFC,
     UDP_PHDR,
-    TCP_PHDR
+    TCP_PHDR,
+    META
 };
 
 enum cea_field_id {
@@ -223,6 +224,15 @@ enum cea_field_id {
     Pause_Quanta_7,
     Zeros_8Bit,
     TCP_Total_Len,
+    META_Len,
+    META_Ipg,
+    META_Preamble,
+    META_Pad1,
+    META_Pad2,
+    META_Pad3,
+    META_Pad4,
+    META_Pad5,
+    META_Pad6,
     Num_Fields
 };
 
@@ -250,6 +260,11 @@ enum cea_field_generation_type {
     Bit_Rate
 };
 
+enum cea_field_type {
+    TYPE_Integer,
+    TYPE_Special
+};
+
 struct cea_field_generation_spec {
     cea_field_generation_type type;
     uint64_t value;
@@ -275,6 +290,7 @@ struct cea_field {
     uint32_t step;
     uint32_t repeat;
     string name;
+    cea_field_type type;
 };
 
 // forward declaration
