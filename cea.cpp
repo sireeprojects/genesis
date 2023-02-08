@@ -1,45 +1,7 @@
 /*
 NOTES:
-CEA_DEBUG - to include debug code and to generate debug library
-
+marco CEA_DEBUG - to include debug code and to generate debug library
 THINGS TO DO:
-- Support for multiprocess
-        proxy_id is taken from global variable. proxies created in other 
-        machines will have duplicate proxy_id values
-
-- stream and proxy id should be 3 digits be default
-
-- add leading space when printing stream and proxy messages (optional/fancy)
-
-- new stream function get_field_property to replace the following
-        is touched, is_merge and value_of
-        uint64_t get_field_property(Property Name, field id)
-        string get_field_property(Property Name, field id)
-
-- stream interleaving support        
-        stream: add context switch variables.
-                current generation context will be stored in stream
-        proxy: add funtions 
-               conext switch
-                    |- save_context
-                    |- restore_context
-        note: saving and restoring context incur performance penalty
-              try some other idea
-              idea: store context in stream itself instead of storing 
-                    in proxy. then context switch means just pointing to 
-                    other stream
-
-- Optimize compute_ udp and tcp csum calculation. avoid payload copy
-
-- dump python script
-        how to use python to start test
-        in 3p mode, the test is first started and then the tcl script is run
-        python mode should be like c++ mode where the test should be invoked
-        by python script. it should not be like, first start the c++ test and
-        then run the python script. if this is the case python script cannot
-        be added to regression
-
-- Unix socket class, IP Socket class and socker server class
 */
 
 #include <thread>
@@ -56,9 +18,9 @@ THINGS TO DO:
 #include <chrono>
 #include <cassert>
 #include <random>
-// #include <bits/stdc++.h>
-
 #include "cea.h"
+
+#define CEA_PACKED __attribute__((packed))
 
 using namespace std;
 using namespace chrono;
@@ -67,15 +29,8 @@ using namespace chrono;
 // Global properties
 //------------------------------------------------------------------------------
 
-// Random data array attributes
-#define CEA_MAX_RND_ARRAYS 16
-#define CEA_RND_ARRAY_SIZE 1000000  // 1M
-
 // maximum supported frame size from MAC dest addr to MAC crc (16KB)
 #define CEA_MAX_FRAME_SIZE 16384
-
-// size of scratchpad buffer
-#define CEA_SCRATCHPAD_SIZE 256
 
 // frame metadata (control header) size in bytes
 #define CEA_FRM_METASIZE 64
@@ -84,14 +39,14 @@ using namespace chrono;
 // Messaging 
 //------------------------------------------------------------------------------
 
-// Used for mandatory messages. Cannot be disabled in debug mode
+// CEA_MSGS: Used for mandatory messages. Cannot be disabled in debug mode
 #define CEA_MSG(msg) { \
     stringstream s; \
     s << msg; \
     cealog << msg_prefix << string(__FUNCTION__) << ": " <<  s.str() << endl; \
 }
 
-// Enabled only in debug mode
+// CEA_DBG: Enabled only in debug mode
 #ifdef CEA_DEBUG
     #define CEA_DBG(msg) { CEA_MSG(msg) }
 #else
@@ -99,7 +54,7 @@ using namespace chrono;
 #endif
 
 //------------------------------------------------------------------------------
-// 1GB Hugepage for frame buffer (shared memory)
+// Flags to create 1GB Hugepage for frame buffer (shared memory)
 //------------------------------------------------------------------------------
 
 #define LENGTH (1UL*1024*1024*1024)
@@ -107,10 +62,9 @@ using namespace chrono;
 #define ADDR (void *)(0x0UL)
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 
-//------------------------------------------------------------------------------
-// CRC32
-//------------------------------------------------------------------------------
+namespace cea {
 
+// CRC32
 const uint32_t crc32_tab[] = {
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
 	0xe963a535, 0x9e6495a3,	0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -157,198 +111,115 @@ const uint32_t crc32_tab[] = {
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-namespace cea {
-
 vector<cea_field> flds = {
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-// Toc     Mrg Added    Stack Id                        Len       Offset Modifier Val                  Start Stop Step Rpt Name
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-{  false,  0,  false,   0,    FRAME_Type               ,0,        0,     Fixed,   ETH_V2,              0,    0,   0,   0,  "FRAME_Type             ", TYPE_Integer },
-{  false,  0,  false,   0,    FRAME_Len                ,0,        0,     Fixed,   64,                  0,    0,   0,   0,  "FRAME_Len              ", TYPE_Integer },
-{  false,  0,  false,   0,    Network_Hdr              ,0,        0,     Fixed,   IPv4,                0,    0,   0,   0,  "Network_Hdr            ", TYPE_Integer },
-{  false,  0,  false,   0,    Transport_Hdr            ,0,        0,     Fixed,   UDP,                 0,    0,   0,   0,  "Transport_Hdr          ", TYPE_Integer },
-{  false,  0,  false,   0,    VLAN_Tag                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_Tag               ", TYPE_Integer },
-{  false,  0,  false,   0,    MPLS_Hdr                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_Hdr               ", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Preamble             ,64,       0,     Fixed,   0x55555555555555d5,  0,    0,   0,   0,  "MAC_Preamble           ", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Dest_Addr            ,48,       0,     Fixed,   0x112233445566,      0,    0,   0,   0,  "MAC_Dest_Addr          ", TYPE_Special },
-{  false,  0,  false,   0,    MAC_Src_Addr             ,48,       0,     Fixed,   0xaabbccddeeff,      0,    0,   0,   0,  "MAC_Src_Addr           ", TYPE_Special },
-{  false,  0,  false,   0,    MAC_Len                  ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Len                ", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Ether_Type           ,16,       0,     Fixed,   0x0800,              0,    0,   0,   0,  "MAC_Ether_Type         ", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Fcs                  ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Fcs                ", TYPE_Integer },
-{  false,  0,  false,   0,    LLC_Dsap                 ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Dsap               ", TYPE_Integer },
-{  false,  0,  false,   0,    LLC_Ssap                 ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Ssap               ", TYPE_Integer },
-{  false,  0,  false,   0,    LLC_Control              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "LLC_Control            ", TYPE_Integer },
-{  false,  0,  false,   0,    SNAP_Oui                 ,24,       0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Oui               ", TYPE_Integer },
-{  false,  0,  false,   0,    SNAP_Pid                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "SNAP_Pid               ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv4_Version             ,4,        0,     Fixed,   4,                   0,    0,   0,   0,  "IPv4_Version           ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv4_IHL                 ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "IPv4_IHL               ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Tos                 ,8,        0,     Fixed,   0xc0,                0,    0,   0,   0,  "IPv4_Tos               ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Total_Len           ,16,       0,     Fixed,   0x33,                0,    0,   0,   0,  "IPv4_Total_Len         ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Id                  ,16,       0,     Fixed,   0xaabb,              0,    0,   0,   0,  "IPv4_Id                ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv4_Flags               ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Flags             ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv4_Frag_Offset         ,13,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Frag_Offset       ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_TTL                 ,8,        0,     Fixed,   10,                  0,    0,   0,   0,  "IPv4_TTL               ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Protocol            ,8,        0,     Fixed,   6,                   0,    0,   0,   0,  "IPv4_Protocol          ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Hdr_Csum            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Hdr_Csum          ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Src_Addr            ,32,       0,     Fixed,   0x11223344,          0,    0,   0,   0,  "IPv4_Src_Addr          ", TYPE_Special },
-{  false,  0,  false,   0,    IPv4_Dest_Addr           ,32,       0,     Fixed,   0xaabbccdd,          0,    0,   0,   0,  "IPv4_Dest_Addr         ", TYPE_Special },
-{  false,  0,  false,   0,    IPv4_Opts                ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Opts              ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv4_Pad                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv4_Pad               ", TYPE_Integer },
-{  false,  2,  false,   0,    IPv6_Version             ,4,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Version           ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv6_Traffic_Class       ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Traffic_Class     ", TYPE_Integer },
-{  false,  1,  false,   0,    IPv6_Flow_Label          ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Flow_Label        ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv6_Payload_Len         ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Payload_Len       ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv6_Next_Hdr            ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Next_Hdr          ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv6_Hop_Limit           ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Hop_Limit         ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv6_Src_Addr            ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Src_Addr          ", TYPE_Integer },
-{  false,  0,  false,   0,    IPv6_Dest_Addr           ,128,      0,     Fixed,   0,                   0,    0,   0,   0,  "IPv6_Dest_Addr         ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Src_Port             ,16,       0,     Fixed,   1234,                0,    0,   0,   0,  "TCP_Src_Port           ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Dest_Port            ,16,       0,     Fixed,   5678,                0,    0,   0,   0,  "TCP_Dest_Port          ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Seq_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Seq_Num            ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Ack_Num              ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack_Num            ", TYPE_Integer },
-{  false,  7,  false,   0,    TCP_Data_Offset          ,4,        0,     Fixed,   5,                   0,    0,   0,   0,  "TCP_Data_Offset        ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Reserved             ,6,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Reserved           ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Urg                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg                ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Ack                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Ack                ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Psh                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Psh                ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Rst                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Rst                ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Syn                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Syn                ", TYPE_Integer },
-{  false,  1,  false,   0,    TCP_Fin                  ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Fin                ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Window               ,16,       0,     Fixed,   64,                  0,    0,   0,   0,  "TCP_Window             ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Csum                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Csum               ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Urg_Ptr              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Urg_Ptr            ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Opts                 ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Opts               ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Pad                  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Pad                ", TYPE_Integer },
-{  false,  0,  false,   0,    UDP_Src_Port             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Src_Port           ", TYPE_Integer },
-{  false,  0,  false,   0,    UDP_Dest_Port            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Dest_Port          ", TYPE_Integer },
-{  false,  0,  false,   0,    UDP_Len                  ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Len                ", TYPE_Integer },
-{  false,  0,  false,   0,    UDP_Csum                 ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "UDP_Csum               ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Hw_Type              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Type            ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Proto_Type           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Type         ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Hw_Len               ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Hw_Len             ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Proto_Len            ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Proto_Len          ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Opcode               ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Opcode             ", TYPE_Integer },
-{  false,  0,  false,   0,    ARP_Sender_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Hw_Addr     ", TYPE_Special },
-{  false,  0,  false,   0,    ARP_Sender_Proto_addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Sender_Proto_addr  ", TYPE_Special },
-{  false,  0,  false,   0,    ARP_Target_Hw_Addr       ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Hw_Addr     ", TYPE_Special },
-{  false,  0,  false,   0,    ARP_Target_Proto_Addr    ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "ARP_Target_Proto_Addr  ", TYPE_Special },
-{  false,  0,  false,   0,    PAYLOAD_Type             ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Type           ", TYPE_Integer },
-{  false,  0,  false,   0,    PAYLOAD_Pattern          ,46,       0,     Fixed,   0,                   0,    0,   0,   0,  "PAYLOAD_Pattern        ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF1                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF1                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF2                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF2                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF3                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF3                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF4                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF4                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF5                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF5                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF6                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF6                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF7                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF7                   ", TYPE_Integer },
-{  false,  0,  false,   0,    UDF8                     ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "UDF8                   ", TYPE_Integer },
-{  false,  2,  false,   1,    MPLS_01_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Label          ", TYPE_Integer },
-{  false,  1,  false,   1,    MPLS_01_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Exp            ", TYPE_Integer },
-{  false,  1,  false,   1,    MPLS_01_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Stack          ", TYPE_Integer },
-{  false,  0,  false,   1,    MPLS_01_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_01_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   2,    MPLS_02_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Label          ", TYPE_Integer },
-{  false,  1,  false,   2,    MPLS_02_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Exp            ", TYPE_Integer },
-{  false,  1,  false,   2,    MPLS_02_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Stack          ", TYPE_Integer },
-{  false,  0,  false,   2,    MPLS_02_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_02_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   3,    MPLS_03_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Label          ", TYPE_Integer },
-{  false,  1,  false,   3,    MPLS_03_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Exp            ", TYPE_Integer },
-{  false,  1,  false,   3,    MPLS_03_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Stack          ", TYPE_Integer },
-{  false,  0,  false,   3,    MPLS_03_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_03_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   4,    MPLS_04_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Label          ", TYPE_Integer },
-{  false,  1,  false,   4,    MPLS_04_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Exp            ", TYPE_Integer },
-{  false,  1,  false,   4,    MPLS_04_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Stack          ", TYPE_Integer },
-{  false,  0,  false,   4,    MPLS_04_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_04_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   5,    MPLS_05_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Label          ", TYPE_Integer },
-{  false,  1,  false,   5,    MPLS_05_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Exp            ", TYPE_Integer },
-{  false,  1,  false,   5,    MPLS_05_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Stack          ", TYPE_Integer },
-{  false,  0,  false,   5,    MPLS_05_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_05_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   6,    MPLS_06_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Label          ", TYPE_Integer },
-{  false,  1,  false,   6,    MPLS_06_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Exp            ", TYPE_Integer },
-{  false,  1,  false,   6,    MPLS_06_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Stack          ", TYPE_Integer },
-{  false,  0,  false,   6,    MPLS_06_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_06_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   7,    MPLS_07_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Label          ", TYPE_Integer },
-{  false,  1,  false,   7,    MPLS_07_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Exp            ", TYPE_Integer },
-{  false,  1,  false,   7,    MPLS_07_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Stack          ", TYPE_Integer },
-{  false,  0,  false,   7,    MPLS_07_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_07_Ttl            ", TYPE_Integer },
-{  false,  2,  false,   8,    MPLS_08_Label            ,20,       0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Label          ", TYPE_Integer },
-{  false,  1,  false,   8,    MPLS_08_Exp              ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Exp            ", TYPE_Integer },
-{  false,  1,  false,   8,    MPLS_08_Stack            ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Stack          ", TYPE_Integer },
-{  false,  0,  false,   8,    MPLS_08_Ttl              ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "MPLS_08_Ttl            ", TYPE_Integer },
-{  false,  0,  false,   1,    VLAN_01_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_01_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   1,    VLAN_01_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_01_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   1,    VLAN_01_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_01_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   1,    VLAN_01_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_01_Vid            ", TYPE_Integer },
-{  false,  0,  false,   2,    VLAN_02_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_02_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   2,    VLAN_02_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_02_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   2,    VLAN_02_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_02_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   2,    VLAN_02_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_02_Vid            ", TYPE_Integer },
-{  false,  0,  false,   3,    VLAN_03_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_03_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   3,    VLAN_03_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_03_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   3,    VLAN_03_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_03_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   3,    VLAN_03_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_03_Vid            ", TYPE_Integer },
-{  false,  0,  false,   4,    VLAN_04_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_04_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   4,    VLAN_04_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_04_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   4,    VLAN_04_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_04_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   4,    VLAN_04_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_04_Vid            ", TYPE_Integer },
-{  false,  0,  false,   5,    VLAN_05_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_05_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   5,    VLAN_05_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_05_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   5,    VLAN_05_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_05_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   5,    VLAN_05_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_05_Vid            ", TYPE_Integer },
-{  false,  0,  false,   6,    VLAN_06_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_06_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   6,    VLAN_06_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_06_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   6,    VLAN_06_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_06_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   6,    VLAN_06_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_06_Vid            ", TYPE_Integer },
-{  false,  0,  false,   7,    VLAN_07_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_07_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   7,    VLAN_07_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_07_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   7,    VLAN_07_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_07_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   7,    VLAN_07_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_07_Vid            ", TYPE_Integer },
-{  false,  0,  false,   8,    VLAN_08_Tpi              ,16,       0,     Fixed,   0x8100,              0,    0,   0,   0,  "VLAN_08_Tpi            ", TYPE_Integer },
-{  false,  2,  false,   8,    VLAN_08_Tci_Pcp          ,3,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_08_Tci_Pcp        ", TYPE_Integer },
-{  false,  1,  false,   8,    VLAN_08_Tci_Cfi          ,1,        0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_08_Tci_Cfi        ", TYPE_Integer },
-{  false,  1,  false,   8,    VLAN_08_Vid              ,12,       0,     Fixed,   0,                   0,    0,   0,   0,  "VLAN_08_Vid            ", TYPE_Integer },
-{  false,  0,  false,   0,    Num_VLAN_Tags            ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "Num_VLAN_Tags          ", TYPE_Integer },
-{  false,  0,  false,   0,    Num_MPLS_Hdrs            ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "Num_MPLS_Hdrs          ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Type              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Type            ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Pkts_Per_Burst    ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Burst  ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Burst_Per_Stream  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Burst_Per_Stream", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Inter_Burst_Gap   ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Inter_Burst_Gap ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Inter_Stream_Gap  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Inter_Stream_Gap", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Start_Delay       ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Start_Delay     ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Rate_Type         ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Rate_Type       ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Rate              ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Rate            ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Ipg               ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Ipg             ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Percentage        ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Percentage      ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Pkts_Per_Sec      ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Pkts_Per_Sec    ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Bit_Rate          ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Bit_Rate        ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Crc_Enable        ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Crc_Enable      ", TYPE_Integer },
-{  false,  0,  false,   0,    STREAM_Timestamp_Enable  ,0,        0,     Fixed,   0,                   0,    0,   0,   0,  "STREAM_Timestamp_Enable", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Control              ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control            ", TYPE_Integer },
-{  false,  0,  false,   0,    MAC_Control_Opcode       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "MAC_Control_Opcode     ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta             ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta           ", TYPE_Integer },
-{  false,  0,  false,   0,    Priority_En_Vector       ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Priority_En_Vector     ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_0           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_0         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_1           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_1         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_2           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_2         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_3           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_3         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_4           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_4         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_5           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_5         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_6           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_6         ", TYPE_Integer },
-{  false,  0,  false,   0,    Pause_Quanta_7           ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "Pause_Quanta_7         ", TYPE_Integer },
-{  false,  0,  false,   0,    Zeros_8Bit               ,8,        0,     Fixed,   0,                   0,    0,   0,   0,  "Zeros_8Bit             ", TYPE_Integer },
-{  false,  0,  false,   0,    TCP_Total_Len            ,16,       0,     Fixed,   0,                   0,    0,   0,   0,  "TCP_Total_Len          ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Len                 ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Len               ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Ipg                 ,32,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Ipg               ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Preamble            ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Preamble          ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad1                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad2                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad3                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad4                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad5                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer },
-{  false,  0,  false,   0,    META_Pad6                ,64,       0,     Fixed,   0,                   0,    0,   0,   0,  "META_Pad1              ", TYPE_Integer }
+{	false	,	0	,	MAC_Preamble               	,	64	,	0	,	Fixed_Value     	,	0x55555555555555d5  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Preamble               "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Dest_Addr              	,	48	,	0	,	Fixed_Pattern   	,	0                   	,	"00:00:00:00:00:00"    	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Dest_Addr              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Src_Addr               	,	48	,	0	,	Fixed_Pattern   	,	0                   	,	"00:00:00:00:00:00"    	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Src_Addr               "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Len                    	,	16	,	0	,	Fixed_Value     	,	46                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Len                    "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Ether_Type             	,	16	,	0	,	Fixed_Value     	,	0x0800              	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Ether_Type             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Fcs                    	,	32	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Fcs                    "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	LLC_Dsap                   	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"LLC_Dsap                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	LLC_Ssap                   	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"LLC_Ssap                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	LLC_Control                	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"LLC_Control                "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	SNAP_Oui                   	,	24	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"SNAP_Oui                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	SNAP_Pid                   	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"SNAP_Pid                   "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv4_Version               	,	4	,	0	,	Fixed_Value     	,	4                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Version               "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv4_IHL                   	,	4	,	0	,	Fixed_Value     	,	5                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_IHL                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Tos                   	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Tos                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Total_Len             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Total_Len             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Id                    	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Id                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv4_Flags                 	,	3	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Flags                 "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv4_Frag_Offset           	,	13	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Frag_Offset           "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_TTL                   	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_TTL                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Protocol              	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Protocol              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Hdr_Csum              	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Hdr_Csum              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Src_Addr              	,	32	,	0	,	Fixed_Pattern   	,	0                   	,	"0.0.0.0"              	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Src_Addr              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Dest_Addr             	,	32	,	0	,	Fixed_Pattern   	,	0                   	,	"0.0.0.0"              	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Dest_Addr             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Opts                  	,	0	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Opts                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv4_Pad                   	,	0	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv4_Pad                   "	,	Integer	,	{}	,	{}	},
+{	false	,	2	,	IPv6_Version               	,	4	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Version               "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv6_Traffic_Class         	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Traffic_Class         "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	IPv6_Flow_Label            	,	20	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Flow_Label            "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv6_Payload_Len           	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Payload_Len           "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv6_Next_Hdr              	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Next_Hdr              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv6_Hop_Limit             	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Hop_Limit             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv6_Src_Addr              	,	128	,	0	,	Fixed_Pattern   	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Src_Addr              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	IPv6_Dest_Addr             	,	128	,	0	,	Fixed_Pattern   	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"IPv6_Dest_Addr             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Src_Port               	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Src_Port               "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Dest_Port              	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Dest_Port              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Seq_Num                	,	32	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Seq_Num                "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Ack_Num                	,	32	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Ack_Num                "	,	Integer	,	{}	,	{}	},
+{	false	,	7	,	TCP_Data_Offset            	,	4	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Data_Offset            "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Reserved               	,	6	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Reserved               "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Urg                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Urg                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Ack                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Ack                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Psh                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Psh                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Rst                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Rst                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Syn                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Syn                    "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	TCP_Fin                    	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Fin                    "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Window                 	,	16	,	0	,	Fixed_Value     	,	64                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Window                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Csum                   	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Csum                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Urg_Ptr                	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Urg_Ptr                "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Opts                   	,	0	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Opts                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Pad                    	,	0	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Pad                    "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	UDP_Src_Port               	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"UDP_Src_Port               "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	UDP_Dest_Port              	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"UDP_Dest_Port              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	UDP_Len                    	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"UDP_Len                    "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	UDP_Csum                   	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"UDP_Csum                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Hw_Type                	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Hw_Type                "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Proto_Type             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Proto_Type             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Hw_Len                 	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Hw_Len                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Proto_Len              	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Proto_Len              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Opcode                 	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Opcode                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Sender_Hw_Addr         	,	48	,	0	,	Fixed_Pattern   	,	0                   	,	"00:00:00:00:00:00"    	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Sender_Hw_Addr         "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Sender_Proto_addr      	,	32	,	0	,	Fixed_Pattern   	,	0                   	,	"0.0.0.0"              	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Sender_Proto_addr      "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Target_Hw_Addr         	,	48	,	0	,	Fixed_Pattern   	,	0                   	,	"00:00:00:00:00:00"    	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Target_Hw_Addr         "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	ARP_Target_Proto_Addr      	,	32	,	0	,	Fixed_Pattern   	,	0                   	,	"0.0.0.0"              	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"ARP_Target_Proto_Addr      "	,	Integer	,	{}	,	{}	},
+{	false	,	2	,	MPLS_Label                 	,	20	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MPLS_Label                 "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	MPLS_Exp                   	,	3	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MPLS_Exp                   "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	MPLS_Stack                 	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MPLS_Stack                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MPLS_Ttl                   	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MPLS_Ttl                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	VLAN_Tpi                   	,	16	,	0	,	Fixed_Value     	,	0x8100              	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"VLAN_Tpi                   "	,	Integer	,	{}	,	{}	},
+{	false	,	2	,	VLAN_Tci_Pcp               	,	3	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"VLAN_Tci_Pcp               "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	VLAN_Tci_Cfi               	,	1	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"VLAN_Tci_Cfi               "	,	Integer	,	{}	,	{}	},
+{	false	,	1	,	VLAN_Vid                   	,	12	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"VLAN_Vid                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Control                	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Control                "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	MAC_Control_Opcode         	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"MAC_Control_Opcode         "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta               	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta               "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Priority_En_Vector         	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Priority_En_Vector         "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_0             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_0             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_1             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_1             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_2             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_2             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_3             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_3             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_4             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_4             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_5             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_5             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_6             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_6             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Pause_Quanta_7             	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Pause_Quanta_7             "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	FRAME_Len                  	,	32	,	0	,	Fixed_Value     	,	64                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"FRAME_Len                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	PAYLOAD_Pattern            	,	0	,	0	,	Fixed_Value     	,	0                   	,	"00"                   	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"PAYLOAD_Pattern            "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Traffic_Type        	,	32	,	0	,	Fixed_Value     	,	Continuous          	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Traffic_Type        "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Traffic_Control     	,	32	,	0	,	Fixed_Value     	,	Stop_After_Stream   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Traffic_Control     "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Ipg                 	,	32	,	0	,	Fixed_Value     	,	12                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Ipg                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Isg                 	,	32	,	0	,	Fixed_Value     	,	12                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Ifg                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Ibg                 	,	32	,	0	,	Fixed_Value     	,	12                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Ibg                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Bandwidth           	,	32	,	0	,	Fixed_Value     	,	100                 	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Bandwidth           "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	STREAM_Start_Delay         	,	32	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"STREAM_Start_Delay         "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	UDF                        	,	0	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"UDF                        "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Len                   	,	32	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Len                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Ipg                   	,	32	,	0	,	Fixed_Value     	,	12                  	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Ipg                   "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Preamble              	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Preamble              "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad1                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad1                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad2                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad2                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad3                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad3                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad4                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad4                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad5                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad5                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	META_Pad6                  	,	64	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"META_Pad6                  "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	Zeros_8Bit                 	,	8	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"Zeros_8Bit                 "	,	Integer	,	{}	,	{}	},
+{	false	,	0	,	TCP_Total_Len              	,	16	,	0	,	Fixed_Value     	,	0                   	,	""                     	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,	"TCP_Total_Len              "	,	Integer	,	{}	,	{}	},
 };
 
-// header to fields map (field groups)
-map <cea_hdr_type, vector <cea_field_id>> htof = {
+// map header type to list of associated fields
+map <cea_hdr_type, vector <cea_field_id>> hfmap = {
     {META,  {
             META_Len,
             META_Ipg,
@@ -373,7 +244,19 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             SNAP_Oui,
             SNAP_Pid
             }},
-    {IPv4,  { 
+    {VLAN,  {
+            VLAN_Tpi,
+            VLAN_Tci_Pcp,
+            VLAN_Tci_Cfi,
+            VLAN_Vid
+            }},
+    {MPLS,  {
+            MPLS_Label,
+            MPLS_Exp,
+            MPLS_Stack,
+            MPLS_Ttl
+            }},
+    {IPv4,  {
             IPv4_Version,
             IPv4_IHL,
             IPv4_Tos,
@@ -429,7 +312,7 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             TCP_Opts,
             TCP_Pad
             }},
-    {UDP,   { 
+    {UDP,   {
             UDP_Src_Port,
             UDP_Dest_Port,
             UDP_Len,
@@ -452,36 +335,20 @@ map <cea_hdr_type, vector <cea_field_id>> htof = {
             Pause_Quanta_7
             }},
     {UDP_PHDR, {
-               IPv4_Src_Addr,
-               IPv4_Dest_Addr,
-               Zeros_8Bit,
-               IPv4_Protocol,
-               UDP_Len
-               }},
+            IPv4_Src_Addr,
+            IPv4_Dest_Addr,
+            Zeros_8Bit,
+            IPv4_Protocol,
+            UDP_Len
+            }},
     {TCP_PHDR, {
-               IPv4_Src_Addr,
-               IPv4_Dest_Addr,
-               Zeros_8Bit,
-               IPv4_Protocol,
-               TCP_Total_Len,
-               }}
-};
-
-struct cea_field_mutable {
-    uint32_t offset;
-    uint32_t size;
-    cea_field_generation_spec spec;
-    //
-    cea_field_type type;
-    uint64_t cval;
-    uint64_t cpos;
-};
-
-// TODO
-// include meta fields in fields table and treat it a fields
-// easy to access using set function. it should not be a touch field
-struct CEA_PACKED cea_frm_metadata {
-    unsigned char meta[CEA_FRM_METASIZE];
+            IPv4_Src_Addr,
+            IPv4_Dest_Addr,
+            Zeros_8Bit,
+            IPv4_Protocol,
+            TCP_Total_Len,
+            }
+    }
 };
 
 // file stream for cea message logging
@@ -591,6 +458,11 @@ void write_pcap(unsigned char *frame, uint32_t len) {
     pcapfile.close();
 }
 
+// utility
+bool in_range(uint32_t low, uint32_t high, uint32_t x) {        
+    return (low <= x && x <= high);         
+}
+
 // memcpy in network byte order
 void *cea_memcpy_ntw_byte_order(void *dest, const void *src, size_t len) {
     if (len==0) return dest;
@@ -612,60 +484,6 @@ uint64_t reverse_byte_order(uint64_t original, uint32_t num) {
       original = original >> 8;
    }
    return reversed;
-}
-
-// calculate and return checksum in network byte order
-uint16_t compute_ipv4_csum(unsigned char *vdata,size_t length) {
-    // Cast the data pointer to one that can be indexed.
-    // char* data=(char*)vdata;
-    unsigned char *data=vdata;
-
-    // Initialise the accumulator.
-    uint64_t acc=0xffff;
-
-    // Handle any partial block at the start of the data.
-    unsigned int offset=((uintptr_t)data)&3;
-    if (offset) {
-        size_t count=4-offset;
-        if (count>length) count=length;
-        uint32_t word=0;
-        memcpy(offset+(char*)&word,data,count);
-        acc+=ntohl(word);
-        data+=count;
-        length-=count;
-    }
-
-    // Handle any complete 32-bit blocks.
-    unsigned char* data_end=data+(length&~3);
-    while (data!=data_end) {
-        uint32_t word;
-        memcpy(&word,data,4);
-        acc+=ntohl(word);
-        data+=4;
-    }
-    length&=3;
-
-    // Handle any partial block at the end of the data.
-    if (length) {
-        uint32_t word=0;
-        memcpy(&word,data,length);
-        acc+=ntohl(word);
-    }
-
-    // Handle deferred carries.
-    acc=(acc&0xffffffff)+(acc>>32);
-    while (acc>>16) {
-        acc=(acc&0xffff)+(acc>>16);
-    }
-
-    // If the data began at an odd byte address
-    // then reverse the byte order to compensate.
-    if (offset&1) {
-        acc=((acc&0xff00)>>8)|((acc&0x00ff)<<8);
-    }
-
-    // Return the checksum in network byte order.
-    return htons(~acc);
 }
 
 // remove trailing whitespaces from a string
@@ -734,80 +552,6 @@ string cea_readable_fs(double size, cea_readable_type type) {
     return buf.str();
 }
 
-// stringize cea_frame_type
-string to_str(cea_frame_type t) {
-    string name;
-    switch(t) {
-        case ETH_V2   : { name = "ETH_V2  "; break; }
-        case ETH_LLC  : { name = "ETH_LLC "; break; }
-        case ETH_SNAP : { name = "ETH_SNAP"; break; }
-        default       : { name = "undefined"; break; }
-    }
-    return cea_trim(name);
-}
-
-// stringize cea_hdr_type
-string to_str(cea_hdr_type t) {
-    string name;
-    switch(t) {
-        case MAC      : { name = "MAC     "; break; }
-        case LLC      : { name = "LLC     "; break; }
-        case SNAP     : { name = "SNAP    "; break; }
-        case IPv4     : { name = "IPv4    "; break; }
-        case IPv6     : { name = "IPv6    "; break; }
-        case ARP      : { name = "ARP     "; break; }
-        case TCP      : { name = "TCP     "; break; }
-        case UDP      : { name = "UDP     "; break; }
-        case PAUSE    : { name = "PAUSE   "; break; }
-        case PFC      : { name = "PFC     "; break; }
-        case UDP_PHDR : { name = "UDP_PHDR"; break; }
-        case TCP_PHDR : { name = "TCP_PHDR"; break; }
-        default       : { name = "undefined"; break; }
-    }
-    return cea_trim(name);
-}
-
-// stringize cea_msg_verbosity
-string to_str(cea_msg_verbosity t) {
-    string name;
-    switch(t) {
-        case LOW  : { name = "LOW  "; break; }
-        case FULL : { name = "FULL "; break; }
-        default   : { name = "UNSET"; break; }
-    }
-    return cea_trim(name);
-}
-
-// stringize cea_field_generation_type
-string to_str(cea_field_generation_type t) {
-    string name;
-    switch(t) {
-        case Fixed             : { name = "Fixed            "; break; }                                    
-        case Random            : { name = "Random           "; break; }                                    
-        case Random_in_Range   : { name = "Random_in_Range  "; break; }                                    
-        case Increment         : { name = "Increment        "; break; }                                    
-        case Decrement         : { name = "Decrement        "; break; }                                    
-        case Increment_Cycle   : { name = "Increment_Cycle  "; break; }                                    
-        case Decrement_Cycle   : { name = "Decrement_Cycle  "; break; }                                   
-        case Incr_Byte         : { name = "Incr_Byte        "; break; }                                    
-        case Incr_Word         : { name = "Incr_Word        "; break; }                                      
-        case Decr_Byte         : { name = "Decr_Byte        "; break; }                                       
-        case Decr_Word         : { name = "Decr_Word        "; break; }                                        
-        case Repeat_Pattern    : { name = "Repeat_Pattern   "; break; }                                         
-        case Fixed_Pattern     : { name = "Fixed_Pattern    "; break; }                                          
-        case Continuous_Pkts   : { name = "Continuous_Pkts  "; break; }                                  
-        case Continuous_Burst  : { name = "Continuous_Burst "; break; }                                   
-        case Stop_After_Stream : { name = "Stop_After_Stream"; break; }                                    
-        case Goto_Next_Stream  : { name = "Goto_Next_Stream "; break; }                                   
-        case Ipg               : { name = "Ipg              "; break; }                      
-        case Percentage        : { name = "Percentage       "; break; }                             
-        case Pkts_Per_Sec      : { name = "Pkts_Per_Sec     "; break; }                               
-        case Bit_Rate          : { name = "Bit_Rate         "; break; }                           
-        default                : { name = "undefined        "; break; }
-    }
-    return cea_trim(name);
-}
-
 // global variable to track proxy and stream id
 // TODO: This will become a problem in multi-process mode
 //       Every workstation will have a proxy_id and stream_id = 0
@@ -872,855 +616,20 @@ void print_cdata (unsigned char* tmp, int len) {
 
 class cea_stream::core {
 public:    
-    // constructor
     core(string name);
-
-    // destructor
     ~core();
-
-    // fucntion to set the field to a fixed value
-    void set(cea_field_id id, uint64_t value);
-
-    // function to assign a field to an inbuilt value generator
-    // with custom specifications
-    void set(cea_field_id id, cea_field_generation_spec spec);
-
-    // set when the proxy object is created
-    string stream_name;
-
-    // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
-    uint32_t stream_id;
-
-    // (container2) a list of all the field ids (in sequence) of the 
-    // selected frame type and headers output of arrange_fields_in_sequence
-    vector<uint32_t> fseq;
-
-    // (container3) a sequence of all the fields ids that needs 
-    // generation of values output of purge_static_fields
-    vector<cea_field_mutable> cseq;
-
-    // (container4) field matrix
-    vector<cea_field> fields;
-
-    // based on user specification of the frame, build a vector of 
-    // field ids in the sequence required by the specification
-    void arrange_fields_in_sequence();
-
-    // build cseq by parsing fseq and adding only mutable fields
-    void purge_static_fields();
-
-    // calls arrange and purge
-    void prune();
-
-    // build the principal frame using fseq
-    void build_base_frame();
-
-    // concatenate all fields reuired by the frame spec
-    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
-
-    // base frame buffer
-    unsigned char *base_frame;
-
-    // total or initial len of the principal frame
-    uint32_t base_frame_len;
-
-    // (debug only) print all the bytes of the principal frame in hex
-    void print_base_frame();
-
-    // reset stream to factory settings
-    void reset();
-
-    // overload =
-    void do_copy(const cea_stream *rhs);
-
-    // overload <<
-    string describe() const;
-
-    // calculate offset in fseq
-    void build_offsets();
-
-    // get offset of a particular field by parsing fseq
-    uint32_t get_offset(cea_field_id id);
-
-    // get length (in bits) of a field from fields
-    uint32_t get_len(cea_field_id id);
-
-    // get current value of a field from fields
-    uint64_t get_value(cea_field_id id);
-
-    // build a string to be prefixed in all messages generated from this class
-    string msg_prefix;
-
-    // calculate udp checksum along with the conceptual pseudoheader
-    uint32_t compute_udp_csum();
-
-    // calculate tcp checksum along with the conceptual pseudoheader
-    uint32_t compute_tcp_csum();
-
-    // if at any point of time a char array is required, scratchpad can be used
-    // it is created during stream constructor, it should never be freed 
-    unsigned char *scratchpad;
-
-    // slow crc method
-    uint32_t compute_crc32(unsigned char *data, uint32_t len);
-
-    // print functions
-    void print_stream_properties();
-    void print_base_frame_properties();
-
-    uint32_t crc_len;
-
-    // generation attributes
-    uint32_t meta_size;
-    uint32_t hdr_size;
-    uint32_t nof_sizes;
-    uint32_t payload_pattern_size;
-
-    uint32_t *array_of_frame_sizes;
-    uint32_t *array_of_computed_frame_sizes;
-    uint32_t *array_of_payload_sizes;
-    unsigned char *array_of_payload_pattern;
-    unsigned char *payload_pattern;
-    unsigned char *rnd_arrays[CEA_MAX_RND_ARRAYS];
-
-    string token;
-    vector<string> tokens_of_payload_pattern;
-
-    void compute_gen_attributes();
-    void make_arrays();
-
-    cea_field_generation_spec frm_len_spec;
-    cea_field_generation_spec frm_payload_spec;
-
-    cea_frm_metadata metadata;
-    unsigned char *base_hdr;
 };
 
-cea_stream::~cea_stream() = default;
-
 cea_stream::core::~core() {
-    delete [] array_of_frame_sizes;
-    delete [] array_of_computed_frame_sizes;
-    delete [] array_of_payload_sizes;
 }
 
-void cea_stream::core::make_arrays() {
-    cea_field_generation_spec spec = {};
-
-    //-------------
-    // size arrays
-    //-------------
-    spec.type =  fields[FRAME_Len].gen_type;
-    spec.value  = fields[FRAME_Len].value;
-    spec.start  = fields[FRAME_Len].start;
-    spec.stop   = fields[FRAME_Len].stop;
-    spec.step   = fields[FRAME_Len].step;
-    spec.repeat = fields[FRAME_Len].repeat;
-
-    nof_sizes = 0;
-
-    switch (spec.type) {
-        case Fixed: {
-            nof_sizes = 1;
-            array_of_frame_sizes = new uint32_t(nof_sizes);
-            array_of_computed_frame_sizes = new uint32_t(nof_sizes);
-            array_of_payload_sizes = new uint32_t(nof_sizes);
-            array_of_frame_sizes[0] = spec.value;
-            array_of_computed_frame_sizes[0] = array_of_frame_sizes[0] + meta_size;
-            array_of_payload_sizes[0] = array_of_frame_sizes[0] - (hdr_size - meta_size) - crc_len;
-            break;
-            }
-        case Increment: {
-            nof_sizes = ((spec.stop - spec.start)/spec.step)+1;
-            array_of_frame_sizes = new uint32_t(nof_sizes);
-            array_of_computed_frame_sizes = new uint32_t(nof_sizes);
-            array_of_payload_sizes = new uint32_t(nof_sizes);
-            uint32_t szidx=0;
-            for (uint32_t i=spec.start; i<=spec.stop; i=i+spec.step) {
-                array_of_frame_sizes[szidx] = i;
-                array_of_computed_frame_sizes[szidx] = array_of_frame_sizes[szidx] + meta_size;
-                array_of_payload_sizes[szidx] = array_of_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-                szidx++;
-            }
-            break;
-            }
-        case Decrement: {
-            nof_sizes = ((spec.start - spec.stop)/spec.step)+1;
-            array_of_frame_sizes = new uint32_t(nof_sizes);
-            array_of_computed_frame_sizes = new uint32_t(nof_sizes);
-            array_of_payload_sizes = new uint32_t(nof_sizes);
-            uint32_t szidx=0;
-            for (uint32_t i=spec.start; i>=spec.stop; i=i-spec.step) {
-                array_of_frame_sizes[szidx] = i;
-                array_of_computed_frame_sizes[szidx] = array_of_frame_sizes[szidx] + meta_size;
-                array_of_payload_sizes[szidx] = array_of_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-                szidx++;
-            }
-            break;
-            }
-        case Random_in_Range: {
-            nof_sizes = (spec.stop - spec.start) + 1;
-            array_of_frame_sizes = new uint32_t(nof_sizes);
-            array_of_computed_frame_sizes = new uint32_t(nof_sizes);
-            array_of_payload_sizes = new uint32_t(nof_sizes);
-            random_device rd;
-            mt19937 gen(rd());
-            uniform_int_distribution<> distr(spec.stop, spec.start);
-            uint32_t szidx=0;
-            for (uint32_t szidx=spec.start; szidx>spec.stop; szidx++) {
-                array_of_frame_sizes[szidx] = distr(gen);
-                array_of_computed_frame_sizes[szidx] = array_of_frame_sizes[szidx] + meta_size;
-                array_of_payload_sizes[szidx] = array_of_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-            }
-            break;
-            }
-        default:{
-            CEA_MSG("Invalid Generation type Specified for Frame Length");
-            exit(1);
-            }
-    }
-
-    //---------------
-    // payload array
-    //---------------
-    array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
-
-    cea_field_generation_spec plspec;
-    plspec.type   = fields[PAYLOAD_Type].gen_type;
-    plspec.value  = fields[PAYLOAD_Type].value;
-    plspec.start  = fields[PAYLOAD_Type].start;
-    plspec.stop   = fields[PAYLOAD_Type].stop;
-    plspec.step   = fields[PAYLOAD_Type].step;
-    plspec.repeat = fields[PAYLOAD_Type].repeat;
-
-    switch (plspec.type) {
-        case Random : {
-            // create random arrays and fill it with random data
-            srand(time(NULL));
-            for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
-                uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
-                rnd_arrays[idx] = new unsigned char[array_size];
-                for(uint32_t offset=0; offset<array_size; offset++) {
-                    int num = rand()%255;
-                    memcpy(rnd_arrays[idx]+offset, (unsigned char*)&num, 1);
-                }
-                #ifdef CEA_DEBUG
-                print_cdata(rnd_arrays[idx], 100);
-                #endif
-            }
-            break;
-            }
-        case Fixed_Pattern: {
-            uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
-            uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
-            uint32_t offset = 0;
-            if (plspec.repeat) {
-                for (uint32_t cnt=0; cnt<quotient; cnt++) {
-                    memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
-                    offset += payload_pattern_size;
-                }
-                memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
-            } else {
-                memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
-            }
-            #ifdef CEA_DEBUG
-            print_cdata(array_of_payload_pattern, 100);
-            #endif
-            break;
-            }
-        case Incr_Byte: {
-            uint32_t offset = 0;
-            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
-                for (uint16_t val=0; val<256; val++) {
-                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
-                    offset++;
-                }
-            }
-            #ifdef CEA_DEBUG
-            print_cdata(array_of_payload_pattern, 100);
-            #endif
-            break;
-            }
-        case Incr_Word: {
-            uint32_t offset = 0;
-            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
-                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
-                offset += 2;
-            }
-            #ifdef CEA_DEBUG
-            print_cdata(array_of_payload_pattern, 1000);
-            #endif
-            break;
-            }
-        case Decr_Byte: {
-            uint32_t offset = 0;
-            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
-                for (int16_t val=255; val>=0; val--) {
-                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
-                    cout << val << endl;
-                    offset++;
-                }
-            }
-            #ifdef CEA_DEBUG
-            print_cdata(array_of_payload_pattern, 258);
-            #endif
-            break;
-            }
-        case Decr_Word: {
-            uint32_t offset = 0;
-            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
-                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
-                offset += 2;
-            }
-            #ifdef CEA_DEBUG
-            print_cdata(array_of_payload_pattern, 1000);
-            #endif
-            break;
-            }
-        default:{
-            CEA_MSG("Invalid Generation type Specified for Frame payload");
-            exit(1);
-            }
-    }
-}
-
-void cea_stream::core::compute_gen_attributes() {
-    // header size: sum of length of all the fields in fseq
-    for (auto i : fseq) {
-        hdr_size += fields[i].len; // len in bits
-    }
-
-    CEA_DBG("Header size in Bits:     " << dec << hdr_size);
-    CEA_DBG("Header size byte modulo: " << dec << (hdr_size%8));
-    assert((hdr_size%8)==0);
-
-    hdr_size = (hdr_size/8); // convert to bytes
-    CEA_DBG("Header size in Bytes:    " << dec << hdr_size);
-}
-
-// void cea_stream::core::print_base_frame_properties() {
-//     cealog << endl << cea_formatted_hdr("Base Frame Properties");
-//     cealog << left << "Frame len"
-//         << string((30 - cea_trim("Frame len").length()), '.') 
-//         << " " << dec << get_value(FRAME_Len) << endl;
-//     cealog << left << "Preamble len"
-//         << string((30 - cea_trim("Preamble len").length()), '.') 
-//         << " " << dec << get_len(MAC_Preamble) << endl;
-//     cealog << left << "Headers len" 
-//         << string((30 - cea_trim("Headers len").length()), '.')
-//         << " " << dec << (base_frame_len-get_len(MAC_Preamble)) << endl;
-//     cealog << left << "Payload len" 
-//         << string((30 - cea_trim("Payload len").length()), '.') 
-//         << " " << dec << payload_len << endl;
-//     cealog << left << "Payload offset" 
-//         << string((30 - cea_trim("Payload offset").length()), '.') 
-//         << " " << dec << payload_offset << endl;
-// }
-
-void cea_stream::core::print_stream_properties() {
-    cealog << endl << cea_formatted_hdr("Stream Properties");
-    for (uint32_t idx=STREAM_Type; idx<=STREAM_Timestamp_Enable; idx++) {
-        cealog << left << dec
-            << cea_trim(fields[idx].name)
-            << string((30 - cea_trim(fields[idx].name).length()), '.') 
-            << " " << fields[idx].value << " "
-            << ((fields[idx].touched)? "(user)" : "")
-            << endl;
-    }
-}
-
-uint32_t cea_stream::core::compute_crc32(unsigned char *data, uint32_t len) {
-    uint32_t crc;
-    crc = ~0U;
-    while (len--)
-    	crc = crc32_tab[(crc ^ *data++) & 0xFF] ^ (crc >> 8);
-    return crc ^ ~0U;
-}
-
-void cea_stream::core::prune() {
-    arrange_fields_in_sequence();
-    purge_static_fields();
-}
-
-uint32_t cea_stream::core::get_offset(cea_field_id id) {
-    uint32_t total_bits = 0;
-    for (auto i: fseq) {
-        if (fields[i].id == id)
-            break;
-        total_bits += fields[i].len;
-    }
-    return (total_bits/8);
-}
-
-uint32_t cea_stream::core::get_len(cea_field_id id) {
-    return (fields[id].len/8);
-}
-
-uint64_t cea_stream::core::get_value(cea_field_id id) {
-    return (fields[id].value);
-}
-
-void cea_stream::core::build_offsets() {
-    uint32_t cntr = 0;
-    for (auto i: fseq) {
-        if (cntr==0) {
-            fields[i].offset = 0;
-        } else {
-            auto prev_offset = fseq.begin() + (cntr-1);
-            fields[i].offset = floor((double)fields[*prev_offset].len/8) + 
-                fields[*prev_offset].offset;
-        }
-        cntr++;
-    }
-}
-
-void cea_stream::core::print_base_frame() {
-    ostringstream buf("");
-    buf.setf(ios::hex, ios::basefield);
-    buf.setf(ios_base::left);
-    buf << endl;
-    buf << cea_formatted_hdr("Base Frame");
-    
-    for (uint32_t idx=0; idx<(get_value(FRAME_Len) + get_len(MAC_Preamble)); 
-            idx++) {
-        buf << setw(2) << right << setfill('0')<< hex << 
-            (uint16_t) base_frame[idx] << " ";
-        if (idx%8==7) buf << " ";
-        if (idx%16==15) buf  << "(" << dec << (idx+1) << ")" << endl;
-    }
-    buf << endl << endl;
-
-    cealog << buf.str();
-}
-
-void cea_stream::core::purge_static_fields() {
-    for (auto i: fseq) {
-        if (fields[i].touched) {
-            cea_field_mutable f;
-            f.offset = fields[i].offset;
-            f.size = fields[i].len;
-            f.spec.type = fields[i].gen_type;
-            f.spec.value = fields[i].value;
-            f.spec.start = fields[i].start;
-            f.spec.stop = fields[i].stop;
-            f.spec.step = fields[i].step;
-            f.spec.repeat = fields[i].repeat;
-            cseq.push_back(f);
-        }
-    }
-    
-// TODO
-//    // print cseq
-//    #ifdef CEA_DEBUG
-//    if (cseq.size() != 0)
-//        cealog << endl << cea_formatted_hdr("Mutable fields");
-//    for (auto idx : cseq) {
-//        cealog << left
-//            << cea_trim(fields[idx].name)
-//            << string((30 - cea_trim(fields[idx].name).length()), '.') 
-//            << " " << hex << fields[idx].value << " "
-//            << endl;
-//    }
-//    #endif
-}
-
-uint32_t cea_stream::core::compute_udp_csum() {
-    vector<uint32_t>nseq;
-    for (auto i: htof[UDP_PHDR]) {
-        nseq.push_back(i);
-    }
-    uint32_t offset = splice_fields(nseq, scratchpad);
-
-    memcpy(scratchpad+offset, base_frame+get_offset(UDP_Src_Port), 
-        get_value(UDP_Len));
-    return (compute_ipv4_csum(scratchpad, (offset+get_value(UDP_Len))));
-}
-
-uint32_t cea_stream::core::compute_tcp_csum() {
-    vector<uint32_t>nseq;
-    for (auto i: htof[TCP_PHDR]) {
-        nseq.push_back(i);
-    }
-    uint32_t offset = splice_fields(nseq, scratchpad);
-
-    // copy tcp header and payload
-    memcpy(scratchpad+offset, base_frame+get_offset(TCP_Src_Port), 
-        get_value(TCP_Total_Len));
-    return (compute_ipv4_csum(scratchpad, (offset+get_value(TCP_Total_Len))));
-}
-
-// concatenate all fields reuired by the frame spec
-uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, 
-        unsigned char *buf) {
-    uint32_t offset = 0;
-    uint64_t merged = 0;
-    uint64_t len = 0;
-    uint64_t mlen = 0;
-
-    for (uint32_t i=0; i<seq.size(); i++) {
-        uint32_t idx = fields[seq[i]].id;
-        if (fields[idx].merge != 0) {
-            merged = fields[idx].value; // first field
-            mlen += fields[idx].len;
-            for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
-                uint32_t xidx = fields[seq[x]].id;
-                len = fields[xidx].len;
-                merged = (merged << len) | fields[xidx].value;
-                mlen += len;
-            }
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
-            offset += mlen/8;
-            i += fields[idx].merge; // skip mergable entries
-        } else {
-            uint64_t tmp = fields[idx].value;
-            uint64_t len = fields[idx].len;
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&tmp, len/8);
-            offset += len/8;
-            mlen = 0; // TODO fix this
-            merged = 0; // TODO fix this
-        }
-    }
-    return offset;
-}
-
-// algorithm to arrange the frame fields
-void cea_stream::core::arrange_fields_in_sequence() {
-    
-    // TODO
-    // To be optionally included in the full version
-    // skip in AVIP version
-    // fseq.push_back(MAC_Preamble);
-    
-    fseq.insert(fseq.end(),
-        htof[META].begin(),
-        htof[META].end());
-
-    fseq.insert(fseq.end(),
-        htof[MAC].begin(),
-        htof[MAC].end());
-
-    for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
-        if (fields[idx].added) {
-            fseq.push_back(idx);
-        }
-    }
-
-    if (fields[FRAME_Type].value == ETH_V2) {
-        fseq.push_back(MAC_Ether_Type);
-    } else {
-        fseq.push_back(MAC_Len);
-    }
-
-    if (fields[FRAME_Type].value == ETH_LLC) {
-        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
-    }
-
-    if (fields[FRAME_Type].value == ETH_SNAP) {
-        fseq.insert(fseq.end(), htof[LLC].begin(), htof[LLC].end());
-        fseq.insert(fseq.end(), htof[SNAP].begin(), htof[SNAP].end());
-    }
-
-    for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
-        if (fields[idx].added) {
-            fseq.push_back(idx);
-        }
-    }
-
-    // ARP does not contain IP or TCP/UDP headers
-    if (fields[Network_Hdr].value == ARP) {
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
-    } else {
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Network_Hdr].value].end());
-    
-        if (get_value(Transport_Hdr)==UDP)
-            set(IPv4_Protocol, 17);
-        else if (get_value(Transport_Hdr)==TCP)
-            set(IPv4_Protocol, 6);
-
-        fseq.insert(fseq.end(), 
-            htof[(cea_hdr_type)fields[Transport_Hdr].value].begin(), 
-            htof[(cea_hdr_type)fields[Transport_Hdr].value].end());
-    }
-
-    // print fseq
-    #ifdef CEA_DEBUG
-    cealog << endl << cea_formatted_hdr("Frame Properties");
-    for (auto idx : fseq) {
-        cealog << left
-            << cea_trim(fields[idx].name)
-            << string((30 - cea_trim(fields[idx].name).length()), '.') 
-            << " " << hex << fields[idx].value << " "
-            << ((fields[idx].touched)? "(user)" : "")
-            << endl;
-    }
-    #endif
-}
-
-void cea_stream::core::build_base_frame() {
-    // allocate base array
-    //      random data -> metasize + 16K + 1MB
-    //      others      -> metasize + 16K
-    
-    if (frm_payload_spec.type == Random) {
-        base_frame = new unsigned char [(CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE+CEA_RND_ARRAY_SIZE)];
-        memset(base_frame, 0, (CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE+CEA_RND_ARRAY_SIZE));
-    } else {
-        base_frame = new unsigned char [(CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE)];
-        memset(base_frame, 0, (CEA_FRM_METASIZE+CEA_MAX_FRAME_SIZE));
-    }
-
-    // copy header from fseq
-    base_hdr = new unsigned char[hdr_size];
-    splice_fields(fseq, base_hdr);
-    memcpy(base_frame, base_hdr, hdr_size);
-    
-    // RESUME
-    // TODO copy payload based on payload type
-    memcpy(base_frame+hdr_size, array_of_payload_pattern, array_of_frame_sizes[0]);
-
-    // calculate checksums (IP/TCP/UDP) and overlay
-    // calculate fcs and copy
-    
-    #ifdef CEA_DEBUG
-    print_cdata(base_frame, array_of_computed_frame_sizes[0]);
-    #endif
-}
-
-// constructor
 cea_stream::core::core(string name) {
-    stream_id = cea::stream_id;
-    cea::stream_id++;
-    stream_name = name + ":" + to_string(stream_id);
-    reset();
 }
 
 cea_stream::cea_stream(string name) : impl (new core(name)) {
 }
 
-// copy constructor
-cea_stream::cea_stream(const cea_stream &rhs) {
-    // impl->do_copy(&rhs); // TODO
-}
-
-// assign operator overload
-cea_stream& cea_stream::operator = (cea_stream &rhs) {
-   if (this != &rhs) {
-      impl->do_copy(&rhs);
-   }
-   return *this;
-}
-
-// print operator overload
-ostream& operator << (ostream &os, const cea_stream &f) {
-    os << f.impl->describe();
-    return os;
-}
-
-// utility
-bool in_range(uint32_t low, uint32_t high, uint32_t x) {        
-    return (low <= x && x <= high);         
-}
-
-void cea_stream::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-// user api to set fields of the stream
-void cea_stream::core::set(cea_field_id id, uint64_t value) {
-    // process if mpls
-    bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
-    if (mpls) {
-        fields[Num_MPLS_Hdrs].value += 1;
-        uint32_t stack = fields[id].stack;
-        // mark all fields of this stack
-        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
-            if (fields[idx].stack == stack) {
-                fields[idx].added = true;
-            }
-        }
-    }
-    // process if vlan
-    bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
-    if (vlan) {
-        fields[Num_VLAN_Tags].value += 1;
-        uint32_t stack = fields[id].stack;
-        // touch all fields of this stack
-        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
-            if (fields[idx].stack == stack)
-                fields[idx].added = true;
-        }
-    }
-    fields[id].value = value;
-}
-
-void cea_stream::set(cea_field_id id, cea_field_generation_spec spec) {
-    impl->set(id, spec);
-}
-
-void cea_stream::core::set(cea_field_id id, cea_field_generation_spec spec) {
-    // process if mpls
-    bool mpls = in_range(MPLS_01_Label, MPLS_08_Ttl, id);
-    if (mpls) {
-        fields[Num_MPLS_Hdrs].value += 1;
-        uint32_t stack = fields[id].stack;
-        // touch all fields of this stack
-        for (uint32_t idx=MPLS_01_Label; idx<=MPLS_08_Ttl; idx++) {
-            if (fields[idx].stack == stack)
-                fields[idx].added = true;
-        }
-    }
-    // process if vlan
-    bool vlan = in_range(VLAN_01_Tpi, VLAN_08_Vid, id);
-    if (vlan) {
-        fields[Num_VLAN_Tags].value += 1;
-        uint32_t stack = fields[id].stack;
-        // touch all fields of this stack
-        for (uint32_t idx=VLAN_01_Tpi; idx<=VLAN_08_Vid; idx++) {
-            if (fields[idx].stack == stack)
-                fields[idx].added = true;
-        }
-    }
-
-    if (spec.type == Fixed || spec.type == Fixed_Pattern)
-        fields[id].touched = false;
-    else
-        fields[id].touched = true;
-
-    fields[id].gen_type = spec.type;
-    fields[id].value = spec.value;
-    fields[id].start = spec.start;
-    fields[id].stop = spec.stop;
-    fields[id].step = spec.step;
-    fields[id].repeat = spec.repeat;
-
-    if (id == FRAME_Len) {
-        frm_len_spec = spec;
-    } else if (id == PAYLOAD_Type) {
-        frm_payload_spec = spec;
-    }
-
-    string pattern_to_string = spec.pattern;
-    stringstream token_stream(pattern_to_string);
-
-    // tokenize
-    while(getline(token_stream, token, ' ')) {
-        tokens_of_payload_pattern.push_back(token);
-    }
-
-    payload_pattern_size = tokens_of_payload_pattern.size();
-    payload_pattern = new unsigned char [payload_pattern_size];
-
-    for(uint32_t i=0; i<tokens_of_payload_pattern.size(); i++) {
-        string s = tokens_of_payload_pattern[i];
-        uint32_t val = stoi(s, nullptr, 16);
-        memcpy(payload_pattern+i, (char*)&val, 1);
-    }
-}
-
-void cea_stream::core::do_copy(const cea_stream *rhs) {
-}
-
-void cea_stream::core::reset() {
-    if (!base_frame) {
-        CEA_DBG("INFO: base_frame is not null, delete existing buffer");
-        delete(base_frame);
-    }
-    base_frame = new unsigned char[CEA_MAX_FRAME_SIZE];
-    memset(base_frame, 0, CEA_MAX_FRAME_SIZE);
-
-    if (!scratchpad) {
-        CEA_DBG("INFO: scratchpad is not null, delete existing buffer");
-        delete(scratchpad);
-    }
-    scratchpad = new unsigned char[CEA_SCRATCHPAD_SIZE];
-    memset(scratchpad, 0, CEA_SCRATCHPAD_SIZE);
-
-    base_frame_len = 0;
-    crc_len = 4;
-    fields = flds;
-    msg_prefix = '(' + stream_name + ") ";
-    meta_size = 64;
-    hdr_size = 0;
-    nof_sizes = 0;
-    payload_pattern_size = 0;
-}
-
-#define CEA_FLDWIDTH 8
-string cea_stream::core::describe() const {
-    ostringstream buf("");
-    buf.setf(ios::hex, ios::basefield);
-    buf.setf(ios_base::left);
-    buf << cea_formatted_hdr("Stream Definition");
-
-    buf << setw(CEA_FLDWIDTH)   << "Touch" 
-        << setw(CEA_FLDWIDTH)   << "Merge"  
-        << setw(CEA_FLDWIDTH)   << "Mask "  
-        << setw(CEA_FLDWIDTH)   << "Id   "  
-        << setw(CEA_FLDWIDTH)   << "Len  "  
-        << setw(CEA_FLDWIDTH)   << "Offset"  
-        << setw(CEA_FLDWIDTH+2)   << "Modifier" 
-        << setw(CEA_FLDWIDTH+10) << "Value"  
-        << setw(CEA_FLDWIDTH)   << "Start"  
-        << setw(CEA_FLDWIDTH)   << "Stop "  
-        << setw(CEA_FLDWIDTH)   << "Step "  
-        << setw(CEA_FLDWIDTH)   << "Repeat"
-        << "Name" << endl;
-
-    for (uint32_t id = 0; id <cea::Network_Hdr; id++) {
-        buf << setw(CEA_FLDWIDTH) << fields[id].touched 
-            << setw(CEA_FLDWIDTH) << fields[id].merge    
-            << setw(CEA_FLDWIDTH) << fields[id].added
-            << setw(CEA_FLDWIDTH) << fields[id].id       
-            << setw(CEA_FLDWIDTH) << fields[id].len      
-            << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+10) << to_str((cea_frame_type) fields[id].value)
-            << setw(CEA_FLDWIDTH) << fields[id].start    
-            << setw(CEA_FLDWIDTH) << fields[id].stop     
-            << setw(CEA_FLDWIDTH) << fields[id].step     
-            << setw(CEA_FLDWIDTH) << fields[id].repeat
-            << fields[id].name;
-            buf << endl;
-    }
-    for (uint32_t id = cea::Network_Hdr; id <cea::VLAN_Tag; id++) {
-        buf << setw(CEA_FLDWIDTH) << fields[id].touched 
-            << setw(CEA_FLDWIDTH) << fields[id].merge    
-            << setw(CEA_FLDWIDTH) << fields[id].added
-            << setw(CEA_FLDWIDTH) << fields[id].id       
-            << setw(CEA_FLDWIDTH) << fields[id].len      
-            << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+10) << to_str((cea_hdr_type) fields[id].value)
-            << setw(CEA_FLDWIDTH) << fields[id].start    
-            << setw(CEA_FLDWIDTH) << fields[id].stop     
-            << setw(CEA_FLDWIDTH) << fields[id].step     
-            << setw(CEA_FLDWIDTH) << fields[id].repeat
-            << fields[id].name;
-            buf << endl;
-    }
-    for (uint32_t id = VLAN_Tag; id<cea::Num_Fields; id++) {
-        buf << setw(CEA_FLDWIDTH) << fields[id].touched 
-            << setw(CEA_FLDWIDTH) << fields[id].merge    
-            << setw(CEA_FLDWIDTH) << fields[id].added     
-            << setw(CEA_FLDWIDTH) << fields[id].id       
-            << setw(CEA_FLDWIDTH) << fields[id].len      
-            << setw(CEA_FLDWIDTH) << fields[id].offset    
-            << setw(CEA_FLDWIDTH+2) << fields[id].gen_type 
-            << setw(CEA_FLDWIDTH+10) << fields[id].value    
-            << setw(CEA_FLDWIDTH) << fields[id].start    
-            << setw(CEA_FLDWIDTH) << fields[id].stop     
-            << setw(CEA_FLDWIDTH) << fields[id].step     
-            << setw(CEA_FLDWIDTH) << fields[id].repeat
-            << fields[id].name;
-            buf << endl;
-    }
-    return buf.str();
-}
+cea_stream::~cea_stream() = default;
 
 //------------------------------------------------------------------------------
 // Proxy Implementation
@@ -1728,52 +637,7 @@ string cea_stream::core::describe() const {
 
 class cea_proxy::core {
 public:
-    // set when the proxy object is created
-    string proxy_name;
-
     core(string name);
-
-    // add stream to proxy queue
-    void add_stream(cea_stream *stm);
-
-    // add a command (in the form of cea_stream) to proxy queue
-    void add_cmd(cea_stream *stm);
-
-    // execute a command immediately does not add to proxy queue
-    void exec_cmd(cea_stream *stm);
-
-    void start();
-
-    // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
-    uint32_t proxy_id;
-
-    // user's test streams will be pushed into this queue (container1)
-    vector<cea_stream*> stmq;
-
-    // handle to the stream being processed
-    cea_stream *cur_stm;
-
-    // main thread
-    thread worker_tid;
-    void worker();
-    void start_worker();
-    void join_threads();
-
-    // worker modules
-    void read_next_stream_from_stmq();
-    void extract_traffic_parameters();
-    void begin_mutation();
-
-    // buffer to store the generated frames
-    void *fbuf;
-    void create_frame_buffer();
-    void release_frame_buffer();
-
-    void reset();
-    string msg_prefix;
-
-    cea_timer timer;
 };
 
 cea_proxy::~cea_proxy() = default;
@@ -1781,104 +645,7 @@ cea_proxy::~cea_proxy() = default;
 cea_proxy::cea_proxy(string name) : impl(new core(name)){
 }
 
-void cea_proxy::add_stream(cea_stream *stm) {
-    impl->stmq.push_back(stm);
-}
-
-void cea_proxy::add_cmd(cea_stream *stm) {
-    impl->stmq.push_back(stm);
-}
-
-void cea_proxy::exec_cmd(cea_stream *stm) {
-    impl->exec_cmd(stm);
-}
-
-// constructor
 cea_proxy::core::core(string name) {
-    proxy_id = cea::proxy_id;
-    cea::proxy_id++;
-    proxy_name = name + ":" + to_string(proxy_id);
-    reset();
-    CEA_MSG("Proxy created with name=" << name << " and id=" << proxy_id);
-}
-
-void cea_proxy::core::add_stream(cea_stream *stm) {
-    stmq.push_back(stm);
-}
-
-void cea_proxy::core::add_cmd(cea_stream *stm) {
-    stmq.push_back(stm);
-}
-
-void cea_proxy::core::exec_cmd(cea_stream *stm) {
-}
-
-void cea_proxy::core::reset() {
-    msg_prefix = '(' + proxy_name + ") ";
-}
-
-void cea_proxy::start() {
-    impl->start();
-}
-
-// start stream processing and generate frames
-void cea_proxy::core::start() {
-    start_worker();
-    join_threads();
-}
-
-void cea_proxy::core::join_threads() {
-    worker_tid.join();
-}
-
-void cea_proxy::core::start_worker() {
-    worker_tid = thread(&cea_proxy::core::worker, this);
-    char name[16];
-    sprintf(name, "worker_%d", proxy_id);
-    pthread_setname_np(worker_tid.native_handle(), name);
-}
-
-void cea_proxy::core::worker() {
-    read_next_stream_from_stmq();
-    extract_traffic_parameters();
-    cur_stm->impl->prune();
-    cur_stm->impl->compute_gen_attributes();
-    cur_stm->impl->make_arrays();
-    cur_stm->impl->build_base_frame();
-    begin_mutation();
-}
-
-void cea_proxy::core::read_next_stream_from_stmq() {
-    cur_stm = stmq[0];
-}
-
-void cea_proxy::core::extract_traffic_parameters() {
-}
-
-void cea_proxy::core::begin_mutation() {
-    // handle dynamic metadata
-    // store current metadata to a prev_metadata struct
-    // if prev.len != cur.len OR prev.ipg != cur.ipg
-    //      then add metadata to the frame
-}
-
-void cea_proxy::core::create_frame_buffer() {
-    fbuf = mmap(ADDR, LENGTH, PROTECTION, FLAGS, -1, 0);
-    if (fbuf == MAP_FAILED) {
-        CEA_MSG("***ERROR: Memory map failed");
-        exit(0);
-    } else {
-        CEA_DBG("Hugepage created successfully");
-    }
-}
-
-void cea_proxy::core::release_frame_buffer() {
-    if (munmap(fbuf, LENGTH)) {
-        CEA_MSG("***ERROR: Memory unmap failed");
-        exit(1);
-    } else {
-        CEA_DBG("Hugepage released successfully");
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -1904,59 +671,6 @@ cea_manager::cea_manager() : impl (new core) {
 }
 
 cea_manager::core::core() {
-}
-
-void cea_manager::add_proxy(cea_proxy *pxy) {
-    impl->add_proxy(pxy);
-}
-
-void cea_manager::add_proxy(cea_proxy *pxy, uint32_t cnt) {
-    impl->add_proxy(pxy, cnt);
-}
-
-void cea_manager::add_stream(cea_stream *stm, cea_proxy *pxy) {
-    impl->add_stream(stm, pxy);
-}
-
-void cea_manager::add_cmd(cea_stream *stm, cea_proxy *pxy) {
-    impl->add_cmd(stm, pxy);
-}
-
-void cea_manager::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
-    impl->exec_cmd(stm, pxy);
-}
-
-void cea_manager::core::add_proxy(cea_proxy *pxy) {
-    proxies.push_back(pxy);
-}
-
-void cea_manager::core::add_proxy(cea_proxy *pxy, uint32_t cnt) {
-    CEA_DBG(cnt << " Proxies added");
-    for (uint32_t idx=0; idx<cnt; idx++)
-        proxies.push_back(&pxy[idx]);
-}
-
-void cea_manager::core::add_stream(cea_stream *stm, cea_proxy *pxy) {
-    if (pxy != NULL) {
-        vector<cea_proxy*>::iterator it;
-        for (it = proxies.begin(); it != proxies.end(); it++) {
-            if ((*it)->impl->proxy_id == pxy->impl->proxy_id) {
-                uint32_t idx = distance(proxies.begin(), it);
-                proxies[idx]->add_stream(stm);
-            }
-        }
-    } else {
-        for (uint32_t idx=0; idx<proxies.size(); idx++) {
-            proxies[idx]->add_stream(stm);
-        }
-    }
-}
-
-void cea_manager::core::add_cmd(cea_stream *stm, cea_proxy *pxy) {
-    add_stream(stm, pxy);
-}
-
-void cea_manager::core::exec_cmd(cea_stream *stm, cea_proxy *pxy) {
 }
 
 } // namespace
