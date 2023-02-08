@@ -250,7 +250,6 @@ class cea_proxy {
 public:
     cea_proxy(string name=string("pxy"));
     ~cea_proxy();
-
 private:
     class core;
     unique_ptr<core> impl;
@@ -264,11 +263,23 @@ class cea_stream {
 public:    
     cea_stream(string name=string("stm"));
     ~cea_stream();
-
 private:
     class core;
     unique_ptr<core> impl;
     friend class cea_proxy;
+};
+
+//------------------------------------------------------------------------------
+// Header Class
+//------------------------------------------------------------------------------
+class cea_header {
+public:
+    cea_header(cea_hdr_type hdr);
+    ~cea_header() = default;
+private:
+    class core;
+    unique_ptr<core> impl;
+    // friend class cea_stream;
 };
 
 } // namespace 
