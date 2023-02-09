@@ -20,7 +20,7 @@ outbuf ob;
 //     cealog << "Frame recevied: " << frm_count << endl;
 ostream cealog(&ob);
 
-enum cea_hdr_type {
+enum cea_header_type {
     MAC,
     LLC,
     SNAP,
@@ -181,27 +181,6 @@ enum cea_gen_type {
 };
 
 struct cea_gen_spec {
-    uint64_t value;
-    string pattern;
-    vector<uint64_t> value_list;
-    vector<string> pattern_list;
-    uint32_t step;
-    uint32_t min;
-    uint32_t max;
-    uint32_t count;
-    uint32_t repeat;
-    uint32_t mask;
-    uint32_t seed;
-    uint32_t start;
-    bool make_error;
-};
-
-struct cea_field {
-    bool touched;
-    uint32_t merge;
-    uint32_t id;
-    uint32_t len;
-    uint32_t offset;
     cea_gen_type gen_type;
     uint64_t value;
     string pattern;
@@ -213,19 +192,29 @@ struct cea_field {
     uint32_t mask;
     uint32_t seed;
     uint32_t start;
+    bool make_error;
+    vector<uint64_t> value_list;
+    vector<string> pattern_list;
+};
+
+struct cea_field {
+    bool is_mutable;
+    uint32_t merge;
+    uint32_t id;
+    uint32_t len;
+    uint32_t offset;
     bool proto_list_specified;
     bool auto_field;
-    bool make_error;
     string name;
     cea_field_type type;
-    vector<uint64_t> value_list;
-    vector<string> string_list;
+    cea_gen_spec spec;
 };
 
 // forward declaration
 class cea_stream;
 class cea_proxy;
 class cea_manager;
+class cea_header;
 
 //------------------------------------------------------------------------------
 // Manager
@@ -248,7 +237,7 @@ private:
 //------------------------------------------------------------------------------
 class cea_proxy {
 public:
-    cea_proxy(string name=string("pxy"));
+    cea_proxy(string name = "pxy");
     ~cea_proxy();
 private:
     class core;
@@ -261,8 +250,12 @@ private:
 //------------------------------------------------------------------------------
 class cea_stream {
 public:    
-    cea_stream(string name=string("stm"));
+    cea_stream(string name = "stm");
     ~cea_stream();
+    void set(cea_field_id id, uint64_t value);
+    void set(cea_field_id id, cea_gen_spec spec);
+    cea_header *create_header(cea_header_type type);
+    void add_header(cea_header *hdr);
 private:
     class core;
     unique_ptr<core> impl;
@@ -274,12 +267,14 @@ private:
 //------------------------------------------------------------------------------
 class cea_header {
 public:
-    cea_header(cea_hdr_type hdr);
+    cea_header(cea_header_type hdr);
     ~cea_header() = default;
+    void set(cea_field_id id, uint64_t value);
+    void set(cea_field_id id, cea_gen_spec spec);
 private:
     class core;
     unique_ptr<core> impl;
-    // friend class cea_stream;
+    friend class cea_stream;
 };
 
 } // namespace 
