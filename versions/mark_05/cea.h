@@ -199,6 +199,7 @@ struct cea_gen_spec {
 };
 
 struct cea_field {
+    cea_header_type hdr_type;
     bool is_mutable;
     uint32_t merge;
     cea_field_id id;

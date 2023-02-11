@@ -100,112 +100,127 @@ const uint32_t crc32_tab[] = {
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-map<cea_field_id, cea_field> fdb = {
-{ MAC_Preamble          , {MAC,   false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Dest_Addr         , {MAC,   false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Src_Addr          , {MAC,   false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Len               , {MAC,   false, 0, MAC_Len               , 16 , 0, 0, 0, "MAC_Len               ", Integer, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Ether_Type        , {MAC,   false, 0, MAC_Ether_Type        , 16 , 0, 0, 0, "MAC_Ether_Type        ", Integer, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Fcs               , {MAC,   false, 0, MAC_Fcs               , 32 , 0, 0, 0, "MAC_Fcs               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ LLC_Dsap              , {LLC,   false, 0, LLC_Dsap              , 8  , 0, 0, 0, "LLC_Dsap              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ LLC_Ssap              , {LLC,   false, 0, LLC_Ssap              , 8  , 0, 0, 0, "LLC_Ssap              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ LLC_Control           , {LLC,   false, 0, LLC_Control           , 8  , 0, 0, 0, "LLC_Control           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ SNAP_Oui              , {SNAP,  false, 0, SNAP_Oui              , 24 , 0, 0, 0, "SNAP_Oui              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ SNAP_Pid              , {SNAP,  false, 0, SNAP_Pid              , 16 , 0, 0, 0, "SNAP_Pid              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Version          , {IPv4,  false, 1, IPv4_Version          , 4  , 0, 0, 0, "IPv4_Version          ", Integer, { Fixed_Value  , 4                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_IHL              , {IPv4,  false, 1, IPv4_IHL              , 4  , 0, 0, 0, "IPv4_IHL              ", Integer, { Fixed_Value  , 5                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Tos              , {IPv4,  false, 0, IPv4_Tos              , 8  , 0, 0, 0, "IPv4_Tos              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Total_Len        , {IPv4,  false, 0, IPv4_Total_Len        , 16 , 0, 0, 0, "IPv4_Total_Len        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Id               , {IPv4,  false, 0, IPv4_Id               , 16 , 0, 0, 0, "IPv4_Id               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Flags            , {IPv4,  false, 1, IPv4_Flags            , 3  , 0, 0, 0, "IPv4_Flags            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Frag_Offset      , {IPv4,  false, 1, IPv4_Frag_Offset      , 13 , 0, 0, 0, "IPv4_Frag_Offset      ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_TTL              , {IPv4,  false, 0, IPv4_TTL              , 8  , 0, 0, 0, "IPv4_TTL              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Protocol         , {IPv4,  false, 0, IPv4_Protocol         , 8  , 0, 0, 0, "IPv4_Protocol         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Hdr_Csum         , {IPv4,  false, 0, IPv4_Hdr_Csum         , 16 , 0, 0, 0, "IPv4_Hdr_Csum         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Src_Addr         , {IPv4,  false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Dest_Addr        , {IPv4,  false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Opts             , {IPv4,  false, 0, IPv4_Opts             , 0  , 0, 0, 0, "IPv4_Opts             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv4_Pad              , {IPv4,  false, 0, IPv4_Pad              , 0  , 0, 0, 0, "IPv4_Pad              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Version          , {IPv6,  false, 2, IPv6_Version          , 4  , 0, 0, 0, "IPv6_Version          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Traffic_Class    , {IPv6,  false, 1, IPv6_Traffic_Class    , 8  , 0, 0, 0, "IPv6_Traffic_Class    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Flow_Label       , {IPv6,  false, 1, IPv6_Flow_Label       , 20 , 0, 0, 0, "IPv6_Flow_Label       ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Payload_Len      , {IPv6,  false, 0, IPv6_Payload_Len      , 16 , 0, 0, 0, "IPv6_Payload_Len      ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Next_Hdr         , {IPv6,  false, 0, IPv6_Next_Hdr         , 8  , 0, 0, 0, "IPv6_Next_Hdr         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Hop_Limit        , {IPv6,  false, 0, IPv6_Hop_Limit        , 8  , 0, 0, 0, "IPv6_Hop_Limit        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Src_Addr         , {IPv6,  false, 0, IPv6_Src_Addr         , 128, 0, 0, 0, "IPv6_Src_Addr         ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ IPv6_Dest_Addr        , {IPv6,  false, 0, IPv6_Dest_Addr        , 128, 0, 0, 0, "IPv6_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Src_Port          , {TCP,   false, 0, TCP_Src_Port          , 16 , 0, 0, 0, "TCP_Src_Port          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Dest_Port         , {TCP,   false, 0, TCP_Dest_Port         , 16 , 0, 0, 0, "TCP_Dest_Port         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Seq_Num           , {TCP,   false, 0, TCP_Seq_Num           , 32 , 0, 0, 0, "TCP_Seq_Num           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Ack_Num           , {TCP,   false, 0, TCP_Ack_Num           , 32 , 0, 0, 0, "TCP_Ack_Num           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Data_Offset       , {TCP,   false, 7, TCP_Data_Offset       , 4  , 0, 0, 0, "TCP_Data_Offset       ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Reserved          , {TCP,   false, 1, TCP_Reserved          , 6  , 0, 0, 0, "TCP_Reserved          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Urg               , {TCP,   false, 1, TCP_Urg               , 1  , 0, 0, 0, "TCP_Urg               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Ack               , {TCP,   false, 1, TCP_Ack               , 1  , 0, 0, 0, "TCP_Ack               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Psh               , {TCP,   false, 1, TCP_Psh               , 1  , 0, 0, 0, "TCP_Psh               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Rst               , {TCP,   false, 1, TCP_Rst               , 1  , 0, 0, 0, "TCP_Rst               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Syn               , {TCP,   false, 1, TCP_Syn               , 1  , 0, 0, 0, "TCP_Syn               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Fin               , {TCP,   false, 1, TCP_Fin               , 1  , 0, 0, 0, "TCP_Fin               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Window            , {TCP,   false, 0, TCP_Window            , 16 , 0, 0, 0, "TCP_Window            ", Integer, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Csum              , {TCP,   false, 0, TCP_Csum              , 16 , 0, 0, 0, "TCP_Csum              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Urg_Ptr           , {TCP,   false, 0, TCP_Urg_Ptr           , 16 , 0, 0, 0, "TCP_Urg_Ptr           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Opts              , {TCP,   false, 0, TCP_Opts              , 0  , 0, 0, 0, "TCP_Opts              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Pad               , {TCP,   false, 0, TCP_Pad               , 0  , 0, 0, 0, "TCP_Pad               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ UDP_Src_Port          , {UDP,   false, 0, UDP_Src_Port          , 16 , 0, 0, 0, "UDP_Src_Port          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ UDP_Dest_Port         , {UDP,   false, 0, UDP_Dest_Port         , 16 , 0, 0, 0, "UDP_Dest_Port         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ UDP_Len               , {UDP,   false, 0, UDP_Len               , 16 , 0, 0, 0, "UDP_Len               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ UDP_Csum              , {UDP,   false, 0, UDP_Csum              , 16 , 0, 0, 0, "UDP_Csum              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Hw_Type           , {ARP,   false, 0, ARP_Hw_Type           , 16 , 0, 0, 0, "ARP_Hw_Type           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Proto_Type        , {ARP,   false, 0, ARP_Proto_Type        , 16 , 0, 0, 0, "ARP_Proto_Type        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Hw_Len            , {ARP,   false, 0, ARP_Hw_Len            , 8  , 0, 0, 0, "ARP_Hw_Len            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Proto_Len         , {ARP,   false, 0, ARP_Proto_Len         , 8  , 0, 0, 0, "ARP_Proto_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Opcode            , {ARP,   false, 0, ARP_Opcode            , 16 , 0, 0, 0, "ARP_Opcode            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Sender_Hw_Addr    , {ARP,   false, 0, ARP_Sender_Hw_Addr    , 48 , 0, 0, 0, "ARP_Sender_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Sender_Proto_addr , {ARP,   false, 0, ARP_Sender_Proto_addr , 32 , 0, 0, 0, "ARP_Sender_Proto_addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Target_Hw_Addr    , {ARP,   false, 0, ARP_Target_Hw_Addr    , 48 , 0, 0, 0, "ARP_Target_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ ARP_Target_Proto_Addr , {ARP,   false, 0, ARP_Target_Proto_Addr , 32 , 0, 0, 0, "ARP_Target_Proto_Addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MPLS_Label            , {MPLS,  false, 2, MPLS_Label            , 20 , 0, 0, 0, "MPLS_Label            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MPLS_Exp              , {MPLS,  false, 1, MPLS_Exp              , 3  , 0, 0, 0, "MPLS_Exp              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MPLS_Stack            , {MPLS,  false, 1, MPLS_Stack            , 1  , 0, 0, 0, "MPLS_Stack            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MPLS_Ttl              , {MPLS,  false, 0, MPLS_Ttl              , 8  , 0, 0, 0, "MPLS_Ttl              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ VLAN_Tpi              , {VLAN,  false, 0, VLAN_Tpi              , 16 , 0, 0, 0, "VLAN_Tpi              ", Integer, { Fixed_Value  , 0x8100           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ VLAN_Tci_Pcp          , {VLAN,  false, 2, VLAN_Tci_Pcp          , 3  , 0, 0, 0, "VLAN_Tci_Pcp          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ VLAN_Tci_Cfi          , {VLAN,  false, 1, VLAN_Tci_Cfi          , 1  , 0, 0, 0, "VLAN_Tci_Cfi          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ VLAN_Vid              , {VLAN,  false, 1, VLAN_Vid              , 12 , 0, 0, 0, "VLAN_Vid              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Control           , {MAC,   false, 0, MAC_Control           , 16 , 0, 0, 0, "MAC_Control           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ MAC_Control_Opcode    , {MAC,   false, 0, MAC_Control_Opcode    , 16 , 0, 0, 0, "MAC_Control_Opcode    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta          , {PAUSE, false, 0, Pause_Quanta          , 16 , 0, 0, 0, "Pause_Quanta          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Priority_En_Vector    , {PFC,   false, 0, Priority_En_Vector    , 16 , 0, 0, 0, "Priority_En_Vector    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_0        , {PFC,   false, 0, Pause_Quanta_0        , 16 , 0, 0, 0, "Pause_Quanta_0        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_1        , {PFC,   false, 0, Pause_Quanta_1        , 16 , 0, 0, 0, "Pause_Quanta_1        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_2        , {PFC,   false, 0, Pause_Quanta_2        , 16 , 0, 0, 0, "Pause_Quanta_2        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_3        , {PFC,   false, 0, Pause_Quanta_3        , 16 , 0, 0, 0, "Pause_Quanta_3        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_4        , {PFC,   false, 0, Pause_Quanta_4        , 16 , 0, 0, 0, "Pause_Quanta_4        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_5        , {PFC,   false, 0, Pause_Quanta_5        , 16 , 0, 0, 0, "Pause_Quanta_5        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_6        , {PFC,   false, 0, Pause_Quanta_6        , 16 , 0, 0, 0, "Pause_Quanta_6        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Pause_Quanta_7        , {PFC,   false, 0, Pause_Quanta_7        , 16 , 0, 0, 0, "Pause_Quanta_7        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ FRAME_Len             , {INTL,  false, 0, FRAME_Len             , 32 , 0, 0, 0, "FRAME_Len             ", Integer, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ PAYLOAD_Pattern       , {INTL,  false, 0, PAYLOAD_Pattern       , 0  , 0, 0, 0, "PAYLOAD_Pattern       ", Integer, { Fixed_Value  , 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Traffic_Type   , {INTL,  false, 0, STREAM_Traffic_Type   , 32 , 0, 0, 0, "STREAM_Traffic_Type   ", Integer, { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Traffic_Control, {INTL,  false, 0, STREAM_Traffic_Control, 32 , 0, 0, 0, "STREAM_Traffic_Control", Integer, { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Ipg            , {INTL,  false, 0, STREAM_Ipg            , 32 , 0, 0, 0, "STREAM_Ipg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Isg            , {INTL,  false, 0, STREAM_Isg            , 32 , 0, 0, 0, "STREAM_Ifg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Ibg            , {INTL,  false, 0, STREAM_Ibg            , 32 , 0, 0, 0, "STREAM_Ibg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Bandwidth      , {INTL,  false, 0, STREAM_Bandwidth      , 32 , 0, 0, 0, "STREAM_Bandwidth      ", Integer, { Fixed_Value  , 100              , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ STREAM_Start_Delay    , {INTL,  false, 0, STREAM_Start_Delay    , 32 , 0, 0, 0, "STREAM_Start_Delay    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ UDF                   , {INTL,  false, 0, UDF                   , 0  , 0, 0, 0, "UDF                   ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Len              , {INTL,  false, 0, META_Len              , 32 , 0, 0, 0, "META_Len              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Ipg              , {INTL,  false, 0, META_Ipg              , 32 , 0, 0, 0, "META_Ipg              ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Preamble         , {INTL,  false, 0, META_Preamble         , 64 , 0, 0, 0, "META_Preamble         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad1             , {INTL,  false, 0, META_Pad1             , 64 , 0, 0, 0, "META_Pad1             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad2             , {INTL,  false, 0, META_Pad2             , 64 , 0, 0, 0, "META_Pad2             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad3             , {INTL,  false, 0, META_Pad3             , 64 , 0, 0, 0, "META_Pad3             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad4             , {INTL,  false, 0, META_Pad4             , 64 , 0, 0, 0, "META_Pad4             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad5             , {INTL,  false, 0, META_Pad5             , 64 , 0, 0, 0, "META_Pad5             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ META_Pad6             , {INTL,  false, 0, META_Pad6             , 64 , 0, 0, 0, "META_Pad6             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ Zeros_8Bit            , {INTL,  false, 0, Zeros_8Bit            , 8  , 0, 0, 0, "Zeros_8Bit            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
-{ TCP_Total_Len         , {INTL,  false, 0, TCP_Total_Len         , 16 , 0, 0, 0, "TCP_Total_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }}},
+vector<cea_field> fdb = {
+{false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Len               , 16 , 0, 0, 0, "MAC_Len               ", Integer, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Ether_Type        , 16 , 0, 0, 0, "MAC_Ether_Type        ", Integer, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Fcs               , 32 , 0, 0, 0, "MAC_Fcs               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, LLC_Dsap              , 8  , 0, 0, 0, "LLC_Dsap              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, LLC_Ssap              , 8  , 0, 0, 0, "LLC_Ssap              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, LLC_Control           , 8  , 0, 0, 0, "LLC_Control           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, SNAP_Oui              , 24 , 0, 0, 0, "SNAP_Oui              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, SNAP_Pid              , 16 , 0, 0, 0, "SNAP_Pid              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv4_Version          , 4  , 0, 0, 0, "IPv4_Version          ", Integer, { Fixed_Value  , 4                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv4_IHL              , 4  , 0, 0, 0, "IPv4_IHL              ", Integer, { Fixed_Value  , 5                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Tos              , 8  , 0, 0, 0, "IPv4_Tos              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Total_Len        , 16 , 0, 0, 0, "IPv4_Total_Len        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Id               , 16 , 0, 0, 0, "IPv4_Id               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv4_Flags            , 3  , 0, 0, 0, "IPv4_Flags            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv4_Frag_Offset      , 13 , 0, 0, 0, "IPv4_Frag_Offset      ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_TTL              , 8  , 0, 0, 0, "IPv4_TTL              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Protocol         , 8  , 0, 0, 0, "IPv4_Protocol         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Hdr_Csum         , 16 , 0, 0, 0, "IPv4_Hdr_Csum         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Opts             , 0  , 0, 0, 0, "IPv4_Opts             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv4_Pad              , 0  , 0, 0, 0, "IPv4_Pad              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 2, IPv6_Version          , 4  , 0, 0, 0, "IPv6_Version          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv6_Traffic_Class    , 8  , 0, 0, 0, "IPv6_Traffic_Class    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, IPv6_Flow_Label       , 20 , 0, 0, 0, "IPv6_Flow_Label       ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv6_Payload_Len      , 16 , 0, 0, 0, "IPv6_Payload_Len      ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv6_Next_Hdr         , 8  , 0, 0, 0, "IPv6_Next_Hdr         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv6_Hop_Limit        , 8  , 0, 0, 0, "IPv6_Hop_Limit        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv6_Src_Addr         , 128, 0, 0, 0, "IPv6_Src_Addr         ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, IPv6_Dest_Addr        , 128, 0, 0, 0, "IPv6_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Src_Port          , 16 , 0, 0, 0, "TCP_Src_Port          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Dest_Port         , 16 , 0, 0, 0, "TCP_Dest_Port         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Seq_Num           , 32 , 0, 0, 0, "TCP_Seq_Num           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Ack_Num           , 32 , 0, 0, 0, "TCP_Ack_Num           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 7, TCP_Data_Offset       , 4  , 0, 0, 0, "TCP_Data_Offset       ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Reserved          , 6  , 0, 0, 0, "TCP_Reserved          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Urg               , 1  , 0, 0, 0, "TCP_Urg               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Ack               , 1  , 0, 0, 0, "TCP_Ack               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Psh               , 1  , 0, 0, 0, "TCP_Psh               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Rst               , 1  , 0, 0, 0, "TCP_Rst               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Syn               , 1  , 0, 0, 0, "TCP_Syn               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, TCP_Fin               , 1  , 0, 0, 0, "TCP_Fin               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Window            , 16 , 0, 0, 0, "TCP_Window            ", Integer, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Csum              , 16 , 0, 0, 0, "TCP_Csum              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Urg_Ptr           , 16 , 0, 0, 0, "TCP_Urg_Ptr           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Opts              , 0  , 0, 0, 0, "TCP_Opts              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Pad               , 0  , 0, 0, 0, "TCP_Pad               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, UDP_Src_Port          , 16 , 0, 0, 0, "UDP_Src_Port          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, UDP_Dest_Port         , 16 , 0, 0, 0, "UDP_Dest_Port         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, UDP_Len               , 16 , 0, 0, 0, "UDP_Len               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, UDP_Csum              , 16 , 0, 0, 0, "UDP_Csum              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Hw_Type           , 16 , 0, 0, 0, "ARP_Hw_Type           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Proto_Type        , 16 , 0, 0, 0, "ARP_Proto_Type        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Hw_Len            , 8  , 0, 0, 0, "ARP_Hw_Len            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Proto_Len         , 8  , 0, 0, 0, "ARP_Proto_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Opcode            , 16 , 0, 0, 0, "ARP_Opcode            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Sender_Hw_Addr    , 48 , 0, 0, 0, "ARP_Sender_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Sender_Proto_addr , 32 , 0, 0, 0, "ARP_Sender_Proto_addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Target_Hw_Addr    , 48 , 0, 0, 0, "ARP_Target_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, ARP_Target_Proto_Addr , 32 , 0, 0, 0, "ARP_Target_Proto_Addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 2, MPLS_Label            , 20 , 0, 0, 0, "MPLS_Label            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, MPLS_Exp              , 3  , 0, 0, 0, "MPLS_Exp              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, MPLS_Stack            , 1  , 0, 0, 0, "MPLS_Stack            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MPLS_Ttl              , 8  , 0, 0, 0, "MPLS_Ttl              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, VLAN_Tpi              , 16 , 0, 0, 0, "VLAN_Tpi              ", Integer, { Fixed_Value  , 0x8100           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 2, VLAN_Tci_Pcp          , 3  , 0, 0, 0, "VLAN_Tci_Pcp          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, VLAN_Tci_Cfi          , 1  , 0, 0, 0, "VLAN_Tci_Cfi          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 1, VLAN_Vid              , 12 , 0, 0, 0, "VLAN_Vid              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Control           , 16 , 0, 0, 0, "MAC_Control           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, MAC_Control_Opcode    , 16 , 0, 0, 0, "MAC_Control_Opcode    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta          , 16 , 0, 0, 0, "Pause_Quanta          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Priority_En_Vector    , 16 , 0, 0, 0, "Priority_En_Vector    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_0        , 16 , 0, 0, 0, "Pause_Quanta_0        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_1        , 16 , 0, 0, 0, "Pause_Quanta_1        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_2        , 16 , 0, 0, 0, "Pause_Quanta_2        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_3        , 16 , 0, 0, 0, "Pause_Quanta_3        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_4        , 16 , 0, 0, 0, "Pause_Quanta_4        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_5        , 16 , 0, 0, 0, "Pause_Quanta_5        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_6        , 16 , 0, 0, 0, "Pause_Quanta_6        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Pause_Quanta_7        , 16 , 0, 0, 0, "Pause_Quanta_7        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, FRAME_Len             , 32 , 0, 0, 0, "FRAME_Len             ", Integer, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, PAYLOAD_Pattern       , 0  , 0, 0, 0, "PAYLOAD_Pattern       ", Integer, { Fixed_Value  , 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Traffic_Type   , 32 , 0, 0, 0, "STREAM_Traffic_Type   ", Integer, { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Traffic_Control, 32 , 0, 0, 0, "STREAM_Traffic_Control", Integer, { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Ipg            , 32 , 0, 0, 0, "STREAM_Ipg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Isg            , 32 , 0, 0, 0, "STREAM_Ifg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Ibg            , 32 , 0, 0, 0, "STREAM_Ibg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Bandwidth      , 32 , 0, 0, 0, "STREAM_Bandwidth      ", Integer, { Fixed_Value  , 100              , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, STREAM_Start_Delay    , 32 , 0, 0, 0, "STREAM_Start_Delay    ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, UDF                   , 0  , 0, 0, 0, "UDF                   ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Len              , 32 , 0, 0, 0, "META_Len              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Ipg              , 32 , 0, 0, 0, "META_Ipg              ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Preamble         , 64 , 0, 0, 0, "META_Preamble         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad1             , 64 , 0, 0, 0, "META_Pad1             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad2             , 64 , 0, 0, 0, "META_Pad2             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad3             , 64 , 0, 0, 0, "META_Pad3             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad4             , 64 , 0, 0, 0, "META_Pad4             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad5             , 64 , 0, 0, 0, "META_Pad5             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, META_Pad6             , 64 , 0, 0, 0, "META_Pad6             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, Zeros_8Bit            , 8  , 0, 0, 0, "Zeros_8Bit            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
+{false, 0, TCP_Total_Len         , 16 , 0, 0, 0, "TCP_Total_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
 };
+
+// find_if with lambda predicate
+cea_field get_field(vector<cea_field> table, cea_field_id id) {
+    auto lit = find_if(table.begin(), table.end(),
+                    [&id](const cea_field &item) {
+                    return (item.id == id); 
+                    });
+    if (lit==table.end()) {
+        // TODO: this should never become true, display proper message
+        // regarding the error before abort
+        abort();
+    }
+
+    return (*lit);
+}
 
 // map header type to list of associated fields
 map <cea_header_type, vector <cea_field_id>> hfmap = {
@@ -669,7 +684,7 @@ public:
     ~core();
     cea_header_type hdr_type;
     vector<cea_field_id> fids;
-    map<cea_field_id, cea_field> table;
+    vector<cea_field> table;
     void build_hdr_table();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
@@ -754,25 +769,19 @@ void cea_stream::core::reset() {
 
 void cea_stream::core::test() {
 #ifdef CEA_DEVEL
-//    CEA_DBG("Tree structure of Stream: ");
-//    for (auto f : added_headers) {
-//        for (auto id : f->impl->fids) {
-//            gen_table.push_back(f->impl->table[id]);
-//        }
-//    }
-//
-//    bool flag = false;
-//    cea_header_type type;
-//
-//    for (auto item : gen_table) {
-//        if (flag) {
-//            cealog << cea_hdr_name[item.hdr_type] << endl;
-//        }
-//        type = item.hdr_type;
-//        flag = true;
-//
-//    }
-#endif    
+    
+    gen_table.clear();
+
+    // build gen_table
+    for (auto f : added_headers) {
+        gen_table.insert(
+                gen_table.end(),
+                f->impl->table.begin(),
+                f->impl->table.end()
+        );
+    }
+
+#endif
 }
 
 void cea_stream::test() {
@@ -843,8 +852,8 @@ void cea_header::core::build_hdr_table() {
     fids = hfmap[hdr_type];
 
     for (auto id : fids) {
-        auto item = fdb[id];
-        table.insert(make_pair(id, item));
+        auto item = get_field(fdb, id);
+        table.push_back(item);
     }
 }
 
