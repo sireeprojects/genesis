@@ -754,24 +754,24 @@ void cea_stream::core::reset() {
 
 void cea_stream::core::test() {
 #ifdef CEA_DEVEL
-    CEA_DBG("Tree structure of Stream: ");
-    for (auto f : added_headers) {
-        for (auto id : f->impl->fids) {
-            gen_table.push_back(f->impl->table[id]);
-        }
-    }
-
-    bool flag = false;
-    cea_header_type type;
-
-    for (auto item : gen_table) {
-        if (flag) {
-            cealog << cea_hdr_name[item.hdr_type] << endl;
-        }
-        type = item.hdr_type;
-        flag = true;
-
-    }
+//    CEA_DBG("Tree structure of Stream: ");
+//    for (auto f : added_headers) {
+//        for (auto id : f->impl->fids) {
+//            gen_table.push_back(f->impl->table[id]);
+//        }
+//    }
+//
+//    bool flag = false;
+//    cea_header_type type;
+//
+//    for (auto item : gen_table) {
+//        if (flag) {
+//            cealog << cea_hdr_name[item.hdr_type] << endl;
+//        }
+//        type = item.hdr_type;
+//        flag = true;
+//
+//    }
 #endif    
 }
 
