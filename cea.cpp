@@ -622,16 +622,42 @@ void print_cdata (unsigned char* tmp, int len) {
 // Stream Core
 //-------------
 class cea_stream::core {
-public:    
+public:
+    // ctor
     core(string name);
+
+    // dtor
     ~core();
+
+    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
+
+    // Define a spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
-    void reset();
+
+    // Store header pointers created using create_header() These should be 
+    // deleted when the stream is deleted
     vector<cea_header*> managed_hdrs;
+
+    // Store the header pointers added to the stream for generation
     vector<cea_header*> added_headers;
+
+    // There are two vectors managed_ and added_. The user may create a header
+    // but need not necessarily add that header to the stream for some reasons.
+    // managed_ will be used to store and delete all headers created irrespective
+    // of whethere they are added to the stream or not. added_ will be used for
+    // generation
+
+    // gen_table will be used to store all the fields added by user by the way
+    // of adding headers
+    vector<cea_field> gen_table;
+
+    // Factory reset of the stream core
+    void reset();
+
+    // Used for internal testing only. The define CEA_DEVEL should be included in
+    // the compile to use this function
     void test();
-    vector<cea_field> consoldated_table;
 };
 
 //-------------
@@ -715,7 +741,13 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 }
 
+// TODO Memory leak:
+// clear() only removes the vector elements and not the pointers
+// Should I delete the pointers (ref:dtor) or just clear the vector?    
 void cea_stream::core::reset() {
+    // if i do this stream will lost all pointers and become unmanaged.
+    // TODO: THINK: should i clear this in subsequent resets after the
+    // headers were created?
     managed_hdrs.clear();
     added_headers.clear();
 }
@@ -725,14 +757,14 @@ void cea_stream::core::test() {
     CEA_DBG("Tree structure of Stream: ");
     for (auto f : added_headers) {
         for (auto id : f->impl->fids) {
-            consoldated_table.push_back(f->impl->table[id]);
+            gen_table.push_back(f->impl->table[id]);
         }
     }
 
     bool flag = false;
     cea_header_type type;
 
-    for (auto item : consoldated_table) {
+    for (auto item : gen_table) {
         if (flag) {
             cealog << cea_hdr_name[item.hdr_type] << endl;
         }

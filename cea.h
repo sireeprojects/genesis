@@ -232,6 +232,9 @@ public:
 private:
     class core;
     unique_ptr<core> impl;
+
+public:// internal use
+    void test();
 };
 
 //------------------------------------------------------------------------------
@@ -245,6 +248,9 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_manager;
+
+public:// internal use
+    void test();
 };
 
 //------------------------------------------------------------------------------
@@ -262,7 +268,8 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_proxy;
-public: // for internal use only
+
+public:// internal use
     void test();
 };
 
@@ -279,6 +286,9 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
+
+public:// internal use
+    void test();
 };
 
 } // namespace 

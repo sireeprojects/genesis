@@ -1,6 +1,8 @@
 #include "cea.h"
 using namespace cea;
 
+// Expert Mode of stream specification
+
 int main() {
     cea_proxy *proxy = new cea_proxy(); // proxy instance
     cea_stream *stream = new cea_stream(); // stream
