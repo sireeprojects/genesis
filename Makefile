@@ -1,7 +1,14 @@
 DBG ?= on
+DEV ?= on
 
 ifeq "$(DBG)" "on"
 LIBPARAMS += -DCEA_DEBUG
+else
+LIBPARAMS +=
+endif
+
+ifeq "$(DEV)" "on"
+LIBPARAMS += -DCEA_DEVEL
 else
 LIBPARAMS +=
 endif

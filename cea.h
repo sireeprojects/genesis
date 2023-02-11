@@ -35,7 +35,8 @@ enum cea_header_type {
     PFC,
     UDP_PHDR,
     TCP_PHDR,
-    META
+    META,
+    INTL
 };
 
 enum cea_field_id {
@@ -198,9 +199,10 @@ struct cea_gen_spec {
 };
 
 struct cea_field {
+    cea_header_type hdr_type;
     bool is_mutable;
     uint32_t merge;
-    uint32_t id;
+    cea_field_id id;
     uint32_t len;
     uint32_t offset;
     bool proto_list_specified;
@@ -260,6 +262,8 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_proxy;
+public: // for internal use only
+    void test();
 };
 
 //------------------------------------------------------------------------------
