@@ -781,6 +781,14 @@ void cea_stream::core::test() {
         );
     }
 
+    // testing generation of tree structure
+    for (auto f : added_headers) {
+        cout << cea_hdr_name[f->impl->hdr_type] << endl;
+        for (auto item : f->impl->table) {
+            cealog << "  |->" << item.name << endl;
+        }
+    }
+
 #endif
 }
 
