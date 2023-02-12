@@ -785,7 +785,7 @@ void cea_stream::core::test() {
     for (auto f : added_headers) {
         cout << cea_hdr_name[f->impl->hdr_type] << endl;
         for (auto item : f->impl->table) {
-            cealog << "  |->" << item.name << endl;
+            cealog << "  |--" << item.name << endl;
         }
     }
 
@@ -833,15 +833,32 @@ void cea_header::set(cea_field_id id, cea_gen_spec spec) {
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
-    table[id].spec.value = value;
-    table[id].is_mutable = false;
+    auto field = find_if(table.begin(), table.end(),
+                    [&id](const cea_field &item) {
+                    return (item.id == id); 
+                    });
+    if (field != table.end()) {
+        field->spec.value = value;
+        field->is_mutable = false;
+    } else {
+        // TODO fatal error and abort
+    }
 }
 
 void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
-    table[id].spec = spec;
+    auto field = find_if(table.begin(), table.end(),
+                    [&id](const cea_field &item) {
+                    return (item.id == id); 
+                    });
+    if (field != table.end()) {
+        field->spec = spec;
+        if (field->spec.gen_type != Fixed_Value)
+            field->is_mutable = true;
+    } else {
+        // TODO fatal error and abort
+    }
 
-    if (table[id].spec.gen_type != Fixed_Value)
-        table[id].is_mutable = true;
+
 }
 
 cea_header::cea_header(cea_header_type hdr) {
