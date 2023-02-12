@@ -12,6 +12,11 @@ int main() {
     cea_header *tcp = stream->create_header(TCP);
     cea_header *meta = stream->create_header(META);
 
+    // assign a modifier to mac desination address
+    cea_gen_spec dest_spec;
+    dest_spec.gen_type = Random;
+    mac->set(MAC_Dest_Addr, dest_spec);
+
     stream->add_header(mac);
     stream->add_header(ipv4);
     stream->add_header(meta);

@@ -208,18 +208,28 @@ vector<cea_field> fdb = {
 };
 
 // find_if with lambda predicate
-cea_field get_field(vector<cea_field> table, cea_field_id id) {
-    auto lit = find_if(table.begin(), table.end(),
+cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
+    auto lit = find_if(tbl.begin(), tbl.end(),
                     [&id](const cea_field &item) {
                     return (item.id == id); 
                     });
-    if (lit==table.end()) {
+    if (lit==tbl.end()) {
         // TODO: this should never become true, display proper message
         // regarding the error before abort
         abort();
     }
-
     return (*lit);
+}
+
+void print_ftable(vector<cea_field>tbl) {
+    stringstream ss;
+    ss.setf(ios_base::left);
+
+    for(auto item : tbl) {
+        ss << item.name << endl;
+    }
+    ss << endl;
+    cealog << ss.str();
 }
 
 // map header type to list of associated fields
@@ -652,10 +662,10 @@ public:
 
     // Store header pointers created using create_header() These should be 
     // deleted when the stream is deleted
-    vector<cea_header*> managed_hdrs;
+    vector<cea_header*> managed_htable;
 
     // Store the header pointers added to the stream for generation
-    vector<cea_header*> added_headers;
+    vector<cea_header*> added_htable;
 
     // There are two vectors managed_ and added_. The user may create a header
     // but need not necessarily add that header to the stream for some reasons.
@@ -663,9 +673,13 @@ public:
     // of whethere they are added to the stream or not. added_ will be used for
     // generation
 
-    // gen_table will be used to store all the fields added by user by the way
+    // all_ftable will be used to store all the fields added by user by the way
     // of adding headers
-    vector<cea_field> gen_table;
+    vector<cea_field> all_ftable;
+
+    // mut_ftable will be used to store only those fields that will during
+    // stream generation
+    vector<cea_field> mut_ftable;
 
     // Factory reset of the stream core
     void reset();
@@ -682,13 +696,166 @@ class cea_header::core {
 public:
     core(cea_header_type hdr);
     ~core();
-    cea_header_type hdr_type;
-    vector<cea_field_id> fids;
-    vector<cea_field> table;
-    void build_hdr_table();
+    cea_header_type htype;
+    vector<cea_field_id> hfids;
+    vector<cea_field> htable;
+    void build_htable();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
 };
+
+//------------------------------------------------------------------------------
+// Stream implementation
+//------------------------------------------------------------------------------
+cea_stream::cea_stream(string name) {
+    impl = make_unique<core>(name); 
+}
+
+cea_stream::~cea_stream() = default;
+
+void cea_stream::set(cea_field_id id, uint64_t value) {
+    impl->set(id, value);
+}
+
+void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
+    impl->set(id, spec);
+}
+
+cea_header *cea_stream::create_header(cea_header_type type) {
+    cea_header *new_hdr = new cea_header(type);
+    impl->managed_htable.push_back(new_hdr);
+    return new_hdr;
+}
+
+void cea_stream::add_header(cea_header *hdr) {
+    impl->added_htable.push_back(hdr);
+}
+
+cea_stream::core::core(string name) {
+}
+
+cea_stream::core::~core() {
+    for (auto item : managed_htable) {
+        delete item;
+    }
+}
+
+void cea_stream::core::set(cea_field_id id, uint64_t value) {
+}
+
+void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
+}
+
+// TODO Memory leak:
+// clear() only removes the vector elements and not the pointers
+// Should I delete the pointers (ref:dtor) or just clear the vector?    
+void cea_stream::core::reset() {
+    // if i do this stream will lost all pointers and become unmanaged.
+    // TODO: THINK: should i clear this in subsequent resets after the
+    // headers were created?
+    managed_htable.clear();
+    added_htable.clear();
+}
+
+void cea_stream::core::test() {
+#ifdef CEA_DEVEL
+    all_ftable.clear();
+
+    // build all_ftable
+    for (auto f : added_htable) {
+        all_ftable.insert(
+                all_ftable.end(),
+                f->impl->htable.begin(),
+                f->impl->htable.end()
+        );
+    }
+    // testing generation of tree structure
+    for (auto f : added_htable) {
+        cout << cea_hdr_name[f->impl->htype] << endl;
+        for (auto item : f->impl->htable) {
+            cealog << "  |--" << item.name << endl;
+        }
+    }
+    // build mutable table
+    for (auto f : all_ftable) {
+        if (f.is_mutable) {
+            mut_ftable.push_back(f);
+        }
+    }
+    // print_ftable(all_ftable);
+    // cout << string(20, '-') << endl;
+    // print_ftable(mut_ftable);
+#endif
+}
+
+void cea_stream::test() {
+    impl->test();
+}
+
+//------------------------------------------------------------------------------
+// Header implementation
+//------------------------------------------------------------------------------
+
+void cea_header::set(cea_field_id id, uint64_t value) {
+    impl->set(id, value);
+}
+
+void cea_header::set(cea_field_id id, cea_gen_spec spec) {
+    impl->set(id, spec);
+}
+
+void cea_header::core::set(cea_field_id id, uint64_t value) {
+    auto field = find_if(htable.begin(), htable.end(),
+                    [&id](const cea_field &item) {
+                    return (item.id == id); 
+                    });
+    if (field != htable.end()) {
+        field->spec.value = value;
+        field->is_mutable = false;
+    } else {
+        // TODO fatal error and abort
+    }
+}
+
+void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
+    auto field = find_if(htable.begin(), htable.end(),
+                    [&id](const cea_field &item) {
+                    return (item.id == id); 
+                    });
+    if (field != htable.end()) {
+        field->spec = spec;
+        if (field->spec.gen_type != Fixed_Value)
+            field->is_mutable = true;
+    } else {
+        // TODO fatal error and abort
+    }
+
+
+}
+
+cea_header::cea_header(cea_header_type hdr) {
+    impl = make_unique<core>(hdr); 
+}
+
+cea_header::core::core(cea_header_type hdr) {
+    htype = hdr;
+    build_htable();
+}
+
+void cea_header::core::build_htable() {
+    hfids.clear();
+    htable.clear();
+
+    // extract the list of field ids that make up this header
+    hfids = hfmap[htype];
+
+    for (auto id : hfids) {
+        auto item = get_field(fdb, id);
+        htable.push_back(item);
+    }
+}
+
+cea_header::core::~core() = default;
 
 //-------------
 // Proxy Core
@@ -715,88 +882,6 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// Stream implementation
-//------------------------------------------------------------------------------
-cea_stream::cea_stream(string name) {
-    impl = make_unique<core>(name); 
-}
-
-cea_stream::~cea_stream() = default;
-
-void cea_stream::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
-    impl->set(id, spec);
-}
-
-cea_header *cea_stream::create_header(cea_header_type type) {
-    cea_header *new_hdr = new cea_header(type);
-    impl->managed_hdrs.push_back(new_hdr);
-    return new_hdr;
-}
-
-void cea_stream::add_header(cea_header *hdr) {
-    impl->added_headers.push_back(hdr);
-}
-
-cea_stream::core::core(string name) {
-}
-
-cea_stream::core::~core() {
-    for (auto item : managed_hdrs) {
-        delete item;
-    }
-}
-
-void cea_stream::core::set(cea_field_id id, uint64_t value) {
-}
-
-void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
-}
-
-// TODO Memory leak:
-// clear() only removes the vector elements and not the pointers
-// Should I delete the pointers (ref:dtor) or just clear the vector?    
-void cea_stream::core::reset() {
-    // if i do this stream will lost all pointers and become unmanaged.
-    // TODO: THINK: should i clear this in subsequent resets after the
-    // headers were created?
-    managed_hdrs.clear();
-    added_headers.clear();
-}
-
-void cea_stream::core::test() {
-#ifdef CEA_DEVEL
-    
-    gen_table.clear();
-
-    // build gen_table
-    for (auto f : added_headers) {
-        gen_table.insert(
-                gen_table.end(),
-                f->impl->table.begin(),
-                f->impl->table.end()
-        );
-    }
-
-    // testing generation of tree structure
-    for (auto f : added_headers) {
-        cout << cea_hdr_name[f->impl->hdr_type] << endl;
-        for (auto item : f->impl->table) {
-            cealog << "  |--" << item.name << endl;
-        }
-    }
-
-#endif
-}
-
-void cea_stream::test() {
-    impl->test();
-}
-
-//------------------------------------------------------------------------------
 // Proxy Implementation
 //------------------------------------------------------------------------------
 
@@ -820,68 +905,5 @@ cea_manager::cea_manager() : impl (new core) {
 cea_manager::core::core() {
 }
 
-//------------------------------------------------------------------------------
-// Header implementation
-//------------------------------------------------------------------------------
-
-void cea_header::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-void cea_header::set(cea_field_id id, cea_gen_spec spec) {
-    impl->set(id, spec);
-}
-
-void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(table.begin(), table.end(),
-                    [&id](const cea_field &item) {
-                    return (item.id == id); 
-                    });
-    if (field != table.end()) {
-        field->spec.value = value;
-        field->is_mutable = false;
-    } else {
-        // TODO fatal error and abort
-    }
-}
-
-void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
-    auto field = find_if(table.begin(), table.end(),
-                    [&id](const cea_field &item) {
-                    return (item.id == id); 
-                    });
-    if (field != table.end()) {
-        field->spec = spec;
-        if (field->spec.gen_type != Fixed_Value)
-            field->is_mutable = true;
-    } else {
-        // TODO fatal error and abort
-    }
-
-
-}
-
-cea_header::cea_header(cea_header_type hdr) {
-    impl = make_unique<core>(hdr); 
-}
-
-cea_header::core::core(cea_header_type hdr) {
-    hdr_type = hdr;
-    build_hdr_table();
-}
-
-void cea_header::core::build_hdr_table() {
-    fids.clear();
-    table.clear();
-
-    fids = hfmap[hdr_type];
-
-    for (auto id : fids) {
-        auto item = get_field(fdb, id);
-        table.push_back(item);
-    }
-}
-
-cea_header::core::~core() = default;
 
 } // namespace
