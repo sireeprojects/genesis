@@ -150,9 +150,7 @@ enum cea_field_id {
 
 enum cea_stream_feature_id {
     PCAP_Record_Tx_Enable,
-    PCAP_Record_Rx_Enable,
-    PCAP_Record_Tx_Disable,
-    PCAP_Record_Rx_Disable
+    PCAP_Record_Rx_Enable
 };
 
 enum cea_field_type {

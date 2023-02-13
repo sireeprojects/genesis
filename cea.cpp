@@ -18,6 +18,7 @@ THINGS TO DO:
 #include <chrono>
 #include <cassert>
 #include <random>
+#include <csignal>
 #include "cea.h"
 
 using namespace std;
@@ -31,11 +32,20 @@ using namespace chrono;
 // frame metadata (control header) size in bytes
 #define CEA_FRM_METASIZE 64
 
-// CEA_MSG() - Used for mandatory messages. Cannot be disabled in debug mode
+// CEA_MSG() - Used for mandatory messages inside classes.
+// Cannot be disabled in debug mode
 #define CEA_MSG(msg) { \
     stringstream s; \
     s << msg; \
     cealog << msg_prefix << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+}
+
+// CEA_GMSG() - Used for mandatory messages outside classes.
+// Cannot be disabled in debug mode
+#define CEA_GMSG(msg) { \
+    stringstream s; \
+    s << msg; \
+    cealog << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
 }
 
 // CEA_DBG() - Enabled only in debug mode
@@ -214,6 +224,15 @@ vector<cea_field> fdb = {
 {false, 0, TCP_Total_Len         , 16 , 0, 0, 0, "TCP_Total_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
 };
 
+void signal_handler(int signal) {
+    if (signal == SIGABRT) {
+        cealog << "<<<< Aborting simulation >>>>" << endl;
+    } else {
+        cerr << "Unexpected signal " << signal << " received\n";
+    }
+    exit(EXIT_FAILURE);
+}
+
 // find_if with lambda predicate
 cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
     auto lit = find_if(tbl.begin(), tbl.end(),
@@ -221,8 +240,7 @@ cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
                     return (item.id == id); 
                     });
     if (lit==tbl.end()) {
-        // TODO: this should never become true, display proper message
-        // regarding the error before abort
+        CEA_GMSG("Missing field ID: " << id << " in global field table.");
         abort();
     }
     return (*lit);
@@ -393,9 +411,7 @@ vector<string> cea_header_name = {
 
 vector<string> cea_stream_feature_name {
     "PCAP_Record_Tx_Enable",
-    "PCAP_Record_Rx_Enable",
-    "PCAP_Record_Tx_Disable",
-    "PCAP_Record_Rx_Disable"
+    "PCAP_Record_Rx_Enable"
 };
 
 // file stream for cea message logging
@@ -420,6 +436,7 @@ int outbuf::overflow(int_type c) {
 class cea_init {
 public:
     cea_init() {
+        signal(SIGABRT, signal_handler);
         logfile.open("run.log", ofstream::out);
         if (!logfile.is_open()) {
 
@@ -582,7 +599,7 @@ void print_cdata (unsigned char* tmp, int len) {
 class pcap {
 public:
     // ctor
-    pcap(string filename);
+    pcap(string filename, string parent_name, uint32_t parent_id);
 
     // dtor
     ~pcap();
@@ -597,6 +614,16 @@ public:
     ofstream pcapfile;
 
     bool file_exists(const string &filename);
+
+    // set when the object is created
+    string stream_name;
+
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t stream_id;
+
+    // build a string to be prefixed in all messages generated from this class
+    string msg_prefix;
 
     // pcap global file header
     struct CEA_PACKED pcap_file_hdr {
@@ -616,26 +643,32 @@ public:
         uint32_t caplen : 32;
         uint32_t len : 32;
     } ph;
+
 };
 
-pcap::pcap(string filename) {
+pcap::pcap(string filename, string parent_name, uint32_t parent_id) {
     pcap_filename = filename;
+    stream_name = parent_name;
+    stream_id = parent_id;
+    msg_prefix = '(' + stream_name + ":" + to_string(stream_id) + "|";
 
     if (file_exists(pcap_filename)) {
         if (remove(filename.c_str()) != 0) {
-            cealog << "PCAP file " << filename 
-                << " already exists and cannot be deleted. Aborting..."
-                << endl;
+            CEA_MSG("PCAP file " << filename <<
+                " already exists and cannot be deleted. Aborting...");
             abort();
         }
     } else {
         fh = {0xa1b2c3d4, 2, 4, 0, 0, 4194304, 1};
         pcapfile.open(pcap_filename, ofstream::app);
         pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
+        CEA_MSG("PCAP file created: " << pcap_filename);
+        pcapfile.flush();
     }
 }
 
 pcap::~pcap() {
+    pcapfile.flush();
     pcapfile.close();
 }
 
@@ -704,6 +737,10 @@ public:
     // Factory reset of the stream core
     void reset();
 
+    // pcap
+    pcap *txpcap;
+    pcap *rxpcap;
+
     // Used for internal testing only. The define CEA_DEVEL should be included in
     // the compile to use this function
     void test();
@@ -753,8 +790,8 @@ cea_stream::core::core(string name) {
     stream_name = name;
     stream_id = cea::stream_id;
     cea::stream_id++;
-    stream_name = stream_name + ":" + to_string(stream_id);
-    msg_prefix = '(' + stream_name + "|";
+    msg_prefix = '(' + stream_name + ":" + to_string(stream_id) + "|";
+    CEA_MSG("stream core created");
 }
 
 cea_stream::core::~core() = default;
@@ -766,6 +803,22 @@ void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 }
 
 void cea_stream::core::set(cea_stream_feature_id feature) {
+    switch (feature) {
+        case PCAP_Record_Tx_Enable: {
+            CEA_MSG("PCAP capture enabled @ Transmit side");
+            string pcapfname = stream_name + "_tx" + + ".pcap";
+            txpcap = new pcap(pcapfname, stream_name, stream_id);
+            break;
+            }
+        case PCAP_Record_Rx_Enable: {
+            CEA_MSG("PCAP capture enabled @ Receive side");
+            string pcapfname = stream_name + "_rx" + + ".pcap";
+            rxpcap = new pcap(pcapfname, stream_name, stream_id);
+            break;
+            }
+        default:{
+            }
+    }
 }
 
 void cea_stream::core::reset() {
@@ -774,7 +827,6 @@ void cea_stream::core::reset() {
 
 void cea_stream::core::test() {
 #ifdef CEA_DEVEL
-
     all_ftable.clear();
 
     // build all_ftable
@@ -798,9 +850,6 @@ void cea_stream::core::test() {
             mut_ftable.push_back(f);
         }
     }
-    // print_ftable(all_ftable);
-    // cout << string(20, '-') << endl;
-    // print_ftable(mut_ftable);
 #endif
 }
 
@@ -829,7 +878,8 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
         field->spec.value = value;
         field->is_mutable = false;
     } else {
-        // TODO fatal error and abort
+        CEA_GMSG("Missing field ID: " << id << " in header field table.");
+        abort();
     }
 }
 
@@ -843,7 +893,8 @@ void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
         if (field->spec.gen_type != Fixed_Value)
             field->is_mutable = true;
     } else {
-        // TODO fatal error and abort
+        CEA_GMSG("Missing field ID: " << id << " in header field table.");
+        abort();
     }
 
 
