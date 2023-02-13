@@ -5,7 +5,8 @@ using namespace cea;
 
 int main() {
     cea_proxy *proxy = new cea_proxy(); // proxy instance
-    cea_stream *stream = new cea_stream(); // stream instance
+    cea_stream *stream = new cea_stream("testStream"); // stream instance
+    stream->set(PCAP_Record_Tx_Enable);
 
     cea_header *mac =  new cea_header(MAC);
     cea_header *ipv4 = new cea_header(IPv4);

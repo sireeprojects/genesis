@@ -35,7 +35,7 @@ using namespace chrono;
 #define CEA_MSG(msg) { \
     stringstream s; \
     s << msg; \
-    cealog << string(__FUNCTION__) << ": " <<  s.str() << endl; \
+    cealog << msg_prefix << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
 }
 
 // CEA_DBG() - Enabled only in debug mode
@@ -52,6 +52,13 @@ using namespace chrono;
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 
 namespace cea {
+
+// global variable to track proxy and stream id
+// TODO: This will become a problem in multi-process mode
+//       Every workstation will have a proxy_id and stream_id = 0
+//       Re-design in such a way that these values continue over multiple w/s
+uint32_t stream_id = 0;
+uint32_t proxy_id = 0;
 
 // CRC32
 const uint32_t crc32_tab[] = {
@@ -365,7 +372,7 @@ map <cea_header_type, vector <cea_field_id>> hfmap = {
     }
 };
 
-vector<string> cea_hdr_name = {
+vector<string> cea_header_name = {
     "MAC",
     "LLC",
     "SNAP",
@@ -382,6 +389,13 @@ vector<string> cea_hdr_name = {
     "TCP_PHDR",
     "META",
     "INTL"
+};
+
+vector<string> cea_stream_feature_name {
+    "PCAP_Record_Tx_Enable",
+    "PCAP_Record_Rx_Enable",
+    "PCAP_Record_Tx_Disable",
+    "PCAP_Record_Rx_Disable"
 };
 
 // file stream for cea message logging
@@ -509,13 +523,6 @@ string cea_readable_fs(double size, cea_readable_type type) {
     buf << fixed << setprecision(0) << size << " " << units[i]; 
     return buf.str();
 }
-
-// global variable to track proxy and stream id
-// TODO: This will become a problem in multi-process mode
-//       Every workstation will have a proxy_id and stream_id = 0
-//       Re-design in such a way that these values continue over multiple w/s
-uint32_t proxy_id = 0;
-uint32_t stream_id = 0;
 
 //------------------------------------------------------------------------------
 // Timer class for runtime performance measurement
@@ -658,6 +665,16 @@ public:
     // dtor
     ~core();
 
+    // set when the object is created
+    string stream_name;
+
+    // automatically assigned when the proxy object is created
+    // the value of the field is set from the global variable proxy_id
+    uint32_t stream_id;
+
+    // build a string to be prefixed in all messages generated from this class
+    string msg_prefix;
+
     // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
 
@@ -733,6 +750,11 @@ void cea_stream::add_header(cea_header *hdr) {
 }
 
 cea_stream::core::core(string name) {
+    stream_name = name;
+    stream_id = cea::stream_id;
+    cea::stream_id++;
+    stream_name = stream_name + ":" + to_string(stream_id);
+    msg_prefix = '(' + stream_name + "|";
 }
 
 cea_stream::core::~core() = default;
@@ -744,18 +766,15 @@ void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 }
 
 void cea_stream::core::set(cea_stream_feature_id feature) {
-    // TODO
 }
 
-// TODO Memory leak?
-// clear() only removes the vector elements and not the pointers
-// Should I delete the pointers (ref:dtor) or just clear the vector?    
 void cea_stream::core::reset() {
     added_htable.clear();
 }
 
 void cea_stream::core::test() {
 #ifdef CEA_DEVEL
+
     all_ftable.clear();
 
     // build all_ftable
@@ -768,7 +787,7 @@ void cea_stream::core::test() {
     }
     // testing generation of tree structure
     for (auto f : added_htable) {
-        cout << cea_hdr_name[f->impl->htype] << endl;
+        cout << cea_header_name[f->impl->htype] << endl;
         for (auto item : f->impl->htable) {
             cealog << "  |--" << item.name << endl;
         }
