@@ -16,8 +16,9 @@ outbuf ob;
 
 // A custom output stream. Usage is similar to cout except that cout writes
 // messages only to the screen, but cealog writes the message to the screen
-// as well as the log file. Usage example:
-//     cealog << "Frame recevied: " << frm_count << endl;
+// as well as the log file.
+// Usage example:
+// cealog << "Frame recevied: " << frm_count << endl;
 ostream cealog(&ob);
 
 enum cea_header_type {

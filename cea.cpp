@@ -660,10 +660,6 @@ public:
     // Define a spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
 
-    // Store header pointers created using create_header() These should be 
-    // deleted when the stream is deleted
-    vector<cea_header*> managed_htable;
-
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
 
@@ -721,12 +717,6 @@ void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
     impl->set(id, spec);
 }
 
-cea_header *cea_stream::create_header(cea_header_type type) {
-    cea_header *new_hdr = new cea_header(type);
-    impl->managed_htable.push_back(new_hdr);
-    return new_hdr;
-}
-
 void cea_stream::add_header(cea_header *hdr) {
     impl->added_htable.push_back(hdr);
 }
@@ -734,11 +724,7 @@ void cea_stream::add_header(cea_header *hdr) {
 cea_stream::core::core(string name) {
 }
 
-cea_stream::core::~core() {
-    for (auto item : managed_htable) {
-        delete item;
-    }
-}
+cea_stream::core::~core() = default;
 
 void cea_stream::core::set(cea_field_id id, uint64_t value) {
 }
@@ -746,14 +732,10 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 }
 
-// TODO Memory leak:
+// TODO Memory leak?
 // clear() only removes the vector elements and not the pointers
 // Should I delete the pointers (ref:dtor) or just clear the vector?    
 void cea_stream::core::reset() {
-    // if i do this stream will lost all pointers and become unmanaged.
-    // TODO: THINK: should i clear this in subsequent resets after the
-    // headers were created?
-    managed_htable.clear();
     added_htable.clear();
 }
 
