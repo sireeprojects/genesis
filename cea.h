@@ -148,6 +148,13 @@ enum cea_field_id {
     Num_Fields
 };
 
+enum cea_stream_feature_id {
+    PCAP_Record_Tx_Enable,
+    PCAP_Record_Rx_Enable,
+    PCAP_Record_Tx_Disable,
+    PCAP_Record_Rx_Disable
+};
+
 enum cea_field_type {
     Integer,
     Pattern
@@ -262,6 +269,7 @@ public:
     ~cea_stream();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
+    void set(cea_stream_feature_id feature);
     cea_header *create_header(cea_header_type type);
     void add_header(cea_header *hdr);
 private:

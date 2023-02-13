@@ -416,81 +416,6 @@ public:
 };
 cea_init init;
 
-//------------------------------------------------------------------------------
-// support for PCAP write
-//------------------------------------------------------------------------------
-
-// pcap global header
-struct CEA_PACKED pcap_file_hdr {
-    uint32_t magic         : 32;
-    uint16_t version_major : 16;
-    uint16_t version_minor : 16;
-    uint32_t thiszone      : 32;
-    uint32_t sigfigs       : 32;
-    uint32_t snaplen       : 32;
-    uint32_t linktype      : 32;
-};
-
-// pcap per frame header
-struct CEA_PACKED pcap_frame_hdr {
-    uint32_t tv_sec  : 32;
-    uint32_t tv_usec : 32;
-    uint32_t caplen  : 32;
-    uint32_t len     : 32;
-};
-
-// true if the file exists, else false
-bool file_exists(const string &filename) {
-    struct stat buf;
-    if (stat(filename.c_str(), &buf) != -1) {
-        return true;
-    }
-    return false;
-}
-
-void write_pcap(unsigned char *frame, uint32_t len) {
-    pcap_file_hdr fh;
-    pcap_frame_hdr ph;
-
-    fh.magic= 0xa1b2c3d4;
-    fh.version_major = 2;  
-    fh.version_minor = 4;  
-    fh.thiszone = 0;       
-    fh.sigfigs = 0;        
-    fh.snaplen = 4194304;
-    fh.linktype = 1;     
-
-    ph.tv_sec  = 0;
-    ph.tv_usec = 0;
-    ph.caplen = len;
-    ph.len = len;
-
-    unsigned char buf[CEA_MAX_FRAME_SIZE];
-    uint32_t offset = 0;
-    memset(buf, 0, CEA_MAX_FRAME_SIZE);
-
-    ofstream pcapfile;
-
-    // TODO: what if the frames.pcap was present from a previous run
-    // the file will exist and hence the pcapfile handle will not be created
-    // make sure the old file is deleted
-    // move the file_exists check to a constructor of the stream
-    if (!file_exists("frames.pcap")) {
-        pcapfile.open("frames.pcap", ofstream::app);
-        pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
-    } else {
-        pcapfile.open("frames.pcap", ofstream::app);
-    }
-
-    memcpy(buf+offset, (char*)&ph, sizeof(pcap_frame_hdr));
-    offset += sizeof(pcap_frame_hdr);
-    memcpy(buf+offset, frame, len);
-    offset += len;
-
-    pcapfile.write((const char*)buf, offset);
-    pcapfile.close();
-}
-
 // utility
 bool in_range(uint32_t low, uint32_t high, uint32_t x) {        
     return (low <= x && x <= high);         
@@ -643,6 +568,85 @@ void print_cdata (unsigned char* tmp, int len) {
     fflush (stdout);
 }
 
+//------------------------------------------------------------------------------
+// support for PCAP write
+//------------------------------------------------------------------------------
+
+class pcap {
+public:
+    // ctor
+    pcap(string filename);
+
+    // dtor
+    ~pcap();
+
+    // write the given buffer into the pcap file
+    void write(unsigned char *buf, uint32_t len);
+
+    // name of the pcap file to create
+    string pcap_filename;
+
+    // handle to the pcap file
+    ofstream pcapfile;
+
+    bool file_exists(const string &filename);
+
+    // pcap global file header
+    struct CEA_PACKED pcap_file_hdr {
+        uint32_t magic : 32;
+        uint16_t version_major : 16;
+        uint16_t version_minor : 16;
+        uint32_t thiszone : 32;
+        uint32_t sigfigs : 32;
+        uint32_t snaplen : 32;
+        uint32_t linktype : 32;
+    } fh;
+    
+    // pcap per frame header
+    struct CEA_PACKED pcap_pkt_hdr {
+        uint32_t tv_sec : 32;
+        uint32_t tv_usec : 32;
+        uint32_t caplen : 32;
+        uint32_t len : 32;
+    } ph;
+};
+
+pcap::pcap(string filename) {
+    pcap_filename = filename;
+
+    if (file_exists(pcap_filename)) {
+        if (remove(filename.c_str()) != 0) {
+            cealog << "PCAP file " << filename 
+                << " already exists and cannot be deleted. Aborting..."
+                << endl;
+            abort();
+        }
+    } else {
+        fh = {0xa1b2c3d4, 2, 4, 0, 0, 4194304, 1};
+        pcapfile.open(pcap_filename, ofstream::app);
+        pcapfile.write((char*)&fh, sizeof(pcap_file_hdr));
+    }
+}
+
+pcap::~pcap() {
+    pcapfile.close();
+}
+
+// true if the file exists, else false
+bool pcap::file_exists(const string &filename) {
+    struct stat buf;
+    if (stat(filename.c_str(), &buf) != -1) {
+        return true;
+    }
+    return false;
+}
+
+void pcap::write(unsigned char *buf, uint32_t len) {
+    pcapfile.write((const char*)&ph, sizeof(pcap_pkt_hdr));
+    pcapfile.write((const char*)buf, len);
+    pcapfile.flush();
+}
+
 //-------------
 // Stream Core
 //-------------
@@ -659,6 +663,9 @@ public:
 
     // Define a spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
+
+    // enable or disable stream feature
+    void set(cea_stream_feature_id feature);
 
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
@@ -717,6 +724,10 @@ void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
     impl->set(id, spec);
 }
 
+void cea_stream::set(cea_stream_feature_id feature) {
+    impl->set(feature);
+}
+
 void cea_stream::add_header(cea_header *hdr) {
     impl->added_htable.push_back(hdr);
 }
@@ -730,6 +741,10 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 }
 
 void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
+}
+
+void cea_stream::core::set(cea_stream_feature_id feature) {
+    // TODO
 }
 
 // TODO Memory leak?
