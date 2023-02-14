@@ -32,12 +32,25 @@ using namespace chrono;
 // frame metadata (control header) size in bytes
 #define CEA_FRM_METASIZE 64
 
+// total length of '-' used by cea_formatted_hdr
+#define CEA_FORMATTED_HDR_LEN 80
+
 // CEA_MSG() - Used for mandatory messages inside classes.
 // Cannot be disabled in debug mode
 #define CEA_MSG(msg) { \
     stringstream s; \
     s << msg; \
-    cealog << msg_prefix << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+    cealog << "(" << msg_prefix << "|" << setw(8) << left << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+}
+
+// CEA_ERR_MSG() - Used for mandatory error messages inside classes.
+// Cannot be disabled in debug mode
+#define CEA_ERR_MSG(msg) { \
+    stringstream s; \
+    s << msg; \
+    cealog << endl << cea_formatted_hdr("Fatal Error"); \
+    cealog << "(" << msg_prefix << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+    cealog << string(CEA_FORMATTED_HDR_LEN, '-') << endl; \
 }
 
 // CEA_GMSG() - Used for mandatory messages outside classes.
@@ -226,7 +239,7 @@ vector<cea_field> fdb = {
 
 void signal_handler(int signal) {
     if (signal == SIGABRT) {
-        cealog << "<<<< Aborting simulation >>>>" << endl;
+        cealog << endl << "<<<< Aborting simulation >>>>" << endl;
     } else {
         cerr << "Unexpected signal " << signal << " received\n";
     }
@@ -503,7 +516,6 @@ string cea_wordwrap(string msg, uint32_t line_width=100) {
     return wrapped_msg.str();
 }
 
-#define CEA_FORMATTED_HDR_LEN 80
 string cea_formatted_hdr(string s) {
     stringstream ss;
     ss.setf(ios_base::left);
@@ -599,7 +611,7 @@ void print_cdata (unsigned char* tmp, int len) {
 class pcap {
 public:
     // ctor
-    pcap(string filename, string parent_name, uint32_t parent_id);
+    pcap(string filename, string name, uint32_t id);
 
     // dtor
     ~pcap();
@@ -616,11 +628,11 @@ public:
     bool file_exists(const string &filename);
 
     // set when the object is created
-    string stream_name;
+    string parent_name;
 
     // automatically assigned when the proxy object is created
     // the value of the field is set from the global variable proxy_id
-    uint32_t stream_id;
+    uint32_t parent_id;
 
     // build a string to be prefixed in all messages generated from this class
     string msg_prefix;
@@ -643,14 +655,13 @@ public:
         uint32_t caplen : 32;
         uint32_t len : 32;
     } ph;
-
 };
 
-pcap::pcap(string filename, string parent_name, uint32_t parent_id) {
+pcap::pcap(string filename, string name, uint32_t id) {
     pcap_filename = filename;
-    stream_name = parent_name;
-    stream_id = parent_id;
-    msg_prefix = '(' + stream_name + ":" + to_string(stream_id) + "|";
+    parent_name = name;
+    parent_id = id;
+    msg_prefix = parent_name + ":" + to_string(parent_id);
 
     if (file_exists(pcap_filename)) {
         if (remove(filename.c_str()) != 0) {
@@ -759,6 +770,10 @@ public:
     void build_htable();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
+    string header_name;
+    string parent_name; // TODO
+    string parent_id; // TODO
+    string msg_prefix;
 };
 
 //------------------------------------------------------------------------------
@@ -789,9 +804,8 @@ void cea_stream::add_header(cea_header *hdr) {
 cea_stream::core::core(string name) {
     stream_name = name;
     stream_id = cea::stream_id;
+    msg_prefix = stream_name + ":" + to_string(stream_id);
     cea::stream_id++;
-    msg_prefix = '(' + stream_name + ":" + to_string(stream_id) + "|";
-    CEA_MSG("stream core created");
 }
 
 cea_stream::core::~core() = default;
@@ -839,7 +853,7 @@ void cea_stream::core::test() {
     }
     // testing generation of tree structure
     for (auto f : added_htable) {
-        cout << cea_header_name[f->impl->htype] << endl;
+        cealog << cea_header_name[f->impl->htype] << endl;
         for (auto item : f->impl->htable) {
             cealog << "  |--" << item.name << endl;
         }
@@ -878,7 +892,9 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
         field->spec.value = value;
         field->is_mutable = false;
     } else {
-        CEA_GMSG("Missing field ID: " << id << " in header field table.");
+        CEA_ERR_MSG("The field "
+            << cea_trim(fdb[id].name) << " does not belong to the "
+            << cea_header_name[htype] << " header");
         abort();
     }
 }
@@ -893,11 +909,11 @@ void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
         if (field->spec.gen_type != Fixed_Value)
             field->is_mutable = true;
     } else {
-        CEA_GMSG("Missing field ID: " << id << " in header field table.");
+        CEA_ERR_MSG("The field "
+            << cea_trim(fdb[id].name) << " does not belong to the "
+            << cea_header_name[htype] << " header");
         abort();
     }
-
-
 }
 
 cea_header::cea_header(cea_header_type hdr) {
@@ -905,6 +921,8 @@ cea_header::cea_header(cea_header_type hdr) {
 }
 
 cea_header::core::core(cea_header_type hdr) {
+    header_name = string("Header") + ":" + cea_header_name[hdr];
+    msg_prefix = header_name;
     htype = hdr;
     build_htable();
 }

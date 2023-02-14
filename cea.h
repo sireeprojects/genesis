@@ -263,7 +263,7 @@ public:// internal use
 //------------------------------------------------------------------------------
 class cea_stream {
 public:    
-    cea_stream(string name = "stm");
+    cea_stream(string name = "stream");
     ~cea_stream();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);

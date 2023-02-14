@@ -6,6 +6,7 @@ using namespace cea;
 int main() {
     cea_proxy *proxy = new cea_proxy(); // proxy instance
     cea_stream *stream = new cea_stream("testStream"); // stream instance
+
     stream->set(PCAP_Record_Tx_Enable);
     stream->set(PCAP_Record_Rx_Enable);
 
@@ -26,7 +27,7 @@ int main() {
     stream->add_header(meta);
     stream->add_header(tcp);
 
-    // stream->test();
+    stream->test();
 
     return 0;
 }
