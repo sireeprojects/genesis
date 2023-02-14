@@ -7,8 +7,8 @@ int main() {
     cea_proxy *proxy = new cea_proxy(); // proxy instance
     cea_stream *stream = new cea_stream("testStream"); // stream instance
 
-    stream->set(PCAP_Record_Tx_Enable);
-    stream->set(PCAP_Record_Rx_Enable);
+    // stream->set(PCAP_Record_Tx_Enable);
+    // stream->set(PCAP_Record_Rx_Enable);
 
     cea_header *mac =  new cea_header(MAC);
     cea_header *ipv4 = new cea_header(IPv4);
@@ -28,6 +28,7 @@ int main() {
     stream->add_header(tcp);
 
     stream->test();
+    // mac->test();
 
     return 0;
 }

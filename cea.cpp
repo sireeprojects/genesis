@@ -39,8 +39,9 @@ using namespace chrono;
 // Cannot be disabled in debug mode
 #define CEA_MSG(msg) { \
     stringstream s; \
-    s << msg; \
-    cealog << "(" << msg_prefix << "|" << setw(8) << left << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+    s << msg; cealog << "(" << msg_prefix << "|" << setw(8) << left \
+    << string(__FUNCTION__) << ")" << ": " <<  s.str() \
+    << endl; \
 }
 
 // CEA_ERR_MSG() - Used for mandatory error messages inside classes.
@@ -49,16 +50,9 @@ using namespace chrono;
     stringstream s; \
     s << msg; \
     cealog << endl << cea_formatted_hdr("Fatal Error"); \
-    cealog << "(" << msg_prefix << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
+    cealog << "(" << msg_prefix << "|" << string(__FUNCTION__) << ")" \
+    << ": " <<  s.str() << endl; \
     cealog << string(CEA_FORMATTED_HDR_LEN, '-') << endl; \
-}
-
-// CEA_GMSG() - Used for mandatory messages outside classes.
-// Cannot be disabled in debug mode
-#define CEA_GMSG(msg) { \
-    stringstream s; \
-    s << msg; \
-    cealog << string(__FUNCTION__) << ")" << ": " <<  s.str() << endl; \
 }
 
 // CEA_DBG() - Enabled only in debug mode
@@ -75,6 +69,8 @@ using namespace chrono;
 #define FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
 
 namespace cea {
+
+string msg_prefix = "cea";    
 
 // global variable to track proxy and stream id
 // TODO: This will become a problem in multi-process mode
@@ -244,19 +240,6 @@ void signal_handler(int signal) {
         cerr << "Unexpected signal " << signal << " received\n";
     }
     exit(EXIT_FAILURE);
-}
-
-// find_if with lambda predicate
-cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
-    auto lit = find_if(tbl.begin(), tbl.end(),
-                    [&id](const cea_field &item) {
-                    return (item.id == id); 
-                    });
-    if (lit==tbl.end()) {
-        CEA_GMSG("Missing field ID: " << id << " in global field table.");
-        abort();
-    }
-    return (*lit);
 }
 
 void print_ftable(vector<cea_field>tbl) {
@@ -698,9 +681,23 @@ void pcap::write(unsigned char *buf, uint32_t len) {
     pcapfile.flush();
 }
 
+// find_if with lambda predicate
+cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
+    auto lit = find_if(tbl.begin(), tbl.end(),
+        [&id](const cea_field &item) {
+        return (item.id == id); });
+
+    if (lit==tbl.end()) {
+        CEA_ERR_MSG("Internal: Unrecognized field identifier: " << id);
+        abort();
+    }
+    return (*lit);
+}
+
 //-------------
 // Stream Core
 //-------------
+
 class cea_stream::core {
 public:
     // ctor
@@ -709,33 +706,39 @@ public:
     // dtor
     ~core();
 
-    // set when the object is created
-    string stream_name;
-
-    // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
-    uint32_t stream_id;
-
-    // build a string to be prefixed in all messages generated from this class
-    string msg_prefix;
-
     // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
 
-    // Define a spec for the generation of a field
+    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
 
-    // enable or disable stream feature
+    // enable or disable a stream feature
     void set(cea_stream_feature_id feature);
+
+    // Based on user specification of the frame, build a vector of 
+    // field ids in the sequence required by the specification
+    void arrange_fields_in_sequence();
+
+    // build cseq by parsing fseq and adding only mutable fields
+    void purge_static_fields();
+
+    // calls arrange and purge
+    void prune();
+
+    // concatenate all fields reuired by the frame spec
+    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
+
+    // evaluate field length and calculate offset of all fields of this stream
+    void build_offsets();
+
+    // process the headers and fields and prepare for generation
+    void bootstrap();
+
+    // Factory reset of the stream core
+    void reset();
 
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
-
-    // There are two vectors managed_ and added_. The user may create a header
-    // but need not necessarily add that header to the stream for some reasons.
-    // managed_ will be used to store and delete all headers created irrespective
-    // of whethere they are added to the stream or not. added_ will be used for
-    // generation
 
     // all_ftable will be used to store all the fields added by user by the way
     // of adding headers
@@ -745,12 +748,14 @@ public:
     // stream generation
     vector<cea_field> mut_ftable;
 
-    // Factory reset of the stream core
-    void reset();
-
-    // pcap
+    // pcap handle for recording
     pcap *txpcap;
     pcap *rxpcap;
+
+    // Prefixture to stream messages
+    string stream_name;
+    uint32_t stream_id;
+    string msg_prefix;
 
     // Used for internal testing only. The define CEA_DEVEL should be included in
     // the compile to use this function
@@ -762,23 +767,44 @@ public:
 //-------------
 class cea_header::core {
 public:
+    // ctor
     core(cea_header_type hdr);
+
+    // dtor
     ~core();
-    cea_header_type htype;
-    vector<cea_field_id> hfids;
-    vector<cea_field> htable;
-    void build_htable();
+
+    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
+
+    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
+
+    // The protocol header type that this class represents
+    cea_header_type htype;
+
+    // A list of field identifiers that is required by this header 
+    vector<cea_field_id> hfids;
+
+    // A table of field structs that corresponds to the field identifiers
+    // required by this header
+    vector<cea_field> htable;
+
+    // copy the primordial field structs corresponding to the field
+    // identifiers that are required by this header
+    void build_htable();
+
+    // prefixture to header messages
     string header_name;
-    string parent_name; // TODO
-    string parent_id; // TODO
     string msg_prefix;
+
+    // internal use only
+    void test();
 };
 
 //------------------------------------------------------------------------------
 // Stream implementation
 //------------------------------------------------------------------------------
+
 cea_stream::cea_stream(string name) {
     impl = make_unique<core>(name); 
 }
@@ -798,8 +824,13 @@ void cea_stream::set(cea_stream_feature_id feature) {
 }
 
 void cea_stream::add_header(cea_header *hdr) {
+    hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
     impl->added_htable.push_back(hdr);
 }
+
+//------------------------------------------------------------------------------
+// Stream core implementation
+//------------------------------------------------------------------------------
 
 cea_stream::core::core(string name) {
     stream_name = name;
@@ -833,6 +864,33 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
         default:{
             }
     }
+}
+
+// TODO
+void cea_stream::core::arrange_fields_in_sequence() {
+}
+
+// TODO
+void cea_stream::core::purge_static_fields() {
+}
+
+void cea_stream::core::prune() {
+    arrange_fields_in_sequence();
+    purge_static_fields();
+}
+
+// TODO
+uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
+    return 0;
+}
+
+// TODO
+void cea_stream::core::build_offsets() {
+}
+
+// TODO
+void cea_stream::core::bootstrap() {
+    prune();
 }
 
 void cea_stream::core::reset() {
@@ -875,6 +933,10 @@ void cea_stream::test() {
 // Header implementation
 //------------------------------------------------------------------------------
 
+void cea_header::test() {
+    impl->test();
+}
+
 void cea_header::set(cea_field_id id, uint64_t value) {
     impl->set(id, value);
 }
@@ -883,35 +945,38 @@ void cea_header::set(cea_field_id id, cea_gen_spec spec) {
     impl->set(id, spec);
 }
 
+void cea_header::core::test() {
+}
+
 void cea_header::core::set(cea_field_id id, uint64_t value) {
     auto field = find_if(htable.begin(), htable.end(),
-                    [&id](const cea_field &item) {
-                    return (item.id == id); 
-                    });
+        [&id](const cea_field &item) {
+        return (item.id == id); });
+
     if (field != htable.end()) {
         field->spec.value = value;
         field->is_mutable = false;
     } else {
         CEA_ERR_MSG("The field "
-            << cea_trim(fdb[id].name) << " does not belong to the "
-            << cea_header_name[htype] << " header");
+        << cea_trim(fdb[id].name) << " does not belong to the "
+        << cea_header_name[htype] << " header");
         abort();
     }
 }
 
 void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
     auto field = find_if(htable.begin(), htable.end(),
-                    [&id](const cea_field &item) {
-                    return (item.id == id); 
-                    });
+        [&id](const cea_field &item) {
+        return (item.id == id); });
+
     if (field != htable.end()) {
         field->spec = spec;
         if (field->spec.gen_type != Fixed_Value)
             field->is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
-            << cea_trim(fdb[id].name) << " does not belong to the "
-            << cea_header_name[htype] << " header");
+        << cea_trim(fdb[id].name) << " does not belong to the "
+        << cea_header_name[htype] << " header");
         abort();
     }
 }

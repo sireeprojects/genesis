@@ -261,39 +261,59 @@ public:// internal use
 //------------------------------------------------------------------------------
 // Stream
 //------------------------------------------------------------------------------
+
 class cea_stream {
 public:    
+    // Constructor
     cea_stream(string name = "stream");
+
+    // Destructor
     ~cea_stream();
+
+    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
+
+    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
+
+    // Enable a feature of the stream
     void set(cea_stream_feature_id feature);
-    cea_header *create_header(cea_header_type type);
+
+    // Used to add various protocol headers to this stream. The frame
+    // will be generated in the same sequence as the headers were added
     void add_header(cea_header *hdr);
 private:
     class core;
     unique_ptr<core> impl;
     friend class cea_proxy;
 
-public:// internal use
+public:// for internal debug
     void test();
 };
 
 //------------------------------------------------------------------------------
 // Header Class
 //------------------------------------------------------------------------------
+
 class cea_header {
 public:
+    // Constructor
     cea_header(cea_header_type hdr);
+    
+    // Destructor
     ~cea_header() = default;
+    
+    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
+
+    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
 private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
 
-public:// internal use
+public:// for internal debug
     void test();
 };
 
