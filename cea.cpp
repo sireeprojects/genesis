@@ -951,6 +951,23 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     //     }
     // }
     // return offset;
+
+    uint32_t offset = 0;
+    uint64_t merged = 0;
+    uint64_t len = 0;
+    uint64_t mlen = 0;
+
+    for (auto f : all_ftable) {
+        if(f.merge==0) {
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.spec.value, f.len/8);
+            offset += f.len/8;
+        } else {
+            merged = (merged << f.len) | f.spec.value;
+            for (;;) {
+            }
+        }
+    }
+
     return 0;
 }
 
