@@ -126,6 +126,24 @@ const uint32_t crc32_tab[] = {
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
+enum cea_field_type {
+    Integer,
+    Pattern
+};
+
+struct cea_field {
+    bool is_mutable;
+    uint32_t merge;
+    cea_field_id id;
+    uint32_t len;
+    uint32_t offset;
+    bool proto_list_specified;
+    bool auto_field;
+    string name;
+    cea_field_type type;
+    cea_gen_spec spec;
+};
+
 vector<cea_field> fdb = {
 {false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
 {false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
@@ -717,22 +735,27 @@ public:
 
     // Based on user specification of the frame, build a vector of 
     // field ids in the sequence required by the specification
-    void arrange_fields_in_sequence();
+    void gather_fields_from_added_headers();
 
-    // build cseq by parsing fseq and adding only mutable fields
-    void purge_static_fields();
-
-    // calls arrange and purge
-    void prune();
-
-    // concatenate all fields reuired by the frame spec
-    uint32_t splice_fields(vector<uint32_t> seq, unsigned char *buf);
+    // The addition of mpls/vlan/llc/snap affects the position of ethertype and
+    // length fields. update/insert type or len after arranging all fields in
+    // the required sequence
+    void update_ethertype_and_len();
 
     // evaluate field length and calculate offset of all fields of this stream
     void build_offsets();
 
+    // build cseq by parsing fseq and adding only mutable fields
+    void filter_mutable_fields();
+
+    // concatenate all fields reuired by the frame spec
+    uint32_t splice_fields(unsigned char *buf);
+
     // process the headers and fields and prepare for generation
     void bootstrap();
+
+    // print the headers and fields in a tree structure
+    void display_stream();
 
     // Factory reset of the stream core
     void reset();
@@ -789,7 +812,7 @@ public:
     // required by this header
     vector<cea_field> htable;
 
-    // copy the primordial field structs corresponding to the field
+    // copy the un-modified field structs from fdb corresponding to the field
     // identifiers that are required by this header
     void build_htable();
 
@@ -866,42 +889,8 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
     }
 }
 
-// TODO
-void cea_stream::core::arrange_fields_in_sequence() {
-}
-
-// TODO
-void cea_stream::core::purge_static_fields() {
-}
-
-void cea_stream::core::prune() {
-    arrange_fields_in_sequence();
-    purge_static_fields();
-}
-
-// TODO
-uint32_t cea_stream::core::splice_fields(vector<uint32_t> seq, unsigned char *buf) {
-    return 0;
-}
-
-// TODO
-void cea_stream::core::build_offsets() {
-}
-
-// TODO
-void cea_stream::core::bootstrap() {
-    prune();
-}
-
-void cea_stream::core::reset() {
-    added_htable.clear();
-}
-
-void cea_stream::core::test() {
-#ifdef CEA_DEVEL
+void cea_stream::core::gather_fields_from_added_headers() {
     all_ftable.clear();
-
-    // build all_ftable
     for (auto f : added_htable) {
         all_ftable.insert(
                 all_ftable.end(),
@@ -909,20 +898,87 @@ void cea_stream::core::test() {
                 f->impl->htable.end()
         );
     }
-    // testing generation of tree structure
+}
+
+// TODO
+void cea_stream::core::update_ethertype_and_len() {
+}
+
+void cea_stream::core::build_offsets() {
+    vector<cea_field>::iterator it;
+    for(it=all_ftable.begin(); it<all_ftable.end(); it++) {
+        it->offset = prev(it)->len + prev(it)->offset;
+    }
+}
+
+void cea_stream::core::filter_mutable_fields() {
+    mut_ftable.clear();
+    for (auto f : all_ftable) {
+        if (f.is_mutable) {
+            mut_ftable.push_back(f);
+        }
+    }
+}
+
+// TODO
+uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
+    // uint32_t offset = 0;
+    // uint64_t merged = 0;
+    // uint64_t len = 0;
+    // uint64_t mlen = 0;
+
+    // for (uint32_t i=0; i<seq.size(); i++) {
+    //     uint32_t idx = fields[seq[i]].id;
+    //     if (fields[idx].merge != 0) {
+    //         merged = fields[idx].value; // first field
+    //         mlen += fields[idx].len;
+    //         for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
+    //             uint32_t xidx = fields[seq[x]].id;
+    //             len = fields[xidx].len;
+    //             merged = (merged << len) | fields[xidx].value;
+    //             mlen += len;
+    //         }
+    //         cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
+    //         offset += mlen/8;
+    //         i += fields[idx].merge; // skip mergable entries
+    //     } else {
+    //         uint64_t tmp = fields[idx].value;
+    //         uint64_t len = fields[idx].len;
+    //         cea_memcpy_ntw_byte_order(buf+offset, (char*)&tmp, len/8);
+    //         offset += len/8;
+    //         mlen = 0; // TODO fix this
+    //         merged = 0; // TODO fix this
+    //     }
+    // }
+    // return offset;
+    return 0;
+}
+
+void cea_stream::core::bootstrap() {
+    gather_fields_from_added_headers();
+    update_ethertype_and_len();
+    build_offsets();
+    filter_mutable_fields();
+    display_stream();
+}
+
+void cea_stream::core::display_stream() {
     for (auto f : added_htable) {
         cealog << cea_header_name[f->impl->htype] << endl;
         for (auto item : f->impl->htable) {
             cealog << "  |--" << item.name << endl;
         }
     }
-    // build mutable table
-    for (auto f : all_ftable) {
-        if (f.is_mutable) {
-            mut_ftable.push_back(f);
-        }
-    }
-#endif
+}
+
+void cea_stream::core::reset() {
+    added_htable.clear();
+}
+
+void cea_stream::core::test() {
+    #ifdef CEA_DEVEL
+    bootstrap();
+    #endif
 }
 
 void cea_stream::test() {

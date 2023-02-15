@@ -10,15 +10,9 @@ namespace cea {
 
 class outbuf : public streambuf {
 protected:
-    virtual int overflow(int c) ;
-};
-outbuf ob;
+    virtual int overflow(int c);
+} ob;
 
-// A custom output stream. Usage is similar to cout except that cout writes
-// messages only to the screen, but cealog writes the message to the screen
-// as well as the log file.
-// Usage example:
-// cealog << "Frame recevied: " << frm_count << endl;
 ostream cealog(&ob);
 
 enum cea_header_type {
@@ -153,11 +147,6 @@ enum cea_stream_feature_id {
     PCAP_Record_Rx_Enable
 };
 
-enum cea_field_type {
-    Integer,
-    Pattern
-};
-
 enum cea_unit {
     Percent,
     Frames_Per_Sec,
@@ -204,19 +193,6 @@ struct cea_gen_spec {
     vector<string> pattern_list;
 };
 
-struct cea_field {
-    bool is_mutable;
-    uint32_t merge;
-    cea_field_id id;
-    uint32_t len;
-    uint32_t offset;
-    bool proto_list_specified;
-    bool auto_field;
-    string name;
-    cea_field_type type;
-    cea_gen_spec spec;
-};
-
 // forward declaration
 class cea_stream;
 class cea_proxy;
@@ -226,6 +202,7 @@ class cea_header;
 //------------------------------------------------------------------------------
 // Manager
 //------------------------------------------------------------------------------
+
 class cea_manager {
 public:
     cea_manager();
@@ -245,6 +222,7 @@ public:// internal use
 //------------------------------------------------------------------------------
 // Proxy
 //------------------------------------------------------------------------------
+
 class cea_proxy {
 public:
     cea_proxy(string name = "pxy");
