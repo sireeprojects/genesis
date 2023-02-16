@@ -851,6 +851,10 @@ void cea_stream::add_header(cea_header *hdr) {
     impl->added_htable.push_back(hdr);
 }
 
+void cea_stream::test() {
+    impl->test();
+}
+
 //------------------------------------------------------------------------------
 // Stream core implementation
 //------------------------------------------------------------------------------
@@ -920,38 +924,7 @@ void cea_stream::core::filter_mutable_fields() {
     }
 }
 
-// TODO
 uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
-    // uint32_t offset = 0;
-    // uint64_t merged = 0;
-    // uint64_t len = 0;
-    // uint64_t mlen = 0;
-
-    // for (uint32_t i=0; i<seq.size(); i++) {
-    //     uint32_t idx = fields[seq[i]].id;
-    //     if (fields[idx].merge != 0) {
-    //         merged = fields[idx].value; // first field
-    //         mlen += fields[idx].len;
-    //         for (uint32_t x=(i+1); x<=((i+fields[idx].merge)); x++) {
-    //             uint32_t xidx = fields[seq[x]].id;
-    //             len = fields[xidx].len;
-    //             merged = (merged << len) | fields[xidx].value;
-    //             mlen += len;
-    //         }
-    //         cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
-    //         offset += mlen/8;
-    //         i += fields[idx].merge; // skip mergable entries
-    //     } else {
-    //         uint64_t tmp = fields[idx].value;
-    //         uint64_t len = fields[idx].len;
-    //         cea_memcpy_ntw_byte_order(buf+offset, (char*)&tmp, len/8);
-    //         offset += len/8;
-    //         mlen = 0; // TODO fix this
-    //         merged = 0; // TODO fix this
-    //     }
-    // }
-    // return offset;
-
     uint32_t offset = 0;
     uint64_t merged = 0;
     uint64_t len = 0;
@@ -963,12 +936,16 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
             offset += f.len/8;
         } else {
             merged = (merged << f.len) | f.spec.value;
-            for (;;) {
+            mlen = mlen + f.len;
+            for (uint32_t mcntr=0; mcntr<f.merge; mcntr++) {
+                merged = (merged << f.len) | f.spec.value;
+                mlen = mlen + f.len;
             }
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
+            offset += mlen/8;
         }
     }
-
-    return 0;
+    return offset;
 }
 
 void cea_stream::core::bootstrap() {
@@ -996,10 +973,6 @@ void cea_stream::core::test() {
     #ifdef CEA_DEVEL
     bootstrap();
     #endif
-}
-
-void cea_stream::test() {
-    impl->test();
 }
 
 //------------------------------------------------------------------------------
