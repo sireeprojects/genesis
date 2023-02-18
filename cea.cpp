@@ -592,7 +592,8 @@ void print_cdata (unsigned char* tmp, int len) {
 
     for (int x=0; x<len/16; x++) {
         for (int y=0; y<16; y++) {
-            s <<noshowbase<<setw(2)<<setfill('0')<<hex<<uint16_t(tmp[idx])<<" ";
+            s << noshowbase << setw(2) << setfill('0')
+              << hex << uint16_t(tmp[idx]) << " ";
             idx++;
         }
         s << endl;
@@ -694,6 +695,8 @@ bool pcap::file_exists(const string &filename) {
 }
 
 void pcap::write(unsigned char *buf, uint32_t len) {
+    ph.caplen = len;
+    ph.len = len;
     pcapfile.write((const char*)&ph, sizeof(pcap_pkt_hdr));
     pcapfile.write((const char*)buf, len);
     pcapfile.flush();
@@ -751,6 +754,12 @@ public:
     // concatenate all fields reuired by the frame spec
     uint32_t splice_fields(unsigned char *buf);
 
+    // calculate frame, txn sizes based on user inputs
+    void compute_mutation_sizes();
+
+    // build size and payload pattern arrays
+    void build_arrays();
+
     // process the headers and fields and prepare for generation
     void bootstrap();
 
@@ -759,6 +768,10 @@ public:
 
     // Factory reset of the stream core
     void reset();
+
+    // Used for internal testing only. The define CEA_DEVEL should be included in
+    // the compile to use this function
+    void test();
 
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
@@ -780,9 +793,14 @@ public:
     uint32_t stream_id;
     string msg_prefix;
 
-    // Used for internal testing only. The define CEA_DEVEL should be included in
-    // the compile to use this function
-    void test();
+    uint32_t nof_szs;
+    vector<uint32_t> vec_frm_szs;
+    vector<uint32_t> vec_txn_szs;
+    vector<uint32_t> vec_payl_szs;
+
+    vector<unsigned char> arr_payl_data;
+    vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
+
 };
 
 //-------------
@@ -897,9 +915,9 @@ void cea_stream::core::gather_fields_from_added_headers() {
     all_ftable.clear();
     for (auto f : added_htable) {
         all_ftable.insert(
-                all_ftable.end(),
-                f->impl->htable.begin(),
-                f->impl->htable.end()
+            all_ftable.end(),
+            f->impl->htable.begin(),
+            f->impl->htable.end()
         );
     }
 }
@@ -926,26 +944,33 @@ void cea_stream::core::filter_mutable_fields() {
 
 uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint32_t offset = 0;
-    uint64_t merged = 0;
-    uint64_t len = 0;
-    uint64_t mlen = 0;
+    uint64_t mrg_data = 0;
+    uint64_t mrg_len = 0;
 
     for (auto f : all_ftable) {
         if(f.merge==0) {
             cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.spec.value, f.len/8);
             offset += f.len/8;
         } else {
-            merged = (merged << f.len) | f.spec.value;
-            mlen = mlen + f.len;
+            mrg_data = (mrg_data << f.len) | f.spec.value;
+            mrg_len = mrg_len + f.len;
             for (uint32_t mcntr=0; mcntr<f.merge; mcntr++) {
-                merged = (merged << f.len) | f.spec.value;
-                mlen = mlen + f.len;
+                mrg_data = (mrg_data << f.len) | f.spec.value;
+                mrg_len = mrg_len + f.len;
             }
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&merged, mlen/8);
-            offset += mlen/8;
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&mrg_data, mrg_len/8);
+            offset += mrg_len/8;
         }
     }
     return offset;
+}
+
+// TODO
+void cea_stream::core::compute_mutation_sizes() {
+}
+
+// TODO
+void cea_stream::core::build_arrays() {
 }
 
 void cea_stream::core::bootstrap() {
@@ -954,6 +979,8 @@ void cea_stream::core::bootstrap() {
     build_offsets();
     filter_mutable_fields();
     display_stream();
+    compute_mutation_sizes();
+    build_arrays();
 }
 
 void cea_stream::core::display_stream() {
