@@ -942,6 +942,7 @@ void cea_stream::core::filter_mutable_fields() {
     }
 }
 
+// TODO: Pending verification
 uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t mrg_data = 0;
