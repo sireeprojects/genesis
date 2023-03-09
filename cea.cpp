@@ -423,7 +423,25 @@ vector<string> cea_header_name = {
     "INTL"
 };
 
-vector<string> cea_stream_feature_name {
+vector<string> cea_gen_type_name = {
+    "Fixed_Value",
+    "Fixed_Pattern",
+    "Value_List",
+    "Pattern_List",
+    "Increment",
+    "Decrement",
+    "Random",
+    "Increment_Bytes",
+    "Decrement_Byte",
+    "Increment_Word",
+    "Decrement_Word",
+    "Continuous",
+    "Bursty",
+    "Stop_After_Stream",
+    "Goto_Next_Stream"
+};
+
+vector<string> cea_stream_feature_name = {
     "PCAP_Record_Tx_Enable",
     "PCAP_Record_Rx_Enable"
 };
@@ -758,7 +776,7 @@ public:
     void compute_mutation_sizes();
 
     // build size and payload pattern arrays
-    void build_arrays();
+    void build_payload_arrays();
 
     // process the headers and fields and prepare for generation
     void bootstrap();
@@ -966,12 +984,52 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     return offset;
 }
 
+// struct cea_gen_spec {
+//     cea_gen_type gen_type;
+//     uint64_t value;
+//     string pattern;
+//     uint32_t step;
+//     uint32_t min;
+//     uint32_t max;
+//     uint32_t count;
+//     uint32_t repeat;
+//     uint32_t mask;
+//     uint32_t seed;
+//     uint32_t start;
+//     bool make_error;
+//     vector<uint64_t> value_list;
+//     vector<string> pattern_list;
+// };
+
 // TODO
 void cea_stream::core::compute_mutation_sizes() {
+    // uint32_t nof_szs;
+    // vector<uint32_t> vec_frm_szs;
+    // vector<uint32_t> vec_txn_szs;
+    // vector<uint32_t> vec_payl_szs;
+    // vector<unsigned char> arr_payl_data;
+    // vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
+
+    cea_gen_spec spec = fdb[FRAME_Len].spec;
+
+    cealog << "spec.gen_type     : " << spec.gen_type     << endl; 
+    cealog << "spec.value        : " << spec.value        << endl; 
+    cealog << "spec.pattern      : " << spec.pattern      << endl; 
+    cealog << "spec.step         : " << spec.step         << endl; 
+    cealog << "spec.min          : " << spec.min          << endl; 
+    cealog << "spec.max          : " << spec.max          << endl; 
+    cealog << "spec.count        : " << spec.count        << endl; 
+    cealog << "spec.repeat       : " << spec.repeat       << endl; 
+    cealog << "spec.mask         : " << spec.mask         << endl; 
+    cealog << "spec.seed         : " << spec.seed         << endl; 
+    cealog << "spec.start        : " << spec.start        << endl; 
+    cealog << "spec.make_error   : " << spec.make_error   << endl; 
+    // cealog << "spec.value_list   : " << spec.value_list   << endl; 
+    // cealog << "spec.pattern_list : " << spec.pattern_list << endl; 
 }
 
 // TODO
-void cea_stream::core::build_arrays() {
+void cea_stream::core::build_payload_arrays() {
 }
 
 void cea_stream::core::bootstrap() {
@@ -981,7 +1039,7 @@ void cea_stream::core::bootstrap() {
     filter_mutable_fields();
     display_stream();
     compute_mutation_sizes();
-    build_arrays();
+    build_payload_arrays();
 }
 
 void cea_stream::core::display_stream() {
