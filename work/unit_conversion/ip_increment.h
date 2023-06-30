@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+#include <algorithm>
 using namespace std;
 
 #define DELIMITER '.'

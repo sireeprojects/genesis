@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdint>
+#include <algorithm>
 using namespace std;
 
 // get IP in string format
