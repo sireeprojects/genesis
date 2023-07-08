@@ -797,7 +797,7 @@ public:
     // of adding headers
     vector<cea_field> all_ftable;
 
-    // mut_ftable will be used to store only those fields that will during
+    // mut_ftable will be used to store only those fields that will used during
     // stream generation
     vector<cea_field> mut_ftable;
 
@@ -932,8 +932,8 @@ void cea_stream::core::gather_fields_from_added_headers() {
     }
 }
 
-// TODO
 void cea_stream::core::update_ethertype_and_len() {
+// TODO
 }
 
 void cea_stream::core::build_offsets() {
@@ -976,35 +976,35 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     return offset;
 }
 
-// struct cea_gen_spec {
-//     cea_gen_type gen_type;
-//     uint64_t value;
-//     string pattern;
-//     uint32_t step;
-//     uint32_t min;
-//     uint32_t max;
-//     uint32_t count;
-//     uint32_t repeat;
-//     uint32_t mask;
-//     uint32_t seed;
-//     uint32_t start;
-//     bool make_error;
-//     vector<uint64_t> value_list;
-//     vector<string> pattern_list;
-// };
+// struct cea_gen_spec              enum cea_gen_type 
+//   cea_gen_type gen_type;           Fixed_Value,
+//   uint64_t value;                  Fixed_Pattern,
+//   string pattern;                  Value_List,
+//   uint32_t step;                   Pattern_List,
+//   uint32_t min;                    Increment,
+//   uint32_t max;                    Decrement,
+//   uint32_t count;                  Random,
+//   uint32_t repeat;                 Increment_Bytes,
+//   uint32_t mask;                   Decrement_Byte,
+//   uint32_t seed;                   Increment_Word,
+//   uint32_t start;                  Decrement_Word,
+//   bool make_error;                 Continuous,
+//   vector<uint64_t> value_list;     Bursty,
+//   vector<string> pattern_list;     Stop_After_Stream,
+//                                    Goto_Next_Stream
+// uint32_t nof_szs;
+// vector<uint32_t> vec_frm_szs;
+// vector<uint32_t> vec_txn_szs;
+// vector<uint32_t> vec_payl_szs;
+// vector<unsigned char> arr_payl_data;
+// vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
 
-// TODO
 void cea_stream::core::compute_mutation_sizes() {
-    // uint32_t nof_szs;
-    // vector<uint32_t> vec_frm_szs;
-    // vector<uint32_t> vec_txn_szs;
-    // vector<uint32_t> vec_payl_szs;
-    // vector<unsigned char> arr_payl_data;
-    // vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
+// PROGRESS
+    auto f = get_field(all_ftable, FRAME_Len);
+    cea_gen_spec spec = f.spec;
 
-    cea_gen_spec spec = fdb[FRAME_Len].spec;
-
-    cealog << "spec.gen_type     : " << spec.gen_type     << endl; 
+    cealog << "spec.gen_type     : " << cea_gen_type_name[spec.gen_type] << endl; 
     cealog << "spec.value        : " << spec.value        << endl; 
     cealog << "spec.pattern      : " << spec.pattern      << endl; 
     cealog << "spec.step         : " << spec.step         << endl; 
@@ -1029,7 +1029,7 @@ void cea_stream::core::bootstrap() {
     update_ethertype_and_len();
     build_offsets();
     filter_mutable_fields();
-    display_stream();
+    // display_stream();
     compute_mutation_sizes();
     build_payload_arrays();
 }
@@ -1173,14 +1173,17 @@ public:
 };
 
 void cea_port::core::reset() {
-// TODO
+    msg_prefix = port_name;
 }
 
 void cea_port::core::worker() {
-// TODO
-    cur_stream = streamq[0];
-    cur_stream->impl->bootstrap();
-    cur_stream->impl->mutate();
+    vector<cea_stream*>::iterator it;
+
+    for (it = streamq.begin(); it != streamq.end(); it++) {
+        cur_stream = *it;
+        cur_stream->impl->bootstrap();
+        cur_stream->impl->mutate();
+    }
 }
 
 void cea_port::core::start_worker() {
@@ -1201,6 +1204,11 @@ cea_port::cea_port(string name) {
 }
 
 cea_port::core::core(string name) {
+    port_id = cea::port_id;
+    cea::port_id++;
+    port_name = name + ":" + to_string(port_id);
+    reset();
+    CEA_MSG("Proxy created with name=" << name << " and id=" << port_id);
 }
 
 void cea_port::add_stream(cea_stream *stream) {
@@ -1239,8 +1247,6 @@ void cea_port::core::stop() {
 void cea_port::core::pause() {
 // TODO
 }
-
-
 
 //------------------------------------------------------------------------------
 // Testbench Implementation

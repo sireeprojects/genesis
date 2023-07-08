@@ -22,12 +22,13 @@ int main() {
     dest_spec.gen_type = Random;
     mac->set(MAC_Dest_Addr, dest_spec);
 
+    stream->set(FRAME_Len, 100);
+
     // add headers in desired seqeunce 
     stream->add_header(mac);
     stream->add_header(ipv4);
     stream->add_header(meta);
     stream->add_header(tcp);
-
 
     tb->start();
 

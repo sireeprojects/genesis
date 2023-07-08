@@ -230,7 +230,6 @@ public:
     void add_stream(cea_stream *stream);
     void add_cmd(cea_stream *stream);
     void exec_cmd(cea_stream *stream);
-
 private:
     class core;
     unique_ptr<core> impl;
