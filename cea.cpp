@@ -131,7 +131,12 @@ enum cea_field_type {
     Pattern
 };
 
-struct cea_field {
+enum cea_stream_add_type {
+    Header,
+    Field
+};
+
+struct cea_field_spec {
     bool is_mutable;
     uint32_t merge;
     cea_field_id id;
@@ -144,7 +149,7 @@ struct cea_field {
     cea_gen_spec spec;
 };
 
-vector<cea_field> fdb = {
+vector<cea_field_spec> fdb = {
 {false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
 {false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
 {false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }},
@@ -260,7 +265,7 @@ void signal_handler(int signal) {
     exit(EXIT_FAILURE);
 }
 
-void print_ftable(vector<cea_field>tbl) {
+void print_ftable(vector<cea_field_spec>tbl) {
     stringstream ss;
     ss.setf(ios_base::left);
 
@@ -721,9 +726,9 @@ void pcap::write(unsigned char *buf, uint32_t len) {
 }
 
 // find_if with lambda predicate
-cea_field get_field(vector<cea_field> tbl, cea_field_id id) {
+cea_field_spec get_field(vector<cea_field_spec> tbl, cea_field_id id) {
     auto lit = find_if(tbl.begin(), tbl.end(),
-        [&id](const cea_field &item) {
+        [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
     if (lit==tbl.end()) {
@@ -793,13 +798,21 @@ public:
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
 
-    // all_ftable will be used to store all the fields added by user by the way
+    // Store the field pointers added to the stream for generation
+    vector<cea_field*> added_ftable;
+
+    vector<cea_stream_add_type> hf_sequencer;
+
+    // all_fields_from_hdrs will be used to store all the fields added by user by the way
     // of adding headers
-    vector<cea_field> all_ftable;
+    vector<cea_field_spec> all_fields_from_hdrs;
+
+    // a copy of the all the default fields and it values
+    vector<cea_field_spec> stream_fdb;
 
     // mut_ftable will be used to store only those fields that will used during
     // stream generation
-    vector<cea_field> mut_ftable;
+    vector<cea_field_spec> mut_ftable;
 
     // pcap handle for recording
     pcap *txpcap;
@@ -821,8 +834,39 @@ public:
 };
 
 //-------------
+// Field Core
+//-------------
+
+class cea_field::core {
+public:
+    // ctor
+    core(cea_field_id id);
+
+    // dtor
+    ~core();
+
+    // Quickly set a fixed value to a field
+    void set(uint64_t id);
+
+    // Define a complete spec for the generation of a field
+    void set(cea_gen_spec spec);
+
+    // The protocol field type that this class represents
+    cea_field_id fid;
+
+    // A table of field structs that corresponds to the field identifiers
+    // required by this field
+    cea_field_spec field;
+
+    // prefixture to field messages
+    string field_name;
+    string msg_prefix;
+};
+
+//-------------
 // Header Core
 //-------------
+
 class cea_header::core {
 public:
     // ctor
@@ -845,7 +889,7 @@ public:
 
     // A table of field structs that corresponds to the field identifiers
     // required by this header
-    vector<cea_field> htable;
+    vector<cea_field_spec> htable;
 
     // copy the un-modified field structs from fdb corresponding to the field
     // identifiers that are required by this header
@@ -856,278 +900,10 @@ public:
     string msg_prefix;
 };
 
-//------------------------------------------------------------------------------
-// Stream implementation
-//------------------------------------------------------------------------------
-
-cea_stream::cea_stream(string name) {
-    impl = make_unique<core>(name); 
-}
-
-cea_stream::~cea_stream() = default;
-
-void cea_stream::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
-    impl->set(id, spec);
-}
-
-void cea_stream::set(cea_stream_feature_id feature) {
-    impl->set(feature);
-}
-
-void cea_stream::add_header(cea_header *hdr) {
-    hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
-    impl->added_htable.push_back(hdr);
-}
-
-//------------------------------------------------------------------------------
-// Stream core implementation
-//------------------------------------------------------------------------------
-
-cea_stream::core::core(string name) {
-    stream_name = name;
-    stream_id = cea::stream_id;
-    msg_prefix = stream_name + ":" + to_string(stream_id);
-    cea::stream_id++;
-}
-
-cea_stream::core::~core() = default;
-
-void cea_stream::core::set(cea_field_id id, uint64_t value) {
-}
-
-void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
-}
-
-void cea_stream::core::set(cea_stream_feature_id feature) {
-    switch (feature) {
-        case PCAP_Record_Tx_Enable: {
-            CEA_MSG("PCAP capture enabled @ Transmit side");
-            string pcapfname = stream_name + "_tx" + + ".pcap";
-            txpcap = new pcap(pcapfname, stream_name, stream_id);
-            break;
-            }
-        case PCAP_Record_Rx_Enable: {
-            CEA_MSG("PCAP capture enabled @ Receive side");
-            string pcapfname = stream_name + "_rx" + + ".pcap";
-            rxpcap = new pcap(pcapfname, stream_name, stream_id);
-            break;
-            }
-        default:{
-            }
-    }
-}
-
-void cea_stream::core::gather_fields_from_added_headers() {
-    all_ftable.clear();
-    for (auto f : added_htable) {
-        all_ftable.insert(
-            all_ftable.end(),
-            f->impl->htable.begin(),
-            f->impl->htable.end()
-        );
-    }
-}
-
-void cea_stream::core::update_ethertype_and_len() {
-// TODO
-}
-
-void cea_stream::core::build_offsets() {
-    vector<cea_field>::iterator it;
-    for(it=all_ftable.begin(); it<all_ftable.end(); it++) {
-        it->offset = prev(it)->len + prev(it)->offset;
-    }
-}
-
-void cea_stream::core::filter_mutable_fields() {
-    mut_ftable.clear();
-    for (auto f : all_ftable) {
-        if (f.is_mutable) {
-            mut_ftable.push_back(f);
-        }
-    }
-}
-
-// TODO: Pending verification
-uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
-    uint32_t offset = 0;
-    uint64_t mrg_data = 0;
-    uint64_t mrg_len = 0;
-
-    for (auto f : all_ftable) {
-        if(f.merge==0) {
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.spec.value, f.len/8);
-            offset += f.len/8;
-        } else {
-            mrg_data = (mrg_data << f.len) | f.spec.value;
-            mrg_len = mrg_len + f.len;
-            for (uint32_t mcntr=0; mcntr<f.merge; mcntr++) {
-                mrg_data = (mrg_data << f.len) | f.spec.value;
-                mrg_len = mrg_len + f.len;
-            }
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&mrg_data, mrg_len/8);
-            offset += mrg_len/8;
-        }
-    }
-    return offset;
-}
-
-// struct cea_gen_spec              enum cea_gen_type 
-//   cea_gen_type gen_type;           Fixed_Value,
-//   uint64_t value;                  Fixed_Pattern,
-//   string pattern;                  Value_List,
-//   uint32_t step;                   Pattern_List,
-//   uint32_t min;                    Increment,
-//   uint32_t max;                    Decrement,
-//   uint32_t count;                  Random,
-//   uint32_t repeat;                 Increment_Bytes,
-//   uint32_t mask;                   Decrement_Byte,
-//   uint32_t seed;                   Increment_Word,
-//   uint32_t start;                  Decrement_Word,
-//   bool make_error;                 Continuous,
-//   vector<uint64_t> value_list;     Bursty,
-//   vector<string> pattern_list;     Stop_After_Stream,
-//                                    Goto_Next_Stream
-// uint32_t nof_szs;
-// vector<uint32_t> vec_frm_szs;
-// vector<uint32_t> vec_txn_szs;
-// vector<uint32_t> vec_payl_szs;
-// vector<unsigned char> arr_payl_data;
-// vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
-
-void cea_stream::core::compute_mutation_sizes() {
-// PROGRESS
-    auto f = get_field(all_ftable, FRAME_Len);
-    cea_gen_spec spec = f.spec;
-
-    cealog << "spec.gen_type     : " << cea_gen_type_name[spec.gen_type] << endl; 
-    cealog << "spec.value        : " << spec.value        << endl; 
-    cealog << "spec.pattern      : " << spec.pattern      << endl; 
-    cealog << "spec.step         : " << spec.step         << endl; 
-    cealog << "spec.min          : " << spec.min          << endl; 
-    cealog << "spec.max          : " << spec.max          << endl; 
-    cealog << "spec.count        : " << spec.count        << endl; 
-    cealog << "spec.repeat       : " << spec.repeat       << endl; 
-    cealog << "spec.mask         : " << spec.mask         << endl; 
-    cealog << "spec.seed         : " << spec.seed         << endl; 
-    cealog << "spec.start        : " << spec.start        << endl; 
-    cealog << "spec.make_error   : " << spec.make_error   << endl; 
-    // cealog << "spec.value_list   : " << spec.value_list   << endl; 
-    // cealog << "spec.pattern_list : " << spec.pattern_list << endl; 
-}
-
-// TODO
-void cea_stream::core::build_payload_arrays() {
-}
-
-void cea_stream::core::bootstrap() {
-    gather_fields_from_added_headers();
-    update_ethertype_and_len();
-    build_offsets();
-    filter_mutable_fields();
-    // display_stream();
-    compute_mutation_sizes();
-    build_payload_arrays();
-}
-
-void cea_stream::core::mutate() {
-}
-
-void cea_stream::core::display_stream() {
-    for (auto f : added_htable) {
-        cealog << cea_header_name[f->impl->htype] << endl;
-        for (auto item : f->impl->htable) {
-            cealog << "  |--" << item.name << endl;
-        }
-    }
-}
-
-void cea_stream::core::reset() {
-    added_htable.clear();
-}
-
-//------------------------------------------------------------------------------
-// Header implementation
-//------------------------------------------------------------------------------
-
-void cea_header::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-void cea_header::set(cea_field_id id, cea_gen_spec spec) {
-    impl->set(id, spec);
-}
-
-void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(htable.begin(), htable.end(),
-        [&id](const cea_field &item) {
-        return (item.id == id); });
-
-    if (field != htable.end()) {
-        field->spec.value = value;
-        field->is_mutable = false;
-    } else {
-        CEA_ERR_MSG("The field "
-        << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[htype] << " header");
-        abort();
-    }
-}
-
-void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
-    auto field = find_if(htable.begin(), htable.end(),
-        [&id](const cea_field &item) {
-        return (item.id == id); });
-
-    if (field != htable.end()) {
-        field->spec = spec;
-        if (field->spec.gen_type != Fixed_Value)
-            field->is_mutable = true;
-    } else {
-        CEA_ERR_MSG("The field "
-        << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[htype] << " header");
-        abort();
-    }
-}
-
-cea_header::cea_header(cea_header_type hdr) {
-    impl = make_unique<core>(hdr); 
-}
-
-cea_header::core::core(cea_header_type hdr) {
-    header_name = string("Header") + ":" + cea_header_name[hdr];
-    msg_prefix = header_name;
-    htype = hdr;
-    build_htable();
-}
-
-void cea_header::core::build_htable() {
-    hfids.clear();
-    htable.clear();
-
-    // extract the list of field ids that make up this header
-    hfids = hfmap[htype];
-
-    for (auto id : hfids) {
-        auto item = get_field(fdb, id);
-        htable.push_back(item);
-    }
-}
-
-cea_header::core::~core() = default;
-
-//------------------------------------------------------------------------------
-// Port Implementation
-//------------------------------------------------------------------------------
-
-//-------------
+//-----------
 // Port Core
-//-------------
+//-----------
+
 class cea_port::core {
 public:
     core(string name);
@@ -1171,6 +947,347 @@ public:
     void stop();
     void pause();
 };
+
+//----------------
+// Testbench Core
+//----------------
+
+class cea_testbench::core {
+public:
+    core();
+    ~core();
+    void add_port(cea_port *port);
+    void add_stream(cea_stream *stream, cea_port *port=NULL);
+    void add_cmd(cea_stream *stream, cea_port *port=NULL);
+    void exec_cmd(cea_stream *stream, cea_port *port=NULL);
+    void start(cea_port *port = NULL);
+    void stop(cea_port *port = NULL);
+    void pause(cea_port *port = NULL);
+    vector<cea_port*> ports;
+    string msg_prefix;
+};
+
+//------------------------------------------------------------------------------
+// Field implementation
+//------------------------------------------------------------------------------
+
+cea_field::cea_field(cea_field_id id) {
+    impl = make_unique<core>(id); 
+}
+
+cea_field::core::core(cea_field_id id) {
+    fid = id;
+    field = get_field(fdb, fid); // copy default values
+}
+
+void cea_field::set(uint64_t value) {
+    impl->set(value);
+}
+
+void cea_field::set(cea_gen_spec spec) {
+    impl->set(spec);
+}
+
+void cea_field::core::set(uint64_t value) {
+    field.spec.value = value;
+    field.spec.gen_type = Fixed_Value;
+}
+
+void cea_field::core::set(cea_gen_spec spec) {
+    field.spec.gen_type     = spec.gen_type;
+    field.spec.value        = spec.value;
+    field.spec.pattern      = spec.pattern;
+    field.spec.step         = spec.step;
+    field.spec.min          = spec.min;
+    field.spec.max          = spec.max;
+    field.spec.count        = spec.count;
+    field.spec.repeat       = spec.repeat;
+    field.spec.mask         = spec.mask;
+    field.spec.seed         = spec.seed;
+    field.spec.start        = spec.start;
+    field.spec.make_error   = spec.make_error;
+    field.spec.value_list   = spec.value_list;
+    field.spec.pattern_list = spec.pattern_list;
+}
+
+cea_field::~cea_field() = default;
+cea_field::core::~core() = default;
+
+//------------------------------------------------------------------------------
+// Stream implementation
+//------------------------------------------------------------------------------
+
+cea_stream::cea_stream(string name) {
+    impl = make_unique<core>(name); 
+}
+
+cea_stream::~cea_stream() = default;
+
+void cea_stream::set(cea_field_id id, uint64_t value) {
+    impl->set(id, value);
+}
+
+void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
+    impl->set(id, spec);
+}
+
+void cea_stream::set(cea_stream_feature_id feature) {
+    impl->set(feature);
+}
+
+void cea_stream::add_header(cea_header *hdr) {
+    hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
+    impl->added_htable.push_back(hdr);
+    impl->hf_sequencer.push_back(Header);
+}
+
+void cea_stream::add_field(cea_field *fld) {
+    fld->impl->msg_prefix = impl->msg_prefix + "|" + fld->impl->msg_prefix;
+    impl->added_ftable.push_back(fld);
+    impl->hf_sequencer.push_back(Field);
+}
+
+cea_stream::core::core(string name) {
+    stream_name = name;
+    stream_id = cea::stream_id;
+    msg_prefix = stream_name + ":" + to_string(stream_id);
+    cea::stream_id++;
+    reset();
+}
+
+cea_stream::core::~core() = default;
+
+void cea_stream::core::set(cea_field_id id, uint64_t value) {
+}
+
+void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
+}
+
+void cea_stream::core::set(cea_stream_feature_id feature) {
+    switch (feature) {
+        case PCAP_Record_Tx_Enable: {
+            CEA_MSG("PCAP capture enabled @ Transmit side");
+            string pcapfname = stream_name + "_tx" + + ".pcap";
+            txpcap = new pcap(pcapfname, stream_name, stream_id);
+            break;
+            }
+        case PCAP_Record_Rx_Enable: {
+            CEA_MSG("PCAP capture enabled @ Receive side");
+            string pcapfname = stream_name + "_rx" + + ".pcap";
+            rxpcap = new pcap(pcapfname, stream_name, stream_id);
+            break;
+            }
+        default:{
+            }
+    }
+}
+
+void cea_stream::core::gather_fields_from_added_headers() {
+    all_fields_from_hdrs.clear();
+    for (auto f : added_htable) {
+        all_fields_from_hdrs.insert(
+            all_fields_from_hdrs.end(),
+            f->impl->htable.begin(),
+            f->impl->htable.end()
+        );
+    }
+}
+
+void cea_stream::core::update_ethertype_and_len() {
+// TODO
+}
+
+void cea_stream::core::build_offsets() {
+    vector<cea_field_spec>::iterator it;
+    for(it=all_fields_from_hdrs.begin(); it<all_fields_from_hdrs.end(); it++) {
+        it->offset = prev(it)->len + prev(it)->offset;
+    }
+}
+
+void cea_stream::core::filter_mutable_fields() {
+    mut_ftable.clear();
+    for (auto f : all_fields_from_hdrs) {
+        if (f.is_mutable) {
+            mut_ftable.push_back(f);
+        }
+    }
+}
+
+// TODO: Pending verification
+uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
+    uint32_t offset = 0;
+    uint64_t mrg_data = 0;
+    uint64_t mrg_len = 0;
+
+    for (auto f : all_fields_from_hdrs) {
+        if(f.merge==0) {
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.spec.value, f.len/8);
+            offset += f.len/8;
+        } else {
+            mrg_data = (mrg_data << f.len) | f.spec.value;
+            mrg_len = mrg_len + f.len;
+            for (uint32_t mcntr=0; mcntr<f.merge; mcntr++) {
+                mrg_data = (mrg_data << f.len) | f.spec.value;
+                mrg_len = mrg_len + f.len;
+            }
+            cea_memcpy_ntw_byte_order(buf+offset, (char*)&mrg_data, mrg_len/8);
+            offset += mrg_len/8;
+        }
+    }
+    return offset;
+}
+
+// struct cea_gen_spec              enum cea_gen_type 
+//   cea_gen_type gen_type;           Fixed_Value,
+//   uint64_t value;                  Fixed_Pattern,
+//   string pattern;                  Value_List,
+//   uint32_t step;                   Pattern_List,
+//   uint32_t min;                    Increment,
+//   uint32_t max;                    Decrement,
+//   uint32_t count;                  Random,
+//   uint32_t repeat;                 Increment_Bytes,
+//   uint32_t mask;                   Decrement_Byte,
+//   uint32_t seed;                   Increment_Word,
+//   uint32_t start;                  Decrement_Word,
+//   bool make_error;                 Continuous,
+//   vector<uint64_t> value_list;     Bursty,
+//   vector<string> pattern_list;     Stop_After_Stream,
+//                                    Goto_Next_Stream
+// uint32_t nof_szs;
+// vector<uint32_t> vec_frm_szs;
+// vector<uint32_t> vec_txn_szs;
+// vector<uint32_t> vec_payl_szs;
+// vector<unsigned char> arr_payl_data;
+// vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
+
+void cea_stream::core::compute_mutation_sizes() {
+// INPROGRESS
+//    auto f = get_field(all_fields_from_hdrs, FRAME_Len);
+//    cea_gen_spec spec = f.spec;
+//
+//    cealog << "spec.gen_type     : " << cea_gen_type_name[spec.gen_type] << endl; 
+//    cealog << "spec.value        : " << spec.value        << endl; 
+//    cealog << "spec.pattern      : " << spec.pattern      << endl; 
+//    cealog << "spec.step         : " << spec.step         << endl; 
+//    cealog << "spec.min          : " << spec.min          << endl; 
+//    cealog << "spec.max          : " << spec.max          << endl; 
+//    cealog << "spec.count        : " << spec.count        << endl; 
+//    cealog << "spec.repeat       : " << spec.repeat       << endl; 
+//    cealog << "spec.mask         : " << spec.mask         << endl; 
+//    cealog << "spec.seed         : " << spec.seed         << endl; 
+//    cealog << "spec.start        : " << spec.start        << endl; 
+//    cealog << "spec.make_error   : " << spec.make_error   << endl; 
+//    // cealog << "spec.value_list   : " << spec.value_list   << endl; 
+//    // cealog << "spec.pattern_list : " << spec.pattern_list << endl; 
+}
+
+// TODO
+void cea_stream::core::build_payload_arrays() {
+}
+
+void cea_stream::core::bootstrap() {
+    gather_fields_from_added_headers();
+    update_ethertype_and_len();
+    build_offsets();
+    filter_mutable_fields();
+    // display_stream();
+    compute_mutation_sizes();
+    build_payload_arrays();
+}
+
+void cea_stream::core::mutate() {
+}
+
+void cea_stream::core::display_stream() {
+    for (auto f : added_htable) {
+        cealog << cea_header_name[f->impl->htype] << endl;
+        for (auto item : f->impl->htable) {
+            cealog << "  |--" << item.name << endl;
+        }
+    }
+}
+
+void cea_stream::core::reset() {
+    added_htable.clear();
+    added_ftable.clear();
+    hf_sequencer.clear();
+    stream_fdb = fdb;
+}
+
+//------------------------------------------------------------------------------
+// Header implementation
+//------------------------------------------------------------------------------
+
+void cea_header::set(cea_field_id id, uint64_t value) {
+    impl->set(id, value);
+}
+
+void cea_header::set(cea_field_id id, cea_gen_spec spec) {
+    impl->set(id, spec);
+}
+
+void cea_header::core::set(cea_field_id id, uint64_t value) {
+    auto field = find_if(htable.begin(), htable.end(),
+        [&id](const cea_field_spec &item) {
+        return (item.id == id); });
+
+    if (field != htable.end()) {
+        field->spec.value = value;
+        field->is_mutable = false;
+    } else {
+        CEA_ERR_MSG("The field "
+        << cea_trim(fdb[id].name) << " does not belong to the "
+        << cea_header_name[htype] << " header");
+        abort();
+    }
+}
+
+void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
+    auto field = find_if(htable.begin(), htable.end(),
+        [&id](const cea_field_spec &item) {
+        return (item.id == id); });
+
+    if (field != htable.end()) {
+        field->spec = spec;
+        if (field->spec.gen_type != Fixed_Value)
+            field->is_mutable = true;
+    } else {
+        CEA_ERR_MSG("The field "
+        << cea_trim(fdb[id].name) << " does not belong to the "
+        << cea_header_name[htype] << " header");
+        abort();
+    }
+}
+
+cea_header::cea_header(cea_header_type hdr) {
+    impl = make_unique<core>(hdr); 
+}
+
+cea_header::core::core(cea_header_type hdr) {
+    header_name = string("Header") + ":" + cea_header_name[hdr];
+    msg_prefix = header_name;
+    htype = hdr;
+    build_htable();
+}
+
+void cea_header::core::build_htable() {
+    hfids.clear();
+    htable.clear();
+
+    // extract the list of field ids that make up this header
+    hfids = hfmap[htype];
+
+    for (auto id : hfids) {
+        auto item = get_field(fdb, id);
+        htable.push_back(item);
+    }
+}
+
+cea_header::core::~core() = default;
+
+//------------------------------------------------------------------------------
+// Port Implementation
+//------------------------------------------------------------------------------
 
 void cea_port::core::reset() {
     msg_prefix = port_name;
@@ -1251,22 +1368,6 @@ void cea_port::core::pause() {
 //------------------------------------------------------------------------------
 // Testbench Implementation
 //------------------------------------------------------------------------------
-
-// testbench Core
-class cea_testbench::core {
-public:
-    core();
-    ~core();
-    void add_port(cea_port *port);
-    void add_stream(cea_stream *stream, cea_port *port=NULL);
-    void add_cmd(cea_stream *stream, cea_port *port=NULL);
-    void exec_cmd(cea_stream *stream, cea_port *port=NULL);
-    void start(cea_port *port = NULL);
-    void stop(cea_port *port = NULL);
-    void pause(cea_port *port = NULL);
-    vector<cea_port*> ports;
-    string msg_prefix;
-};
 
 cea_testbench::core::~core() = default;
 

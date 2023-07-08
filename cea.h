@@ -198,6 +198,7 @@ class cea_stream;
 class cea_port;
 class cea_testbench;
 class cea_header;
+class cea_field;
 
 //------------------------------------------------------------------------------
 // Top level software class (sw testbench)
@@ -248,6 +249,7 @@ public:
     void set(cea_field_id id, cea_gen_spec spec);
     void set(cea_stream_feature_id feature);
     void add_header(cea_header *hdr);
+    void add_field(cea_field *fld);
 private:
     class core;
     unique_ptr<core> impl;
@@ -264,6 +266,22 @@ public:
     ~cea_header() = default;
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
+private:
+    class core;
+    unique_ptr<core> impl;
+    friend class cea_stream;
+};
+
+//------------------------------------------------------------------------------
+// Field Class
+//------------------------------------------------------------------------------
+
+class cea_field {
+public:
+    cea_field(cea_field_id id);
+    ~cea_field();
+    void set(uint64_t value);
+    void set(cea_gen_spec spec);
 private:
     class core;
     unique_ptr<core> impl;
