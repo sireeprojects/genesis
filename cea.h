@@ -195,78 +195,64 @@ struct cea_gen_spec {
 
 // forward declaration
 class cea_stream;
-class cea_proxy;
-class cea_manager;
+class cea_port;
+class cea_testbench;
 class cea_header;
 
 //------------------------------------------------------------------------------
-// Manager
+// Top level software class (sw testbench)
 //------------------------------------------------------------------------------
 
-class cea_manager {
+class cea_testbench {
 public:
-    cea_manager();
-    void add_proxy(cea_proxy *pxy);
-    void add_proxy(cea_proxy *pxy, uint32_t cnt);
-    void add_stream(cea_stream *stm, cea_proxy *pxy=NULL);
-    void add_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
+    cea_testbench(); // TODO add socket port number 
+    ~cea_testbench();
+    void add_port(cea_port *port);
+    void add_stream(cea_stream *stream, cea_port *port = NULL);
+    void add_cmd(cea_stream *stream, cea_port *port = NULL);
+    void exec_cmd(cea_stream *stream, cea_port *port = NULL);
+    void start(cea_port *port = NULL);
+    void stop(cea_port *port = NULL);
+    void pause(cea_port *port = NULL);
 private:
     class core;
     unique_ptr<core> impl;
-
-public:// internal use
-    void test();
 };
 
 //------------------------------------------------------------------------------
-// Proxy
+// Port Class
 //------------------------------------------------------------------------------
 
-class cea_proxy {
+class cea_port {
 public:
-    cea_proxy(string name = "pxy");
-    ~cea_proxy();
+    cea_port(string name = "port");
+    ~cea_port();
+    void add_stream(cea_stream *stream);
+    void add_cmd(cea_stream *stream);
+    void exec_cmd(cea_stream *stream);
+
 private:
     class core;
     unique_ptr<core> impl;
-    friend class cea_manager;
-
-public:// internal use
-    void test();
+    friend class cea_testbench;
 };
 
 //------------------------------------------------------------------------------
-// Stream
+// Stream Class
 //------------------------------------------------------------------------------
 
 class cea_stream {
 public:    
-    // Constructor
     cea_stream(string name = "stream");
-
-    // Destructor
     ~cea_stream();
-
-    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
-
-    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
-
-    // Enable a feature of the stream
     void set(cea_stream_feature_id feature);
-
-    // Used to add various protocol headers to this stream. The frame
-    // will be generated in the same sequence as the headers were added
     void add_header(cea_header *hdr);
 private:
     class core;
     unique_ptr<core> impl;
-    friend class cea_proxy;
-
-public:// for internal debug
-    void test();
+    friend class cea_port;
 };
 
 //------------------------------------------------------------------------------
@@ -275,24 +261,14 @@ public:// for internal debug
 
 class cea_header {
 public:
-    // Constructor
     cea_header(cea_header_type hdr);
-    
-    // Destructor
     ~cea_header() = default;
-    
-    // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
-
-    // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
 private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
-
-public:// for internal debug
-    void test();
 };
 
 } // namespace 

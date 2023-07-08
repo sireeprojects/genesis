@@ -74,10 +74,10 @@ string msg_prefix = "cea";
 
 // global variable to track proxy and stream id
 // TODO: This will become a problem in multi-process mode
-//       Every workstation will have a proxy_id and stream_id = 0
+//       Every workstation will have a port_id and stream_id = 0
 //       Re-design in such a way that these values continue over multiple w/s
 uint32_t stream_id = 0;
-uint32_t proxy_id = 0;
+uint32_t port_id = 0;
 
 // CRC32
 const uint32_t crc32_tab[] = {
@@ -651,7 +651,7 @@ public:
     string parent_name;
 
     // automatically assigned when the proxy object is created
-    // the value of the field is set from the global variable proxy_id
+    // the value of the field is set from the global variable port_id
     uint32_t parent_id;
 
     // build a string to be prefixed in all messages generated from this class
@@ -781,15 +781,14 @@ public:
     // process the headers and fields and prepare for generation
     void bootstrap();
 
+    // begin generation
+    void mutate();
+
     // print the headers and fields in a tree structure
     void display_stream();
 
     // Factory reset of the stream core
     void reset();
-
-    // Used for internal testing only. The define CEA_DEVEL should be included in
-    // the compile to use this function
-    void test();
 
     // Store the header pointers added to the stream for generation
     vector<cea_header*> added_htable;
@@ -855,9 +854,6 @@ public:
     // prefixture to header messages
     string header_name;
     string msg_prefix;
-
-    // internal use only
-    void test();
 };
 
 //------------------------------------------------------------------------------
@@ -885,10 +881,6 @@ void cea_stream::set(cea_stream_feature_id feature) {
 void cea_stream::add_header(cea_header *hdr) {
     hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
     impl->added_htable.push_back(hdr);
-}
-
-void cea_stream::test() {
-    impl->test();
 }
 
 //------------------------------------------------------------------------------
@@ -1042,6 +1034,9 @@ void cea_stream::core::bootstrap() {
     build_payload_arrays();
 }
 
+void cea_stream::core::mutate() {
+}
+
 void cea_stream::core::display_stream() {
     for (auto f : added_htable) {
         cealog << cea_header_name[f->impl->htype] << endl;
@@ -1055,19 +1050,9 @@ void cea_stream::core::reset() {
     added_htable.clear();
 }
 
-void cea_stream::core::test() {
-    #ifdef CEA_DEVEL
-    bootstrap();
-    #endif
-}
-
 //------------------------------------------------------------------------------
 // Header implementation
 //------------------------------------------------------------------------------
-
-void cea_header::test() {
-    impl->test();
-}
 
 void cea_header::set(cea_field_id id, uint64_t value) {
     impl->set(id, value);
@@ -1075,9 +1060,6 @@ void cea_header::set(cea_field_id id, uint64_t value) {
 
 void cea_header::set(cea_field_id id, cea_gen_spec spec) {
     impl->set(id, spec);
-}
-
-void cea_header::core::test() {
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
@@ -1139,53 +1121,262 @@ void cea_header::core::build_htable() {
 
 cea_header::core::~core() = default;
 
-//-------------
-// Proxy Core
-//-------------
-class cea_proxy::core {
-public:
-    core(string name);
-};
+//------------------------------------------------------------------------------
+// Port Implementation
+//------------------------------------------------------------------------------
 
 //-------------
-// Manager Core
+// Port Core
 //-------------
-class cea_manager::core {
+class cea_port::core {
+public:
+    core(string name);
+
+    // add stream to port queue
+    void add_stream(cea_stream *stream);
+
+    // add a command (in the form of cea_stream) to port queue
+    void add_cmd(cea_stream *stream);
+
+    // execute a command immediately does not add to port queue
+    void exec_cmd(cea_stream *stream);
+
+    // set default values
+    void reset();
+
+    // set when the port object is created
+    string port_name;
+
+    // automatically assigned when the port object is created
+    // the value of the field is set from the global variable port_id
+    uint32_t port_id;
+
+    // user's test streams will be pushed into this queue (container1)
+    vector<cea_stream*> streamq;
+
+    // handle to the stream being processed
+    cea_stream *cur_stream;
+
+    // prefixture to all msgs from this port
+    string msg_prefix;
+
+    // main port thread
+    thread worker_tid;
+    void worker();
+    void start_worker();
+    void join_threads();
+
+    // execution control
+    void start();
+    void stop();
+    void pause();
+};
+
+void cea_port::core::reset() {
+// TODO
+}
+
+void cea_port::core::worker() {
+// TODO
+    cur_stream = streamq[0];
+    cur_stream->impl->bootstrap();
+    cur_stream->impl->mutate();
+}
+
+void cea_port::core::start_worker() {
+    worker_tid = thread(&cea_port::core::worker, this);
+    char name[16];
+    sprintf(name, "worker_%d", port_id);
+    pthread_setname_np(worker_tid.native_handle(), name);
+}
+
+void cea_port::core::join_threads() {
+    worker_tid.join();
+}
+
+cea_port::~cea_port() = default;
+
+cea_port::cea_port(string name) {
+    impl = make_unique<core>(name);
+}
+
+cea_port::core::core(string name) {
+}
+
+void cea_port::add_stream(cea_stream *stream) {
+    impl->add_stream(stream);
+}
+
+void cea_port::add_cmd(cea_stream *stream) {
+    impl->add_cmd(stream);
+}
+
+void cea_port::exec_cmd(cea_stream *stream) {
+    impl->exec_cmd(stream);
+}
+
+void cea_port::core::add_stream(cea_stream *stream) {
+    streamq.push_back(stream);
+}
+
+void cea_port::core::add_cmd(cea_stream *stream) {
+    add_stream(stream);
+}
+
+void cea_port::core::exec_cmd(cea_stream *stream) {
+// TODO
+}
+
+void cea_port::core::start() {
+    start_worker();
+    join_threads();
+}
+
+void cea_port::core::stop() {
+// TODO
+}
+
+void cea_port::core::pause() {
+// TODO
+}
+
+
+
+//------------------------------------------------------------------------------
+// Testbench Implementation
+//------------------------------------------------------------------------------
+
+// testbench Core
+class cea_testbench::core {
 public:
     core();
     ~core();
-    void add_proxy(cea_proxy *pxy);
-    void add_proxy(cea_proxy *pxy, uint32_t cnt);
-    void add_stream(cea_stream *stm, cea_proxy *pxy=NULL);
-    void add_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    void exec_cmd(cea_stream *stm, cea_proxy *pxy=NULL);
-    vector<cea_proxy*> proxies;
+    void add_port(cea_port *port);
+    void add_stream(cea_stream *stream, cea_port *port=NULL);
+    void add_cmd(cea_stream *stream, cea_port *port=NULL);
+    void exec_cmd(cea_stream *stream, cea_port *port=NULL);
+    void start(cea_port *port = NULL);
+    void stop(cea_port *port = NULL);
+    void pause(cea_port *port = NULL);
+    vector<cea_port*> ports;
     string msg_prefix;
 };
 
-//------------------------------------------------------------------------------
-// Proxy Implementation
-//------------------------------------------------------------------------------
+cea_testbench::core::~core() = default;
 
-cea_proxy::~cea_proxy() = default;
-
-cea_proxy::cea_proxy(string name) : impl(new core(name)){
+cea_testbench::cea_testbench() {
+    impl = make_unique<core>();
 }
 
-cea_proxy::core::core(string name) {
+cea_testbench::~cea_testbench() = default;
+
+cea_testbench::core::core() {
+}
+void cea_testbench::add_port(cea_port *port) {
+    impl->add_port(port);
 }
 
-//------------------------------------------------------------------------------
-// Manager Implementation
-//------------------------------------------------------------------------------
-
-cea_manager::core::~core() = default;
-
-cea_manager::cea_manager() : impl (new core) {
+void cea_testbench::add_stream(cea_stream *stream, cea_port *port) {
+    impl->add_stream(stream, port);
 }
 
-cea_manager::core::core() {
+void cea_testbench::add_cmd(cea_stream *stream, cea_port *port) {
+    impl->add_cmd(stream, port);
 }
 
+void cea_testbench::exec_cmd(cea_stream *stream, cea_port *port) {
+    impl->exec_cmd(stream, port);
+}
+
+void cea_testbench::core::add_port(cea_port *port) {
+    ports.push_back(port);
+}
+
+void cea_testbench::core::add_stream(cea_stream *stream, cea_port *port) {
+    if (ports.size() == 0) {
+        CEA_ERR_MSG("Cannot add stream to port since no ports are added to the testbench");
+    }
+    if (port != NULL) {
+        vector<cea_port*>::iterator it;
+        for (it = ports.begin(); it != ports.end(); it++) {
+            if ((*it)->impl->port_id == port->impl->port_id) {
+                uint32_t idx = distance(ports.begin(), it);
+                ports[idx]->add_stream(stream);
+            }
+        }
+    } else {
+        for (uint32_t idx=0; idx<ports.size(); idx++) {
+            ports[idx]->add_stream(stream);
+        }
+    }
+}
+
+void cea_testbench::core::add_cmd(cea_stream *stream, cea_port *port) {
+    add_stream(stream, port);
+}
+
+void cea_testbench::core::exec_cmd(cea_stream *stream, cea_port *port) {
+// TODO
+}
+
+void cea_testbench::start(cea_port *port) {
+    impl->start(port);
+}
+
+void cea_testbench::stop(cea_port *port) {
+    impl->stop(port);
+}
+
+void cea_testbench::pause(cea_port *port) {
+    impl->pause(port);
+}
+
+void cea_testbench::core::start(cea_port *port) {
+    if (port != NULL) {
+        vector<cea_port*>::iterator it;
+        for (it = ports.begin(); it != ports.end(); it++) {
+            if ((*it)->impl->port_id == port->impl->port_id) {
+                uint32_t idx = distance(ports.begin(), it);
+                ports[idx]->impl->start();
+            }
+        }
+    } else {
+        for (uint32_t idx=0; idx<ports.size(); idx++) {
+            ports[idx]->impl->start();
+        }
+    }
+}
+
+void cea_testbench::core::stop(cea_port *port) {
+    if (port != NULL) {
+        vector<cea_port*>::iterator it;
+        for (it = ports.begin(); it != ports.end(); it++) {
+            if ((*it)->impl->port_id == port->impl->port_id) {
+                uint32_t idx = distance(ports.begin(), it);
+                ports[idx]->impl->stop();
+            }
+        }
+    } else {
+        for (uint32_t idx=0; idx<ports.size(); idx++) {
+            ports[idx]->impl->stop();
+        }
+    }
+}
+
+void cea_testbench::core::pause(cea_port *port) {
+    if (port != NULL) {
+        vector<cea_port*>::iterator it;
+        for (it = ports.begin(); it != ports.end(); it++) {
+            if ((*it)->impl->port_id == port->impl->port_id) {
+                uint32_t idx = distance(ports.begin(), it);
+                ports[idx]->impl->pause();
+            }
+        }
+    } else {
+        for (uint32_t idx=0; idx<ports.size(); idx++) {
+            ports[idx]->impl->pause();
+        }
+    }
+}
 
 } // namespace

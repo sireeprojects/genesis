@@ -4,11 +4,13 @@ using namespace cea;
 // Expert Mode of stream specification
 
 int main() {
-    cea_proxy *proxy = new cea_proxy(); // proxy instance
-    cea_stream *stream = new cea_stream("testStream"); // stream instance
+    cea_testbench *tb = new cea_testbench;
 
-    // stream->set(PCAP_Record_Tx_Enable);
-    // stream->set(PCAP_Record_Rx_Enable);
+    cea_port *port = new cea_port("testPort");
+    tb->add_port(port);
+
+    cea_stream *stream = new cea_stream("testStream");
+    port->add_stream(stream);
 
     cea_header *mac =  new cea_header(MAC);
     cea_header *ipv4 = new cea_header(IPv4);
@@ -19,16 +21,15 @@ int main() {
     cea_gen_spec dest_spec;
     dest_spec.gen_type = Random;
     mac->set(MAC_Dest_Addr, dest_spec);
-    // mac->set(MAC_Preamble, dest_spec);
 
-    // add headers to stream in the desired seqeunce 
+    // add headers in desired seqeunce 
     stream->add_header(mac);
     stream->add_header(ipv4);
     stream->add_header(meta);
     stream->add_header(tcp);
 
-    stream->test();
-    // mac->test();
+
+    tb->start();
 
     return 0;
 }
