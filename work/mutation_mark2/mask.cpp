@@ -125,3 +125,50 @@ void incr_ip_addr(unsigned char *pAddr, unsigned int max_val) {
 		pAddr[MSB]++;
 	}
 }
+
+#define MAC_ADDR_SIZE 8
+void incr_mac_addr(unsigned char *pAddr, unsigned int max_val) {
+
+	unsigned int MSB = MAC_ADDR_SIZE - 1;
+
+	if (pAddr[MSB] == MAX_U8_VAL) {
+		pAddr[MSB] = 0x00;
+		if (pAddr[MSB-1] == MAX_U8_VAL) {
+			pAddr[MSB-1] = 0x00;
+			if (pAddr[MSB-2] == MAX_U8_VAL) {
+				pAddr[MSB-2] = 0x00;
+				if (pAddr[MSB-3] == MAX_U8_VAL) {
+					pAddr[MSB-3] = 0x00;
+                    if (pAddr[MSB-4] == MAX_U8_VAL) {
+                        pAddr[MSB-4] = 0x00;
+                        if (pAddr[MSB-5] == MAX_U8_VAL) {
+                            pAddr[MSB-5] = 0x00;
+                            if (pAddr[MSB-6] == MAX_U8_VAL) {
+                                pAddr[MSB-6] = 0x00;
+                                if (pAddr[MSB-7] == MAX_U8_VAL) {
+                                    pAddr[MSB-7] = 0x00;
+                                } else {
+                                    pAddr[MSB-7]++;
+                                }
+                            } else {
+                                pAddr[MSB-6]++;
+                            }
+                        } else {
+                            pAddr[MSB-5]++;
+                        }
+                    } else {
+                        pAddr[MSB-4]++;
+                    }
+                } else {
+                    pAddr[MSB-3]++;
+                }
+            } else {
+                pAddr[MSB-2]++;
+            }
+        } else {
+            pAddr[MSB-1]++;
+        }
+    } else {
+        pAddr[MSB-0]++;
+    }
+}
