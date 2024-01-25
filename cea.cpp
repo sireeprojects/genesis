@@ -781,7 +781,7 @@ public:
 
     // Based on user specification of the frame, build a vector of 
     // field ids in the sequence required by the specification
-    void gather_fields_from_added_headers();
+    void gather_fields();
 
     // The addition of mpls/vlan/llc/snap affects the position of ethertype and
     // length fields. update/insert type or len after arranging all fields in
@@ -792,7 +792,7 @@ public:
     void build_offsets();
 
     // build cseq by parsing fseq and adding only mutable fields
-    void filter_mutable_fields();
+    void filter_mutables();
 
     // concatenate all fields reuired by the frame spec
     uint32_t splice_fields(unsigned char *buf);
@@ -802,6 +802,8 @@ public:
 
     // build size and payload pattern arrays
     void build_payload_arrays();
+
+    void build_principal_frame();
 
     // process the headers and fields and prepare for generation
     void bootstrap();
@@ -1164,7 +1166,7 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
     }
 }
 
-void cea_stream::core::gather_fields_from_added_headers() {
+void cea_stream::core::gather_fields() {
     all_fields.clear();
     for (auto f : headers) {
         all_fields.insert(
@@ -1186,13 +1188,14 @@ void cea_stream::core::build_offsets() {
     }
 }
 
-void cea_stream::core::filter_mutable_fields() {
+void cea_stream::core::filter_mutables() {
     mutables.clear();
     for (auto f : all_fields) {
         if (f.is_mutable) {
             mutables.push_back(f);
         }
     }
+    // TODO init runtime values
 }
 
 // TODO: Pending verification
@@ -1219,60 +1222,25 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     return offset;
 }
 
-// struct cea_gen_spec              enum cea_gen_type 
-//   cea_gen_type gen_type;           Fixed_Value,
-//   uint64_t value;                  Fixed_Pattern,
-//   string pattern;                  Value_List,
-//   uint32_t step;                   Pattern_List,
-//   uint32_t min;                    Increment,
-//   uint32_t max;                    Decrement,
-//   uint32_t count;                  Random,
-//   uint32_t repeat;                 Increment_Bytes,
-//   uint32_t mask;                   Decrement_Byte,
-//   uint32_t seed;                   Increment_Word,
-//   uint32_t start;                  Decrement_Word,
-//   bool make_error;                 Continuous,
-//   vector<uint64_t> value_list;     Bursty,
-//   vector<string> pattern_list;     Stop_After_Stream,
-//                                    Goto_Next_Stream
-// uint32_t nof_szs;
-// vector<uint32_t> vec_frm_szs;
-// vector<uint32_t> vec_txn_szs;
-// vector<uint32_t> vec_payl_szs;
-// vector<unsigned char> arr_payl_data;
-// vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
-
+// TODO
 void cea_stream::core::compute_mutation_sizes() {
-// INPROGRESS
-//    auto f = get_field(all_fields, FRAME_Len);
-//    cea_gen_spec spec = f.spec;
-//
-//    cealog << "spec.gen_type     : " << cea_gen_type_name[spec.gen_type] << endl; 
-//    cealog << "spec.value        : " << spec.value        << endl; 
-//    cealog << "spec.pattern      : " << spec.pattern      << endl; 
-//    cealog << "spec.step         : " << spec.step         << endl; 
-//    cealog << "spec.min          : " << spec.min          << endl; 
-//    cealog << "spec.max          : " << spec.max          << endl; 
-//    cealog << "spec.count        : " << spec.count        << endl; 
-//    cealog << "spec.repeat       : " << spec.repeat       << endl; 
-//    cealog << "spec.mask         : " << spec.mask         << endl; 
-//    cealog << "spec.seed         : " << spec.seed         << endl; 
-//    cealog << "spec.start        : " << spec.start        << endl; 
-//    cealog << "spec.make_error   : " << spec.make_error   << endl; 
-//    // cealog << "spec.value_list   : " << spec.value_list   << endl; 
-//    // cealog << "spec.pattern_list : " << spec.pattern_list << endl; 
 }
 
 // TODO
 void cea_stream::core::build_payload_arrays() {
 }
 
+// TODO
+void cea_stream::core::build_principal_frame() {
+}
+
+
 void cea_stream::core::bootstrap() {
-    gather_fields_from_added_headers();
+    gather_fields();
     update_ethertype_and_len();
     build_offsets();
-    filter_mutable_fields();
-    // display_stream();
+    filter_mutables();
+    display_stream();
     compute_mutation_sizes();
     build_payload_arrays();
 }
