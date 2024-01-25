@@ -31,7 +31,7 @@ enum cea_header_type {
     UDP_PHDR,
     TCP_PHDR,
     META,
-    INTL
+    PROPERTIES
 };
 
 enum cea_field_id {
@@ -199,6 +199,7 @@ class cea_port;
 class cea_testbench;
 class cea_header;
 class cea_field;
+class cea_udf;
 
 //------------------------------------------------------------------------------
 // Top level software class (sw testbench)
@@ -281,6 +282,21 @@ public:
     cea_field(cea_field_id id);
     ~cea_field();
     void set(uint64_t value);
+    void set(cea_gen_spec spec);
+private:
+    class core;
+    unique_ptr<core> impl;
+    friend class cea_stream;
+};
+
+//------------------------------------------------------------------------------
+// User defined field Class
+//------------------------------------------------------------------------------
+
+class cea_udf {
+public:
+    cea_udf();
+    ~cea_udf();
     void set(cea_gen_spec spec);
 private:
     class core;
