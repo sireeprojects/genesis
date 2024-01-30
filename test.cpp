@@ -27,8 +27,8 @@ int main() {
     // add headers in desired seqeunce 
     stream->add_header(mac);
     stream->add_header(ipv4);
-    stream->add_header(meta);
     stream->add_header(tcp);
+    stream->add_header(meta);
 
     tb->start();
 

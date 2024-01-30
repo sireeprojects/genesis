@@ -946,11 +946,11 @@ public:
 
     // A table of field structs that corresponds to the field identifiers
     // required by this header
-    vector<cea_field_spec> htable;
+    vector<cea_field_spec> hdrs;
 
     // copy the un-modified field structs from fdb corresponding to the field
     // identifiers that are required by this header
-    void build_htable();
+    void build_hdr_fields();
 
     // prefixture to header messages
     string header_name;
@@ -1097,6 +1097,7 @@ void cea_stream::add_header(cea_header *hdr) {
     impl->hf_sequencer.push_back(Header);
 }
 
+// TODO should not be supported
 void cea_stream::add_field(cea_field *fld) {
     fld->impl->msg_prefix = impl->msg_prefix + "|" + fld->impl->msg_prefix;
     impl->fields.push_back(fld);
@@ -1166,38 +1167,6 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
     }
 }
 
-void cea_stream::core::gather_fields() {
-    all_fields.clear();
-    for (auto f : headers) {
-        all_fields.insert(
-            all_fields.end(),
-            f->impl->htable.begin(),
-            f->impl->htable.end()
-        );
-    }
-}
-
-void cea_stream::core::update_ethertype_and_len() {
-// TODO
-}
-
-void cea_stream::core::build_offsets() {
-    vector<cea_field_spec>::iterator it;
-    for(it=all_fields.begin(); it<all_fields.end(); it++) {
-        it->offset = prev(it)->len + prev(it)->offset;
-    }
-}
-
-void cea_stream::core::filter_mutables() {
-    mutables.clear();
-    for (auto f : all_fields) {
-        if (f.is_mutable) {
-            mutables.push_back(f);
-        }
-    }
-    // TODO init runtime values
-}
-
 // TODO: Pending verification
 uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint32_t offset = 0;
@@ -1222,6 +1191,57 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     return offset;
 }
 
+void cea_stream::core::bootstrap() {
+    gather_fields();
+    update_ethertype_and_len();
+    build_offsets();
+    filter_mutables();
+    display_stream();
+    compute_mutation_sizes();
+    build_payload_arrays();
+}
+
+void cea_stream::core::gather_fields() {
+    all_fields.clear();
+    for (auto f : headers) {
+        all_fields.insert(
+            all_fields.end(),
+            f->impl->hdrs.begin(),
+            f->impl->hdrs.end()
+        );
+    }
+}
+
+// TODO
+void cea_stream::core::update_ethertype_and_len() {
+}
+
+void cea_stream::core::build_offsets() {
+    vector<cea_field_spec>::iterator it;
+    for(it=all_fields.begin(); it<all_fields.end(); it++) {
+        it->offset = prev(it)->len + prev(it)->offset;
+    }
+}
+
+void cea_stream::core::filter_mutables() {
+    mutables.clear();
+    for (auto f : all_fields) {
+        if (f.is_mutable) {
+            mutables.push_back(f);
+        }
+    }
+    // TODO init runtime values
+}
+
+void cea_stream::core::display_stream() {
+    for (auto f : headers) {
+        cealog << cea_header_name[f->impl->htype] << endl;
+        for (auto item : f->impl->hdrs) {
+            cealog << "  |--" << item.name << endl;
+        }
+    }
+}
+
 // TODO
 void cea_stream::core::compute_mutation_sizes() {
 }
@@ -1234,27 +1254,7 @@ void cea_stream::core::build_payload_arrays() {
 void cea_stream::core::build_principal_frame() {
 }
 
-
-void cea_stream::core::bootstrap() {
-    gather_fields();
-    update_ethertype_and_len();
-    build_offsets();
-    filter_mutables();
-    display_stream();
-    compute_mutation_sizes();
-    build_payload_arrays();
-}
-
 void cea_stream::core::mutate() {
-}
-
-void cea_stream::core::display_stream() {
-    for (auto f : headers) {
-        cealog << cea_header_name[f->impl->htype] << endl;
-        for (auto item : f->impl->htable) {
-            cealog << "  |--" << item.name << endl;
-        }
-    }
 }
 
 void cea_stream::core::init_properties() {
@@ -1290,11 +1290,11 @@ void cea_header::set(cea_field_id id, cea_gen_spec spec) {
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(htable.begin(), htable.end(),
+    auto field = find_if(hdrs.begin(), hdrs.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (field != htable.end()) {
+    if (field != hdrs.end()) {
         field->spec.value = value;
         field->is_mutable = false;
     } else {
@@ -1306,11 +1306,11 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
 }
 
 void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
-    auto field = find_if(htable.begin(), htable.end(),
+    auto field = find_if(hdrs.begin(), hdrs.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (field != htable.end()) {
+    if (field != hdrs.end()) {
         field->spec = spec;
         if (field->spec.gen_type != Fixed_Value)
             field->is_mutable = true;
@@ -1330,19 +1330,19 @@ cea_header::core::core(cea_header_type hdr) {
     header_name = string("Header") + ":" + cea_header_name[hdr];
     msg_prefix = header_name;
     htype = hdr;
-    build_htable();
+    build_hdr_fields();
 }
 
-void cea_header::core::build_htable() {
+void cea_header::core::build_hdr_fields() {
     hfids.clear();
-    htable.clear();
+    hdrs.clear();
 
     // extract the list of field ids that make up this header
     hfids = hfmap[htype];
 
     for (auto id : hfids) {
         auto item = get_field(fdb, id);
-        htable.push_back(item);
+        hdrs.push_back(item);
     }
 }
 
