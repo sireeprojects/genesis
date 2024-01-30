@@ -797,9 +797,6 @@ public:
     // concatenate all fields reuired by the frame spec
     uint32_t splice_fields(unsigned char *buf);
 
-    // calculate frame, txn sizes based on user inputs
-    void compute_mutation_sizes();
-
     // build size and payload pattern arrays
     void build_payload_arrays();
 
@@ -856,10 +853,13 @@ public:
     uint32_t stream_id;
     string msg_prefix;
 
-    uint32_t nof_szs;
-    vector<uint32_t> vec_frm_szs;
-    vector<uint32_t> vec_txn_szs;
-    vector<uint32_t> vec_payl_szs;
+    uint32_t nof_sizes;
+    uint32_t hdr_size;
+    uint32_t meta_size;
+    uint32_t crc_len;
+    vector<uint32_t> arof_frm_sizes;
+    vector<uint32_t> arof_computed_frm_sizes;
+    vector<uint32_t> arof_pl_sizes;
 
     vector<unsigned char> arr_payl_data;
     vector<unsigned char> arr_rnd_payl_data[10]; // TODO make 10 configurable
@@ -1197,7 +1197,6 @@ void cea_stream::core::bootstrap() {
     build_offsets();
     filter_mutables();
     display_stream();
-    compute_mutation_sizes();
     build_payload_arrays();
 }
 
@@ -1243,11 +1242,184 @@ void cea_stream::core::display_stream() {
 }
 
 // TODO
-void cea_stream::core::compute_mutation_sizes() {
-}
-
-// TODO
 void cea_stream::core::build_payload_arrays() {
+    cea_gen_spec spec = {};
+
+    //-------------
+    // size arrays
+    //-------------
+    spec.gen_type = properties[FRAME_Len].spec.gen_type;
+    spec.value = properties[FRAME_Len].spec.value;
+    spec.min = properties[FRAME_Len].spec.min;
+    spec.max = properties[FRAME_Len].spec.max;
+    spec.step = properties[FRAME_Len].spec.step;
+    spec.repeat = properties[FRAME_Len].spec.repeat;
+
+    nof_sizes = 0;
+
+    switch (spec.gen_type) {
+        case Fixed_Value: {
+            nof_sizes = 1;
+            arof_frm_sizes.resize(nof_sizes);
+            arof_computed_frm_sizes.resize(nof_sizes);
+            arof_pl_sizes.resize(nof_sizes);
+            arof_frm_sizes[0] = spec.value;
+            arof_computed_frm_sizes[0] = arof_frm_sizes[0] + meta_size;
+            arof_pl_sizes[0] = arof_frm_sizes[0] - (hdr_size - meta_size) - crc_len;
+            break;
+            }
+        case Increment: {
+            nof_sizes = ((spec.max - spec.min)/spec.step)+1;
+            arof_frm_sizes.resize(nof_sizes);
+            arof_computed_frm_sizes.resize(nof_sizes);
+            arof_pl_sizes.resize(nof_sizes);
+            uint32_t szidx=0;
+            for (uint32_t i=spec.min; i<=spec.max; i=i+spec.step) {
+                arof_frm_sizes[szidx] = i;
+                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+                szidx++;
+            }
+            break;
+            }
+        case Decrement: {
+            nof_sizes = ((spec.min - spec.max)/spec.step)+1;
+            arof_frm_sizes.resize(nof_sizes);
+            arof_computed_frm_sizes.resize(nof_sizes);
+            arof_pl_sizes.resize(nof_sizes);
+            uint32_t szidx=0;
+            for (uint32_t i=spec.min; i>=spec.max; i=i-spec.step) {
+                arof_frm_sizes[szidx] = i;
+                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+                szidx++;
+            }
+            break;
+            }
+        case Random: {
+            nof_sizes = (spec.max - spec.min) + 1;
+            arof_frm_sizes.resize(nof_sizes);
+            arof_computed_frm_sizes.resize(nof_sizes);
+            arof_pl_sizes.resize(nof_sizes);
+            random_device rd;
+            mt19937 gen(rd());
+            uniform_int_distribution<> distr(spec.max, spec.min);
+            uint32_t szidx=0;
+            for (uint32_t szidx=spec.min; szidx>spec.max; szidx++) {
+                arof_frm_sizes[szidx] = distr(gen);
+                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+            }
+            break;
+            }
+        default:{
+            CEA_MSG("Invalid Generation type Specified for Frame Length");
+            exit(1);
+            }
+    }
+//
+//    //---------------
+//    // payload array
+//    //---------------
+//    array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
+//
+//    cea_field_generation_spec plspec;
+//    plspec.type   = fields[PAYLOAD_Type].gen_type;
+//    plspec.value  = fields[PAYLOAD_Type].value;
+//    plspec.start  = fields[PAYLOAD_Type].start;
+//    plspec.stop   = fields[PAYLOAD_Type].stop;
+//    plspec.step   = fields[PAYLOAD_Type].step;
+//    plspec.repeat = fields[PAYLOAD_Type].repeat;
+//
+//    switch (plspec.type) {
+//        case Random : {
+//            // create random arrays and fill it with random data
+//            srand(time(NULL));
+//            for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
+//                uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
+//                rnd_arrays[idx] = new unsigned char[array_size];
+//                for(uint32_t offset=0; offset<array_size; offset++) {
+//                    int num = rand()%255;
+//                    memcpy(rnd_arrays[idx]+offset, (unsigned char*)&num, 1);
+//                }
+//                #ifdef CEA_DEBUG
+//                print_cdata(rnd_arrays[idx], 100);
+//                #endif
+//            }
+//            break;
+//            }
+//        case Fixed_Pattern: {
+//            uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
+//            uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
+//            uint32_t offset = 0;
+//            if (plspec.repeat) {
+//                for (uint32_t cnt=0; cnt<quotient; cnt++) {
+//                    memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
+//                    offset += payload_pattern_size;
+//                }
+//                memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
+//            } else {
+//                memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 100);
+//            #endif
+//            break;
+//            }
+//        case Incr_Byte: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+//                for (uint16_t val=0; val<256; val++) {
+//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
+//                    offset++;
+//                }
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 100);
+//            #endif
+//            break;
+//            }
+//        case Incr_Word: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
+//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
+//                offset += 2;
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 1000);
+//            #endif
+//            break;
+//            }
+//        case Decr_Byte: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+//                for (int16_t val=255; val>=0; val--) {
+//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
+//                    cout << val << endl;
+//                    offset++;
+//                }
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 258);
+//            #endif
+//            break;
+//            }
+//        case Decr_Word: {
+//            uint32_t offset = 0;
+//            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
+//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
+//                offset += 2;
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 1000);
+//            #endif
+//            break;
+//            }
+//        default:{
+//            CEA_MSG("Invalid Generation type Specified for Frame payload");
+//            exit(1);
+//            }
+//    }
 }
 
 // TODO
@@ -1595,3 +1767,186 @@ cea_udf::~cea_udf() = default;
 cea_udf::core::~core() = default;
 
 } // namespace
+
+
+
+//void cea_stream::core::build_payload_arrays() {
+//    cea_gen_spec spec = {};
+//
+//    //-------------
+//    // size arrays
+//    //-------------
+//    spec.gen_type = properties[FRAME_Len].spec.gen_type;
+//    spec.value = properties[FRAME_Len].spec.value;
+//    spec.min = properties[FRAME_Len].spec.min;
+//    spec.max = properties[FRAME_Len].spec.max;
+//    spec.step = properties[FRAME_Len].spec.step;
+//    spec.repeat = properties[FRAME_Len].spec.repeat;
+//
+//    nof_sizes = 0;
+//
+//    switch (spec.type) {
+//        case Fixed: {
+//            nof_sizes = 1;
+//            arof_frm_sizes = new uint32_t(nof_sizes);
+//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
+//            arof_pl_sizes = new uint32_t(nof_sizes);
+//            arof_frm_sizes[0] = spec.value;
+//            arof_computed_frm_sizes[0] = arof_frm_sizes[0] + meta_size;
+//            arof_pl_sizes[0] = arof_frm_sizes[0] - (hdr_size - meta_size) - crc_len;
+//            break;
+//            }
+//        case Increment: {
+//            nof_sizes = ((spec.stop - spec.start)/spec.step)+1;
+//            arof_frm_sizes = new uint32_t(nof_sizes);
+//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
+//            arof_pl_sizes = new uint32_t(nof_sizes);
+//            uint32_t szidx=0;
+//            for (uint32_t i=spec.start; i<=spec.stop; i=i+spec.step) {
+//                arof_frm_sizes[szidx] = i;
+//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+//                szidx++;
+//            }
+//            break;
+//            }
+//        case Decrement: {
+//            nof_sizes = ((spec.start - spec.stop)/spec.step)+1;
+//            arof_frm_sizes = new uint32_t(nof_sizes);
+//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
+//            arof_pl_sizes = new uint32_t(nof_sizes);
+//            uint32_t szidx=0;
+//            for (uint32_t i=spec.start; i>=spec.stop; i=i-spec.step) {
+//                arof_frm_sizes[szidx] = i;
+//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+//                szidx++;
+//            }
+//            break;
+//            }
+//        case Random_in_Range: {
+//            nof_sizes = (spec.stop - spec.start) + 1;
+//            arof_frm_sizes = new uint32_t(nof_sizes);
+//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
+//            arof_pl_sizes = new uint32_t(nof_sizes);
+//            random_device rd;
+//            mt19937 gen(rd());
+//            uniform_int_distribution<> distr(spec.stop, spec.start);
+//            uint32_t szidx=0;
+//            for (uint32_t szidx=spec.start; szidx>spec.stop; szidx++) {
+//                arof_frm_sizes[szidx] = distr(gen);
+//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
+//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+//            }
+//            break;
+//            }
+//        default:{
+//            CEA_MSG("Invalid Generation type Specified for Frame Length");
+//            exit(1);
+//            }
+//    }
+//
+//    //---------------
+//    // payload array
+//    //---------------
+//    array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
+//
+//    cea_field_generation_spec plspec;
+//    plspec.type   = fields[PAYLOAD_Type].gen_type;
+//    plspec.value  = fields[PAYLOAD_Type].value;
+//    plspec.start  = fields[PAYLOAD_Type].start;
+//    plspec.stop   = fields[PAYLOAD_Type].stop;
+//    plspec.step   = fields[PAYLOAD_Type].step;
+//    plspec.repeat = fields[PAYLOAD_Type].repeat;
+//
+//    switch (plspec.type) {
+//        case Random : {
+//            // create random arrays and fill it with random data
+//            srand(time(NULL));
+//            for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
+//                uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
+//                rnd_arrays[idx] = new unsigned char[array_size];
+//                for(uint32_t offset=0; offset<array_size; offset++) {
+//                    int num = rand()%255;
+//                    memcpy(rnd_arrays[idx]+offset, (unsigned char*)&num, 1);
+//                }
+//                #ifdef CEA_DEBUG
+//                print_cdata(rnd_arrays[idx], 100);
+//                #endif
+//            }
+//            break;
+//            }
+//        case Fixed_Pattern: {
+//            uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
+//            uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
+//            uint32_t offset = 0;
+//            if (plspec.repeat) {
+//                for (uint32_t cnt=0; cnt<quotient; cnt++) {
+//                    memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
+//                    offset += payload_pattern_size;
+//                }
+//                memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
+//            } else {
+//                memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 100);
+//            #endif
+//            break;
+//            }
+//        case Incr_Byte: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+//                for (uint16_t val=0; val<256; val++) {
+//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
+//                    offset++;
+//                }
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 100);
+//            #endif
+//            break;
+//            }
+//        case Incr_Word: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
+//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
+//                offset += 2;
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 1000);
+//            #endif
+//            break;
+//            }
+//        case Decr_Byte: {
+//            uint32_t offset = 0;
+//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
+//                for (int16_t val=255; val>=0; val--) {
+//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
+//                    cout << val << endl;
+//                    offset++;
+//                }
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 258);
+//            #endif
+//            break;
+//            }
+//        case Decr_Word: {
+//            uint32_t offset = 0;
+//            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
+//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
+//                offset += 2;
+//            }
+//            #ifdef CEA_DEBUG
+//            print_cdata(array_of_payload_pattern, 1000);
+//            #endif
+//            break;
+//            }
+//        default:{
+//            CEA_MSG("Invalid Generation type Specified for Frame payload");
+//            exit(1);
+//            }
+//    }
+//}
+
