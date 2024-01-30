@@ -166,7 +166,7 @@ enum cea_gen_type {
     Increment,
     Decrement,
     Random,
-    Increment_Bytes,
+    Increment_Byte,
     Decrement_Byte,
     Increment_Word,
     Decrement_Word,

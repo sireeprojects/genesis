@@ -24,6 +24,10 @@ int main() {
 
     stream->set(FRAME_Len, 100);
 
+    cea_gen_spec pl_spec;
+    pl_spec.gen_type = Fixed_Pattern;
+    stream->set(PAYLOAD_Pattern, pl_spec);
+
     // add headers in desired seqeunce 
     stream->add_header(mac);
     stream->add_header(ipv4);
