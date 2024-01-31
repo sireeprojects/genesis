@@ -163,8 +163,8 @@ struct cea_field_spec {
 
 vector<cea_field_spec> fdb = {
 {false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Len               , 16 , 0, 0, 0, "MAC_Len               ", Integer, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Ether_Type        , 16 , 0, 0, 0, "MAC_Ether_Type        ", Integer, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Fcs               , 32 , 0, 0, 0, "MAC_Fcs               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -183,8 +183,8 @@ vector<cea_field_spec> fdb = {
 {false, 0, IPv4_TTL              , 8  , 0, 0, 0, "IPv4_TTL              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Protocol         , 8  , 0, 0, 0, "IPv4_Protocol         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Hdr_Csum         , 16 , 0, 0, 0, "IPv4_Hdr_Csum         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Opts             , 0  , 0, 0, 0, "IPv4_Opts             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Pad              , 0  , 0, 0, 0, "IPv4_Pad              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 2, IPv6_Version          , 4  , 0, 0, 0, "IPv6_Version          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -193,8 +193,8 @@ vector<cea_field_spec> fdb = {
 {false, 0, IPv6_Payload_Len      , 16 , 0, 0, 0, "IPv6_Payload_Len      ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv6_Next_Hdr         , 8  , 0, 0, 0, "IPv6_Next_Hdr         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv6_Hop_Limit        , 8  , 0, 0, 0, "IPv6_Hop_Limit        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv6_Src_Addr         , 128, 0, 0, 0, "IPv6_Src_Addr         ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv6_Dest_Addr        , 128, 0, 0, 0, "IPv6_Dest_Addr        ", Integer, { Fixed_Pattern, 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv6_Src_Addr         , 128, 0, 0, 0, "IPv6_Src_Addr         ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv6_Dest_Addr        , 128, 0, 0, 0, "IPv6_Dest_Addr        ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, TCP_Src_Port          , 16 , 0, 0, 0, "TCP_Src_Port          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, TCP_Dest_Port         , 16 , 0, 0, 0, "TCP_Dest_Port         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, TCP_Seq_Num           , 32 , 0, 0, 0, "TCP_Seq_Num           ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -221,10 +221,10 @@ vector<cea_field_spec> fdb = {
 {false, 0, ARP_Hw_Len            , 8  , 0, 0, 0, "ARP_Hw_Len            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, ARP_Proto_Len         , 8  , 0, 0, 0, "ARP_Proto_Len         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, ARP_Opcode            , 16 , 0, 0, 0, "ARP_Opcode            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, ARP_Sender_Hw_Addr    , 48 , 0, 0, 0, "ARP_Sender_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, ARP_Sender_Proto_addr , 32 , 0, 0, 0, "ARP_Sender_Proto_addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, ARP_Target_Hw_Addr    , 48 , 0, 0, 0, "ARP_Target_Hw_Addr    ", Integer, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, ARP_Target_Proto_Addr , 32 , 0, 0, 0, "ARP_Target_Proto_Addr ", Integer, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, ARP_Sender_Hw_Addr    , 48 , 0, 0, 0, "ARP_Sender_Hw_Addr    ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, ARP_Sender_Proto_addr , 32 , 0, 0, 0, "ARP_Sender_Proto_addr ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, ARP_Target_Hw_Addr    , 48 , 0, 0, 0, "ARP_Target_Hw_Addr    ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, ARP_Target_Proto_Addr , 32 , 0, 0, 0, "ARP_Target_Proto_Addr ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 2, MPLS_Label            , 20 , 0, 0, 0, "MPLS_Label            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 1, MPLS_Exp              , 3  , 0, 0, 0, "MPLS_Exp              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 1, MPLS_Stack            , 1  , 0, 0, 0, "MPLS_Stack            ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -246,7 +246,7 @@ vector<cea_field_spec> fdb = {
 {false, 0, Pause_Quanta_6        , 16 , 0, 0, 0, "Pause_Quanta_6        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, Pause_Quanta_7        , 16 , 0, 0, 0, "Pause_Quanta_7        ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, FRAME_Len             , 32 , 0, 0, 0, "FRAME_Len             ", Integer, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, PAYLOAD_Pattern       , 0  , 0, 0, 0, "PAYLOAD_Pattern       ", Integer, { Fixed_Pattern  , 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, PAYLOAD_Pattern       , 0  , 0, 0, 0, "PAYLOAD_Pattern       ", Integer, { Fixed_Pattern, 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, STREAM_Traffic_Type   , 32 , 0, 0, 0, "STREAM_Traffic_Type   ", Integer, { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, STREAM_Traffic_Control, 32 , 0, 0, 0, "STREAM_Traffic_Control", Integer, { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, STREAM_Ipg            , 32 , 0, 0, 0, "STREAM_Ipg            ", Integer, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -467,6 +467,11 @@ vector<string> cea_gen_type_name = {
     "Bursty",
     "Stop_After_Stream",
     "Goto_Next_Stream"
+};
+
+vector<string> cea_field_type_name = {
+    "Integer",
+    "Pattern"
 };
 
 vector<string> cea_stream_feature_name = {
@@ -1136,23 +1141,19 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 
 void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 
-    CEA_MSG("Size of properties: " << properties.size());
-
     // check if id is a property and then add to properties
     auto prop = find_if(properties.begin(), properties.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
     if (prop != properties.end()) {
-        prop->spec = spec; // TODO Does not copy prop->spec back to properties
-        CEA_MSG ("spec: " << cea_gen_type_name[spec.gen_type]);
-        CEA_MSG ("spec: " << cea_gen_type_name[prop->spec.gen_type]);
-        if (prop->spec.gen_type != Fixed_Value) {
+        prop->spec = spec;
+
+        if (prop->spec.gen_type != Fixed_Value || prop->spec.gen_type != Fixed_Pattern) {
             prop->is_mutable = true;
         } else {
             prop->is_mutable = false;
         }
-        CEA_MSG("from prop: " << cea_gen_type_name[properties[PAYLOAD_Pattern].spec.gen_type]);
     } else {
         CEA_ERR_MSG("The ID " << id << " does not belong to stream properties");
         abort();
@@ -1241,6 +1242,26 @@ void cea_stream::core::filter_mutables() {
         }
     }
     // TODO init runtime values
+
+}
+
+void print(vector<cea_field_spec>tbl) {
+    stringstream ss;
+    ss.setf(ios_base::left);
+
+    for(auto item : tbl) {
+        ss << setw(5) << left << item.id ;
+        ss << setw(25) << left << item.name;
+        ss << setw(25) << left << cea_field_type_name[item.type];;
+        if (item.type == Integer)
+            ss << setw(25) << left << item.spec.value;
+        else
+            ss << setw(25) << left << item.spec.pattern;
+        ss << setw(25) << left << cea_gen_type_name[item.spec.gen_type];
+        ss << endl;
+    }
+    ss << endl;
+    cout << ss.str();
 }
 
 void cea_stream::core::display_stream() {
@@ -1250,6 +1271,7 @@ void cea_stream::core::display_stream() {
             cealog << "  |--" << item.name << endl;
         }
     }
+    // print(properties);
 }
 
 // TODO
@@ -1333,18 +1355,8 @@ void cea_stream::core::build_payload_arrays() {
     // payload array
     //---------------
     arr_payl_data = new unsigned char[CEA_MAX_FRAME_SIZE];
-
-    cea_gen_spec plspec;
-    plspec.gen_type   = properties[PAYLOAD_Pattern].spec.gen_type;
-    plspec.value      = properties[PAYLOAD_Pattern].spec.value;
-    plspec.min      = properties[PAYLOAD_Pattern].spec.min;
-    plspec.max       = properties[PAYLOAD_Pattern].spec.max;
-    plspec.step       = properties[PAYLOAD_Pattern].spec.step;
-    plspec.repeat     = properties[PAYLOAD_Pattern].spec.repeat;
- 
-    
-    CEA_MSG("gen type: " << cea_gen_type_name[plspec.gen_type]);
-
+    auto item = get_field(properties, PAYLOAD_Pattern);
+    cea_gen_spec plspec = item.spec;
 
     switch (plspec.gen_type) {
         case Random : {
@@ -1431,7 +1443,7 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         default:{
-            CEA_MSG("Invalid Generation type Specified for Frame payload" << plspec.gen_type);
+            CEA_MSG("Invalid Generation type Specified for Frame payload: " << cea_gen_type_name[plspec.gen_type]);
             exit(1);
             }
     }
@@ -1782,186 +1794,3 @@ cea_udf::~cea_udf() = default;
 cea_udf::core::~core() = default;
 
 } // namespace
-
-
-
-//void cea_stream::core::build_payload_arrays() {
-//    cea_gen_spec spec = {};
-//
-//    //-------------
-//    // size arrays
-//    //-------------
-//    spec.gen_type = properties[FRAME_Len].spec.gen_type;
-//    spec.value = properties[FRAME_Len].spec.value;
-//    spec.min = properties[FRAME_Len].spec.min;
-//    spec.max = properties[FRAME_Len].spec.max;
-//    spec.step = properties[FRAME_Len].spec.step;
-//    spec.repeat = properties[FRAME_Len].spec.repeat;
-//
-//    nof_sizes = 0;
-//
-//    switch (spec.type) {
-//        case Fixed: {
-//            nof_sizes = 1;
-//            arof_frm_sizes = new uint32_t(nof_sizes);
-//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
-//            arof_pl_sizes = new uint32_t(nof_sizes);
-//            arof_frm_sizes[0] = spec.value;
-//            arof_computed_frm_sizes[0] = arof_frm_sizes[0] + meta_size;
-//            arof_pl_sizes[0] = arof_frm_sizes[0] - (hdr_size - meta_size) - crc_len;
-//            break;
-//            }
-//        case Increment: {
-//            nof_sizes = ((spec.stop - spec.start)/spec.step)+1;
-//            arof_frm_sizes = new uint32_t(nof_sizes);
-//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
-//            arof_pl_sizes = new uint32_t(nof_sizes);
-//            uint32_t szidx=0;
-//            for (uint32_t i=spec.start; i<=spec.stop; i=i+spec.step) {
-//                arof_frm_sizes[szidx] = i;
-//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-//                szidx++;
-//            }
-//            break;
-//            }
-//        case Decrement: {
-//            nof_sizes = ((spec.start - spec.stop)/spec.step)+1;
-//            arof_frm_sizes = new uint32_t(nof_sizes);
-//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
-//            arof_pl_sizes = new uint32_t(nof_sizes);
-//            uint32_t szidx=0;
-//            for (uint32_t i=spec.start; i>=spec.stop; i=i-spec.step) {
-//                arof_frm_sizes[szidx] = i;
-//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-//                szidx++;
-//            }
-//            break;
-//            }
-//        case Random_in_Range: {
-//            nof_sizes = (spec.stop - spec.start) + 1;
-//            arof_frm_sizes = new uint32_t(nof_sizes);
-//            arof_computed_frm_sizes = new uint32_t(nof_sizes);
-//            arof_pl_sizes = new uint32_t(nof_sizes);
-//            random_device rd;
-//            mt19937 gen(rd());
-//            uniform_int_distribution<> distr(spec.stop, spec.start);
-//            uint32_t szidx=0;
-//            for (uint32_t szidx=spec.start; szidx>spec.stop; szidx++) {
-//                arof_frm_sizes[szidx] = distr(gen);
-//                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-//                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
-//            }
-//            break;
-//            }
-//        default:{
-//            CEA_MSG("Invalid Generation type Specified for Frame Length");
-//            exit(1);
-//            }
-//    }
-//
-//    //---------------
-//    // payload array
-//    //---------------
-//    array_of_payload_pattern = new unsigned char[CEA_MAX_FRAME_SIZE];
-//
-//    cea_field_generation_spec plspec;
-//    plspec.type   = fields[PAYLOAD_Type].gen_type;
-//    plspec.value  = fields[PAYLOAD_Type].value;
-//    plspec.start  = fields[PAYLOAD_Type].start;
-//    plspec.stop   = fields[PAYLOAD_Type].stop;
-//    plspec.step   = fields[PAYLOAD_Type].step;
-//    plspec.repeat = fields[PAYLOAD_Type].repeat;
-//
-//    switch (plspec.type) {
-//        case Random : {
-//            // create random arrays and fill it with random data
-//            srand(time(NULL));
-//            for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
-//                uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
-//                arr_rnd_payl_data[idx] = new unsigned char[array_size];
-//                for(uint32_t offset=0; offset<array_size; offset++) {
-//                    int num = rand()%255;
-//                    memcpy(arr_rnd_payl_data[idx]+offset, (unsigned char*)&num, 1);
-//                }
-//                #ifdef CEA_DEBUG
-//                print_cdata(arr_rnd_payl_data[idx], 100);
-//                #endif
-//            }
-//            break;
-//            }
-//        case Fixed_Pattern: {
-//            uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
-//            uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
-//            uint32_t offset = 0;
-//            if (plspec.repeat) {
-//                for (uint32_t cnt=0; cnt<quotient; cnt++) {
-//                    memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
-//                    offset += payload_pattern_size;
-//                }
-//                memcpy(array_of_payload_pattern+offset, payload_pattern, remainder);
-//            } else {
-//                memcpy(array_of_payload_pattern+offset, payload_pattern, payload_pattern_size);
-//            }
-//            #ifdef CEA_DEBUG
-//            print_cdata(array_of_payload_pattern, 100);
-//            #endif
-//            break;
-//            }
-//        case Increment_Byte: {
-//            uint32_t offset = 0;
-//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
-//                for (uint16_t val=0; val<256; val++) {
-//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
-//                    offset++;
-//                }
-//            }
-//            #ifdef CEA_DEBUG
-//            print_cdata(array_of_payload_pattern, 100);
-//            #endif
-//            break;
-//            }
-//        case Increment_Word: {
-//            uint32_t offset = 0;
-//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
-//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
-//                offset += 2;
-//            }
-//            #ifdef CEA_DEBUG
-//            print_cdata(array_of_payload_pattern, 1000);
-//            #endif
-//            break;
-//            }
-//        case Decrement_Byte: {
-//            uint32_t offset = 0;
-//            for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
-//                for (int16_t val=255; val>=0; val--) {
-//                    memcpy(array_of_payload_pattern+offset, (char*)&val, 1);
-//                    cout << val << endl;
-//                    offset++;
-//                }
-//            }
-//            #ifdef CEA_DEBUG
-//            print_cdata(array_of_payload_pattern, 258);
-//            #endif
-//            break;
-//            }
-//        case Decrement_Word: {
-//            uint32_t offset = 0;
-//            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
-//                cea_memcpy_ntw_byte_order(array_of_payload_pattern+offset, (char*)&idx, 2);
-//                offset += 2;
-//            }
-//            #ifdef CEA_DEBUG
-//            print_cdata(array_of_payload_pattern, 1000);
-//            #endif
-//            break;
-//            }
-//        default:{
-//            CEA_MSG("Invalid Generation type Specified for Frame payload");
-//            exit(1);
-//            }
-//    }
-//}
-

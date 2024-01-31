@@ -26,6 +26,7 @@ int main() {
 
     cea_gen_spec pl_spec;
     pl_spec.gen_type = Fixed_Pattern;
+    // pl_spec.gen_type = Random;
     stream->set(PAYLOAD_Pattern, pl_spec);
 
     // add headers in desired seqeunce 
