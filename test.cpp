@@ -15,7 +15,6 @@ int main() {
     cea_header *mac =  new cea_header(MAC);
     cea_header *ipv4 = new cea_header(IPv4);
     cea_header *tcp =  new cea_header(TCP);
-    cea_header *meta = new cea_header(META);
 
     // assign a modifier to mac desination address
     cea_gen_spec dest_spec;
@@ -25,7 +24,7 @@ int main() {
     stream->set(FRAME_Len, 100);
 
     cea_gen_spec pl_spec;
-    pl_spec.gen_type = Fixed_Pattern;
+    pl_spec.gen_type = Increment_Byte;
     // pl_spec.gen_type = Random;
     stream->set(PAYLOAD_Pattern, pl_spec);
 
@@ -33,7 +32,6 @@ int main() {
     stream->add_header(mac);
     stream->add_header(ipv4);
     stream->add_header(tcp);
-    stream->add_header(meta);
 
     tb->start();
 

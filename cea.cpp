@@ -37,6 +37,7 @@ using namespace chrono;
 
 #define CEA_MAX_RND_ARRAYS 16
 #define CEA_RND_ARRAY_SIZE 1000000  // 1M
+#define CEA_PF_SIZE 1000000  // 1M
 
 // CEA_MSG() - Used for mandatory messages inside classes.
 // Cannot be disabled in debug mode
@@ -459,7 +460,7 @@ vector<string> cea_gen_type_name = {
     "Increment",
     "Decrement",
     "Random",
-    "Increment_Bytes",
+    "Increment_Byte",
     "Decrement_Byte",
     "Increment_Word",
     "Decrement_Word",
@@ -798,6 +799,7 @@ public:
 
     // evaluate field length and calculate offset of all fields of this stream
     void build_offsets();
+    uint32_t hdr_len;
 
     // build cseq by parsing fseq and adding only mutable fields
     void filter_mutables();
@@ -831,6 +833,7 @@ public:
     
     // Store the field pointers added to the stream
     // for generation
+    // TODO Unused, to be removed
     vector<cea_field*> fields;
 
     // all_fields will be used to store all the fields added
@@ -872,7 +875,9 @@ public:
     unsigned char *arr_payl_data;
     unsigned char *arr_rnd_payl_data[CEA_MAX_RND_ARRAYS]; // TODO make 10 configurable
     unsigned char *payload_pattern; // TODO what is this
-    uint32_t payload_pattern_size; // TODO what is this
+    uint32_t payload_pattern_size; // TODO what is this?
+
+    unsigned char *pf; // TODO make 10 configurable
 };
 
 //-------------
@@ -1208,8 +1213,9 @@ void cea_stream::core::bootstrap() {
     update_ethertype_and_len();
     build_offsets();
     filter_mutables();
-    display_stream();
+    // display_stream();
     build_payload_arrays();
+    build_principal_frame();
 }
 
 void cea_stream::core::gather_fields() {
@@ -1231,7 +1237,9 @@ void cea_stream::core::build_offsets() {
     vector<cea_field_spec>::iterator it;
     for(it=all_fields.begin(); it<all_fields.end(); it++) {
         it->offset = prev(it)->len + prev(it)->offset;
+        hdr_len = hdr_len + it->len;
     }
+    cealog << "Header len: " << hdr_len/8 << endl;
 }
 
 void cea_stream::core::filter_mutables() {
@@ -1274,19 +1282,12 @@ void cea_stream::core::display_stream() {
     // print(properties);
 }
 
-// TODO
 void cea_stream::core::build_payload_arrays() {
-    cea_gen_spec spec = {};
-
     //-------------
     // size arrays
     //-------------
-    spec.gen_type = properties[FRAME_Len].spec.gen_type;
-    spec.value = properties[FRAME_Len].spec.value;
-    spec.min = properties[FRAME_Len].spec.min;
-    spec.max = properties[FRAME_Len].spec.max;
-    spec.step = properties[FRAME_Len].spec.step;
-    spec.repeat = properties[FRAME_Len].spec.repeat;
+    auto len_item = get_field(properties, FRAME_Len);
+    cea_gen_spec spec = len_item.spec;
 
     nof_sizes = 0;
 
@@ -1355,8 +1356,8 @@ void cea_stream::core::build_payload_arrays() {
     // payload array
     //---------------
     arr_payl_data = new unsigned char[CEA_MAX_FRAME_SIZE];
-    auto item = get_field(properties, PAYLOAD_Pattern);
-    cea_gen_spec plspec = item.spec;
+    auto pl_item = get_field(properties, PAYLOAD_Pattern);
+    cea_gen_spec plspec = pl_item.spec;
 
     switch (plspec.gen_type) {
         case Random : {
@@ -1375,17 +1376,21 @@ void cea_stream::core::build_payload_arrays() {
             }
             break;
             }
-        case Fixed_Pattern: {
+        case Fixed_Pattern: { // TODO payload_pattern_size not defined
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
+                    cealog << "binary search mark 1" << endl;
+
                     memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
                     offset += payload_pattern_size;
                 }
+                    cealog << "binary search mark 2" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, remainder);
             } else {
+                    cealog << "binary search mark 3" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
             }
             #ifdef CEA_DEBUG
@@ -1449,8 +1454,23 @@ void cea_stream::core::build_payload_arrays() {
     }
 }
 
-// TODO
+// TODO: Incomplete
 void cea_stream::core::build_principal_frame() {
+    splice_fields(pf);
+
+    auto len_item = get_field(properties, FRAME_Len);
+    cea_gen_spec lenspec = len_item.spec;
+
+    auto pl_item = get_field(properties, PAYLOAD_Pattern);
+    cea_gen_spec plspec = pl_item.spec;
+
+    uint32_t ploffset = hdr_len/8;
+
+    if (plspec.gen_type == Increment_Byte) {
+        cealog << "inside pf: " << lenspec.value << endl;
+        memcpy(pf+ploffset, arr_payl_data, lenspec.value);
+        print_cdata(pf, ploffset+lenspec.value);
+    }
 }
 
 void cea_stream::core::mutate() {
@@ -1468,12 +1488,20 @@ void cea_stream::core::init_properties() {
 
 void cea_stream::core::reset() {
     headers.clear();
+    // add metadata to headers by default
+    cea_header *meta = new cea_header(META);
+    headers.push_back(meta);
+
     fields.clear();
     hf_sequencer.clear();
     all_fields.clear();
     stream_db = fdb;
     udfs.clear();
     init_properties();
+
+    // TODO memory leak wh reset is done twice in same test
+    pf = new unsigned char [CEA_PF_SIZE];
+    hdr_len = 0;
 }
 
 //------------------------------------------------------------------------------
