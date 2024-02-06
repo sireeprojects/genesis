@@ -77,7 +77,7 @@ namespace cea {
 string msg_prefix = "cea";    
 
 // global variable to track proxy and stream id
-// TODO: This will become a problem in multi-process mode
+// TODO This will become a problem in multi-process mode
 //       Every workstation will have a port_id and stream_id = 0
 //       Re-design in such a way that these values continue over multiple w/s
 uint32_t stream_id = 0;
@@ -824,18 +824,10 @@ public:
     // Factory reset of the stream core
     void reset();
 
-    // TODO not require, remove after confirmation
-    vector<cea_stream_add_type> hf_sequencer;
-    
     // Store the header pointers added to the stream
     // for generation
     vector<cea_header*> headers;
     
-    // Store the field pointers added to the stream
-    // for generation
-    // TODO Unused, to be removed
-    vector<cea_field*> fields;
-
     // all_fields will be used to store all the fields added
     // by user by the way of adding headers
     vector<cea_field_spec> all_fields;
@@ -873,11 +865,12 @@ public:
     vector<uint32_t> arof_pl_sizes;
 
     unsigned char *arr_payl_data;
-    unsigned char *arr_rnd_payl_data[CEA_MAX_RND_ARRAYS]; // TODO make 10 configurable
+    unsigned char *arr_rnd_payl_data[CEA_MAX_RND_ARRAYS];
     unsigned char *payload_pattern; // TODO what is this
     uint32_t payload_pattern_size; // TODO what is this?
 
-    unsigned char *pf; // TODO make 10 configurable
+    // principle frame
+    unsigned char *pf;
 };
 
 //-------------
@@ -1108,14 +1101,10 @@ void cea_stream::set(cea_stream_feature_id feature) {
 void cea_stream::add_header(cea_header *hdr) {
     hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
     impl->headers.push_back(hdr);
-    impl->hf_sequencer.push_back(Header);
 }
 
-// TODO should not be supported
-void cea_stream::add_field(cea_field *fld) {
-    fld->impl->msg_prefix = impl->msg_prefix + "|" + fld->impl->msg_prefix;
-    impl->fields.push_back(fld);
-    impl->hf_sequencer.push_back(Field);
+// TODO pending implementation
+void cea_stream::add_udf(cea_field *fld) {
 }
 
 cea_stream::core::core(string name) {
@@ -1184,7 +1173,7 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
     }
 }
 
-// TODO: Pending verification
+// TODO Pending verification
 uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t mrg_data = 0;
@@ -1229,7 +1218,7 @@ void cea_stream::core::gather_fields() {
     }
 }
 
-// TODO
+// TODO pending implementation
 void cea_stream::core::update_ethertype_and_len() {
 }
 
@@ -1239,7 +1228,6 @@ void cea_stream::core::build_offsets() {
         it->offset = prev(it)->len + prev(it)->offset;
         hdr_len = hdr_len + it->len;
     }
-    cealog << "Header len: " << hdr_len/8 << endl;
 }
 
 void cea_stream::core::filter_mutables() {
@@ -1249,7 +1237,7 @@ void cea_stream::core::filter_mutables() {
             mutables.push_back(f);
         }
     }
-    // TODO init runtime values
+    // TODO peniding implementaton: init runtime values
 
 }
 
@@ -1454,7 +1442,7 @@ void cea_stream::core::build_payload_arrays() {
     }
 }
 
-// TODO: Incomplete
+// TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
     splice_fields(pf);
 
@@ -1492,8 +1480,6 @@ void cea_stream::core::reset() {
     cea_header *meta = new cea_header(META);
     headers.push_back(meta);
 
-    fields.clear();
-    hf_sequencer.clear();
     all_fields.clear();
     stream_db = fdb;
     udfs.clear();
@@ -1635,7 +1621,7 @@ void cea_port::core::add_cmd(cea_stream *stream) {
 }
 
 void cea_port::core::exec_cmd(cea_stream *stream) {
-// TODO
+// TODO pending implementation
 }
 
 void cea_port::core::start() {
@@ -1643,11 +1629,11 @@ void cea_port::core::start() {
 }
 
 void cea_port::core::stop() {
-// TODO
+// TODO pending implementation
 }
 
 void cea_port::core::pause() {
-// TODO
+// TODO pending implementation
 }
 
 //------------------------------------------------------------------------------
@@ -1708,7 +1694,7 @@ void cea_testbench::core::add_cmd(cea_stream *stream, cea_port *port) {
 }
 
 void cea_testbench::core::exec_cmd(cea_stream *stream, cea_port *port) {
-// TODO
+// TODO pending implementation
 }
 
 void cea_testbench::start(cea_port *port) {

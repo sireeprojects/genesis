@@ -250,7 +250,7 @@ public:
     void set(cea_field_id id, cea_gen_spec spec);
     void set(cea_stream_feature_id feature);
     void add_header(cea_header *hdr);
-    void add_field(cea_field *fld);
+    void add_udf(cea_field *fld); // TODO pending implementation
 private:
     class core;
     unique_ptr<core> impl;

@@ -1,8 +1,6 @@
 #include "cea.h"
 using namespace cea;
 
-// Expert Mode of stream specification
-
 int main() {
     cea_testbench *tb = new cea_testbench;
 
