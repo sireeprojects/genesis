@@ -164,8 +164,8 @@ struct cea_field_spec {
 
 vector<cea_field_spec> fdb = {
 {false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", Integer, { Fixed_Value  , 0x55555555555555d, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Pattern, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", Pattern, { Fixed_Pattern, 0                , "01:02:03:04:05:06", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", Pattern, { Fixed_Pattern, 0                , "0a:0b:0c:0d:0e:0f", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Len               , 16 , 0, 0, 0, "MAC_Len               ", Integer, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Ether_Type        , 16 , 0, 0, 0, "MAC_Ether_Type        ", Integer, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, MAC_Fcs               , 32 , 0, 0, 0, "MAC_Fcs               ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -184,8 +184,8 @@ vector<cea_field_spec> fdb = {
 {false, 0, IPv4_TTL              , 8  , 0, 0, 0, "IPv4_TTL              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Protocol         , 8  , 0, 0, 0, "IPv4_Protocol         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Hdr_Csum         , 16 , 0, 0, 0, "IPv4_Hdr_Csum         ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
-{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Pattern, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", Pattern, { Fixed_Pattern, 0                , "1.2.3.4"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
+{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", Pattern, { Fixed_Pattern, 0                , "a.b.c.d"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Opts             , 0  , 0, 0, 0, "IPv4_Opts             ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 0, IPv4_Pad              , 0  , 0, 0, 0, "IPv4_Pad              ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
 {false, 2, IPv6_Version          , 4  , 0, 0, 0, "IPv6_Version          ", Integer, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, 0, "", 0, 0 }},
@@ -1358,9 +1358,6 @@ void cea_stream::core::build_payload_arrays() {
                     int num = rand()%255;
                     memcpy(arr_rnd_payl_data[idx]+offset, (unsigned char*)&num, 1);
                 }
-                #ifdef CEA_DEBUG
-                print_cdata(arr_rnd_payl_data[idx], 100);
-                #endif
             }
             break;
             }
@@ -1381,9 +1378,6 @@ void cea_stream::core::build_payload_arrays() {
                     cealog << "binary search mark 3" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
             }
-            #ifdef CEA_DEBUG
-            print_cdata(arr_payl_data, 100);
-            #endif
             break;
             }
         case Increment_Byte: {
@@ -1394,9 +1388,6 @@ void cea_stream::core::build_payload_arrays() {
                     offset++;
                 }
             }
-            #ifdef CEA_DEBUG
-            print_cdata(arr_payl_data, 100);
-            #endif
             break;
             }
         case Increment_Word: {
@@ -1405,9 +1396,6 @@ void cea_stream::core::build_payload_arrays() {
                 cea_memcpy_ntw_byte_order(arr_payl_data+offset, (char*)&idx, 2);
                 offset += 2;
             }
-            #ifdef CEA_DEBUG
-            print_cdata(arr_payl_data, 1000);
-            #endif
             break;
             }
         case Decrement_Byte: {
@@ -1419,9 +1407,6 @@ void cea_stream::core::build_payload_arrays() {
                     offset++;
                 }
             }
-            #ifdef CEA_DEBUG
-            print_cdata(arr_payl_data, 258);
-            #endif
             break;
             }
         case Decrement_Word: {
@@ -1430,9 +1415,6 @@ void cea_stream::core::build_payload_arrays() {
                 cea_memcpy_ntw_byte_order(arr_payl_data+offset, (char*)&idx, 2);
                 offset += 2;
             }
-            #ifdef CEA_DEBUG
-            print_cdata(arr_payl_data, 1000);
-            #endif
             break;
             }
         default:{
@@ -1444,7 +1426,12 @@ void cea_stream::core::build_payload_arrays() {
 
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
+    
+    print(all_fields);
+
     splice_fields(pf);
+
+    print_cdata(pf, 100);
 
     auto len_item = get_field(properties, FRAME_Len);
     cea_gen_spec lenspec = len_item.spec;
@@ -1455,7 +1442,6 @@ void cea_stream::core::build_principal_frame() {
     uint32_t ploffset = hdr_len/8;
 
     if (plspec.gen_type == Increment_Byte) {
-        cealog << "inside pf: " << lenspec.value << endl;
         memcpy(pf+ploffset, arr_payl_data, lenspec.value);
         print_cdata(pf, ploffset+lenspec.value);
     }
@@ -1478,7 +1464,7 @@ void cea_stream::core::reset() {
     headers.clear();
     // add metadata to headers by default
     cea_header *meta = new cea_header(META);
-    headers.push_back(meta);
+    // headers.push_back(meta);
 
     all_fields.clear();
     stream_db = fdb;
