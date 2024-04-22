@@ -24,7 +24,7 @@ int main() {
     cea_gen_spec pl_spec;
     pl_spec.gen_type = Increment_Byte;
     // pl_spec.gen_type = Random;
-    stream->set(PAYLOAD_Pattern, pl_spec);
+    // stream->set(PAYLOAD_Pattern, pl_spec);
 
     // add headers in desired seqeunce 
     stream->add_header(mac);

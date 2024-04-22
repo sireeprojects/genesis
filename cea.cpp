@@ -1374,14 +1374,13 @@ void cea_stream::core::build_payload_arrays() {
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
                     cealog << "binary search mark 1" << endl;
-
                     memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
                     offset += payload_pattern_size;
                 }
-                    cealog << "binary search mark 2" << endl;
+                cealog << "binary search mark 2" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, remainder);
             } else {
-                    cealog << "binary search mark 3" << endl;
+                cealog << "binary search mark 3" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
             }
             break;
