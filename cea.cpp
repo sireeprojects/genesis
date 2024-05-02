@@ -875,7 +875,7 @@ public:
     unsigned char *payload_pattern; // TODO what is this
     uint32_t payload_pattern_size; // TODO what is this?
 
-    // principle frame
+    // principal frame
     unsigned char *pf;
 };
 
