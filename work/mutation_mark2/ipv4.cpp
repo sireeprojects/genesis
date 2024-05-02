@@ -16,6 +16,7 @@ void print_cdata (unsigned char* tmp, int len);
 
 int main() {
     string ipv4addr = "192.168.0.1";
+    // string ipv4addr = "a.b.c.d"; // input shud be integer only
 	unsigned char patt_array[IPV4_SIZE];
     unsigned char pf[100];
     memset(pf, 0, 100);
