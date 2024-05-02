@@ -656,15 +656,20 @@ void print_cdata (unsigned char* tmp, int len) {
         for (int y=0; y<16; y++) {
             s << noshowbase << setw(2) << setfill('0')
               << hex << uint16_t(tmp[idx]) << " ";
+            if (y == 7 )
+                s << " ";
             idx++;
         }
         s << endl;
     }
+    int spacer = 0;
     for (int x=idx; x<len; x++) {
        s<<noshowbase<<setw(2)<<setfill('0') <<hex<<uint16_t(tmp[idx])<<" ";
        idx++;
+       spacer++;
+       if (spacer == 8) s << " ";
     }
-    cout << "PKT Data :" << endl << s.str()<<endl;
+    cealog << "Array Data " << string(37, '-') << endl << s.str()<<endl << string(48, '-') << endl;
     fflush (stdout);
 }
 
@@ -1201,6 +1206,9 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t mrg_data = 0;
     uint64_t mrg_len = 0;
+    uint64_t mrg_cnt_total = 0;
+    uint64_t mrg_cntr = 0;
+    bool mrg_start = false;
 
     for (auto f : all_fields) {
         if(f.merge==0) {
@@ -1210,22 +1218,27 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
             else {
                 memcpy(buf+offset, f.rt.gen_pattern, f.len/8);
                 if (f.type == Pattern_IPv4) {
-                    cealog << cea_field_type_name[f.type] << endl;
-                    cealog << "offset: " << dec << offset << endl;
-                    print_cdata(f.rt.gen_pattern, 16);
-                    print_cdata(buf, offset+4);
                 }
             }
             offset += f.len/8;
         } else {
+            if (!mrg_start) {
+                mrg_start = true;
+                mrg_cnt_total = f.merge + 1;
+            }
             mrg_data = (mrg_data << f.len) | f.spec.value;
             mrg_len = mrg_len + f.len;
-            for (uint32_t mcntr=0; mcntr<f.merge; mcntr++) {
-                mrg_data = (mrg_data << f.len) | f.spec.value;
-                mrg_len = mrg_len + f.len;
+            mrg_cntr++;
+
+            if (mrg_cntr == mrg_cnt_total) {
+                cea_memcpy_ntw_byte_order(buf+offset, (char*)&mrg_data, mrg_len/8);
+                offset += mrg_len/8;
+                mrg_data = 0; 
+                mrg_len = 0;
+                mrg_cntr = 0;
+                mrg_cnt_total = 0;
+                mrg_start = false;
             }
-            cea_memcpy_ntw_byte_order(buf+offset, (char*)&mrg_data, mrg_len/8);
-            offset += mrg_len/8;
         }
     }
     return offset;
@@ -1263,8 +1276,6 @@ void cea_stream::core::build_offsets() {
         it->offset = prev(it)->len + prev(it)->offset;
         hdr_len = hdr_len + it->len;
     }
-
-    cealog << "build offset header len: " << hdr_len/8 << endl;
 }
 
 void cea_stream::core::filter_mutables() {
@@ -1295,7 +1306,7 @@ void print(vector<cea_field_spec>tbl) {
         ss << endl;
     }
     ss << endl;
-    cout << ss.str();
+    cealog << ss.str();
 }
 
 void cea_stream::core::display_stream() {
@@ -1443,7 +1454,6 @@ void cea_stream::core::build_payload_arrays() {
             for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
                 for (int16_t val=255; val>=0; val--) {
                     memcpy(arr_payl_data+offset, (char*)&val, 1);
-                    cout << val << endl;
                     offset++;
                 }
             }
@@ -1451,9 +1461,10 @@ void cea_stream::core::build_payload_arrays() {
             }
         case Decrement_Word: {
             uint32_t offset = 0;
-            for (int32_t idx=CEA_MAX_FRAME_SIZE; idx>=CEA_MAX_FRAME_SIZE/2; idx--) {
-                cea_memcpy_ntw_byte_order(arr_payl_data+offset, (char*)&idx, 2);
+            for (uint32_t val=0xFFFF; val>=0; val--) {
+                memcpy(arr_payl_data+offset, (char*)&val, 2);
                 offset += 2;
+                if (offset > CEA_MAX_FRAME_SIZE) break;
             }
             break;
             }
@@ -1481,7 +1492,6 @@ void cea_stream::core::build_runtime() {
                     }
                 case Pattern_IPv4:{
                     convert_ipv4_to_uca(f.spec.pattern, f.rt.gen_pattern);
-                    print_cdata(f.rt.gen_pattern, 16);
                     break;
                     }
                 case Pattern_IPv6:{
@@ -1499,10 +1509,8 @@ void cea_stream::core::build_runtime() {
 
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
-    
-    print(all_fields);
+    // print(all_fields);
     splice_fields(pf);
-    // print_cdata(pf, 100);
 
     auto len_item = get_field(properties, FRAME_Len);
     cea_gen_spec lenspec = len_item.spec;
@@ -1511,12 +1519,13 @@ void cea_stream::core::build_principal_frame() {
     cea_gen_spec plspec = pl_item.spec;
 
     uint32_t ploffset = hdr_len/8;
-    cealog << "header len: " << hdr_len/8 << endl;
 
-    if (plspec.gen_type == Fixed_Pattern) {
+    if (plspec.gen_type == Random)
+        memcpy(pf+ploffset, arr_rnd_payl_data[0], lenspec.value);
+    else 
         memcpy(pf+ploffset, arr_payl_data, lenspec.value);
-        print_cdata(pf, ploffset+lenspec.value);
-    }
+
+    print_cdata(pf, ploffset+lenspec.value);
 }
 
 void cea_stream::core::mutate() {

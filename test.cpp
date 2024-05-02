@@ -18,15 +18,23 @@ int main() {
     // cea_gen_spec dest_spec;
     // dest_spec.gen_type = Random;
     // mac->set(MAC_Dest_Addr, dest_spec);
+    mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
+    mac->set(MAC_Src_Addr, "11:22:33:44:55:aa");
+    ipv4->set(IPv4_Dest_Addr, "127.0.0.1");
 
-    stream->set(FRAME_Len, 100);
+    stream->set(FRAME_Len, 128);
 
     cea_gen_spec pl_spec;
-    // pl_spec.gen_type = Increment_Byte;
+    pl_spec.gen_type = Increment_Byte;
+    // pl_spec.gen_type = Decrement_Byte;
+    //
+    // pl_spec.gen_type = Increment_Word;
+    // pl_spec.gen_type = Decrement_Word;
+    //
     // pl_spec.gen_type = Random;
-    pl_spec.gen_type = Fixed_Pattern;
-    pl_spec.pattern = "010203040506070809101112131415";
-    pl_spec.repeat = true;
+    // pl_spec.gen_type = Fixed_Pattern;
+    // pl_spec.pattern = "010203040506070809101112131415";
+    // pl_spec.repeat = true;
     stream->set(PAYLOAD_Pattern, pl_spec);
 
     // add headers in desired seqeunce 
