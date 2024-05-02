@@ -266,6 +266,7 @@ public:
     cea_header(cea_header_type hdr);
     ~cea_header() = default;
     void set(cea_field_id id, uint64_t value);
+    void set(cea_field_id id, string value);
     void set(cea_field_id id, cea_gen_spec spec);
 private:
     class core;

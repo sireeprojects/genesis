@@ -22,8 +22,11 @@ int main() {
     stream->set(FRAME_Len, 100);
 
     cea_gen_spec pl_spec;
-    pl_spec.gen_type = Increment_Byte;
+    // pl_spec.gen_type = Increment_Byte;
     // pl_spec.gen_type = Random;
+    pl_spec.gen_type = Fixed_Pattern;
+    pl_spec.pattern = "010203040506070809101112131415";
+    pl_spec.repeat = true;
     stream->set(PAYLOAD_Pattern, pl_spec);
 
     // add headers in desired seqeunce 

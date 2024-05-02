@@ -133,7 +133,7 @@ const uint32_t crc32_tab[] = {
 enum cea_field_type {
     Integer,
     Pattern,
-    Pattern_PRE,
+    Pattern_PREAMBLE,
     Pattern_MAC,
     Pattern_IPv4,
     Pattern_IPv6
@@ -477,7 +477,7 @@ vector<string> cea_gen_type_name = {
 vector<string> cea_field_type_name = {
     "Integer",
     "Pattern",
-    "Pattern_PRE",
+    "Pattern_PREAMBLE",
     "Pattern_MAC",
     "Pattern_IPv4",
     "Pattern_IPv6"
@@ -803,6 +803,7 @@ public:
     // The addition of mpls/vlan/llc/snap affects the position of ethertype and
     // length fields. update/insert type or len after arranging all fields in
     // the required sequence
+    // TODO check if this is required
     void update_ethertype_and_len();
 
     // evaluate field length and calculate offset of all fields of this stream
@@ -953,6 +954,9 @@ public:
 
     // Quickly set a fixed value to a field
     void set(cea_field_id id, uint64_t value);
+
+    // Quickly set a fixed pattern to a field (limited set)
+    void set(cea_field_id id, string value);
 
     // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_gen_spec spec);
@@ -1374,23 +1378,48 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         case Fixed_Pattern: { // TODO payload_pattern_size not defined
+    // pl_spec.gen_type = Fixed_Pattern;
+    // pl_spec.pattern = "010203040506070809101112131415";
+    // pl_spec.repeat = true;
+    
+            payload_pattern_size = plspec.pattern.size() / 2;
+            payload_pattern = new unsigned char[payload_pattern_size];
+            convert_string_to_uca(plspec.pattern, payload_pattern);
+            print_cdata(payload_pattern, payload_pattern_size);
+            cealog << "payload_pattern_size: " << payload_pattern_size << endl; 
+
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
-                    cealog << "binary search mark 1" << endl;
                     memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
                     offset += payload_pattern_size;
                 }
-                cealog << "binary search mark 2" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, remainder);
             } else {
-                cealog << "binary search mark 3" << endl;
                 memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
             }
             break;
             }
+        // case Fixed_Pattern: { // TODO payload_pattern_size not defined
+        //     uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
+        //     uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
+        //     uint32_t offset = 0;
+        //     if (plspec.repeat) {
+        //         for (uint32_t cnt=0; cnt<quotient; cnt++) {
+        //             cealog << "binary search mark 1" << endl;
+        //             memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
+        //             offset += payload_pattern_size;
+        //         }
+        //         cealog << "binary search mark 2" << endl;
+        //         memcpy(arr_payl_data+offset, payload_pattern, remainder);
+        //     } else {
+        //         cealog << "binary search mark 3" << endl;
+        //         memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
+        //     }
+        //     break;
+        //     }
         case Increment_Byte: {
             uint32_t offset = 0;
             for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
@@ -1440,7 +1469,7 @@ void cea_stream::core::build_principal_frame() {
     
     print(all_fields);
     splice_fields(pf);
-    print_cdata(pf, 100);
+    // print_cdata(pf, 100);
 
     auto len_item = get_field(properties, FRAME_Len);
     cea_gen_spec lenspec = len_item.spec;
@@ -1450,7 +1479,7 @@ void cea_stream::core::build_principal_frame() {
 
     uint32_t ploffset = hdr_len/8;
 
-    if (plspec.gen_type == Increment_Byte) {
+    if (plspec.gen_type == Fixed_Pattern) {
         memcpy(pf+ploffset, arr_payl_data, lenspec.value);
         print_cdata(pf, ploffset+lenspec.value);
     }
@@ -1491,7 +1520,7 @@ void cea_stream::core::convert_string_to_uca(string address, unsigned char *op) 
     for (uint32_t i=0; i<address.size(); i+=2)
         tokens.push_back(address.substr(i, 2));
 
-    for (uint32_t i=0; i<8; i++) {
+    for (uint32_t i=0; i<address.size()/2; i++) {
         op[i]= convert_char_to_int(tokens[i]);
     }
 }
@@ -1541,6 +1570,21 @@ void cea_header::set(cea_field_id id, uint64_t value) {
 
 void cea_header::set(cea_field_id id, cea_gen_spec spec) {
     impl->set(id, spec);
+}
+
+void cea_header::set(cea_field_id id, string value) {
+    impl->set(id, value);
+}
+
+// TODO
+void cea_header::core::set(cea_field_id id, string value) {
+    // MAC_Preamble
+    // MAC_Dest_Addr
+    // MAC_Src_Addr
+    // IPv4_Src_Addr
+    // IPv4_Dest_Addr
+    // IPv6_Src_Addr
+    // IPv6_Dest_Addr
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
