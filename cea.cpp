@@ -133,6 +133,7 @@ const uint32_t crc32_tab[] = {
 enum cea_field_type {
     Integer,
     Pattern,
+    Pattern_PRE,
     Pattern_MAC,
     Pattern_IPv4,
     Pattern_IPv6
@@ -476,6 +477,7 @@ vector<string> cea_gen_type_name = {
 vector<string> cea_field_type_name = {
     "Integer",
     "Pattern",
+    "Pattern_PRE",
     "Pattern_MAC",
     "Pattern_IPv4",
     "Pattern_IPv6"
@@ -848,6 +850,10 @@ public:
     vector<cea_field_spec> udfs;
 
     void init_properties();
+
+    void convert_string_to_uca(string address, unsigned char *op);
+    unsigned char convert_char_to_int(string hexNumber);
+    int convert_nibble_to_int(char digit);
 
     // mutables will be used to store only those fields that will used during
     // stream generation
@@ -1477,6 +1483,52 @@ void cea_stream::core::reset() {
     // TODO memory leak wh reset is done twice in same test
     pf = new unsigned char [CEA_PF_SIZE];
     hdr_len = 0;
+}
+
+void cea_stream::core::convert_string_to_uca(string address, unsigned char *op) {
+    vector <string> tokens;
+
+    for (uint32_t i=0; i<address.size(); i+=2)
+        tokens.push_back(address.substr(i, 2));
+
+    for (uint32_t i=0; i<8; i++) {
+        op[i]= convert_char_to_int(tokens[i]);
+    }
+}
+
+int cea_stream::core::convert_nibble_to_int (char digit) {
+    int asciiOffset, digitValue;
+    if (digit >= 48 && digit <= 57) {
+        // code for '0' through '9'
+        asciiOffset = 48;
+        digitValue = digit - asciiOffset;
+        return digitValue;
+    } else if (digit >= 65 && digit <= 70) {
+        // digit is 'A' through 'F'
+        asciiOffset = 55;
+        digitValue = digit - asciiOffset;
+        return digitValue;
+    } else if (digit >= 97 && digit <= 122) {
+        // code for 'a' through 'f'
+        asciiOffset = 87;
+        digitValue = digit - asciiOffset;
+        return digitValue;
+    } else {
+        // TODO illegal digit
+    }
+    return 0;
+}
+
+unsigned char cea_stream::core::convert_char_to_int(string hexNumber) {
+     unsigned char aChar;
+     char highOrderDig = hexNumber[0];
+     char lowOrderDig  = hexNumber[1];
+     int lowOrderValue = convert_nibble_to_int(lowOrderDig);
+     //  convert lowOrderDig to number from 0 to 15
+     int highOrderValue = convert_nibble_to_int(highOrderDig);
+     // convert highOrderDig to number from 0 to 15
+     aChar = lowOrderValue + 16 * highOrderValue;
+     return aChar;
 }
 
 //------------------------------------------------------------------------------
