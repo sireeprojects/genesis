@@ -248,7 +248,24 @@ public:
     ~cea_stream();
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, cea_gen_spec spec);
+
+    // TODO rename set to enable and check if disable can also
+    // be added
     void set(cea_stream_feature_id feature);
+
+    // TODO
+    // user may want to just specify frame type first and then
+    // customize its field. So add set(frame_type, xxxxx). This 
+    // should internally add the necessary headers.
+    // A set(field_id,...) should also be implemented to customize the fields
+    // added by set(frame_type,...)
+    // when set(frame_type,...) is called, add the necessary headers
+    // to headers vector.
+    //
+    // TODO
+    // check is a facility to add custom payload like in acip c++ test
+    // is available
+
     void add_header(cea_header *hdr);
     void add_udf(cea_field *fld); // TODO pending implementation
 private:
