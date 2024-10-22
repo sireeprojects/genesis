@@ -1248,9 +1248,9 @@ void cea_stream::core::bootstrap() {
     gather_fields();
     update_ethertype_and_len();
     build_offsets();
-    build_runtime();
+    // build_runtime();
     filter_mutables();
-    // display_stream();
+    display_stream();
     build_payload_arrays();
     build_principal_frame();
 }
@@ -1289,6 +1289,24 @@ void cea_stream::core::filter_mutables() {
 
 }
 
+void print_field(cea_field_spec item) {
+    stringstream ss;
+    ss.setf(ios_base::left);
+
+        ss << setw(5) << left << item.id ;
+        ss << setw(25) << left << item.name;
+        ss << setw(25) << left << item.len;
+        ss << setw(25) << left << cea_field_type_name[item.type];;
+        if (item.type == Integer)
+            ss << setw(25) << left << item.spec.value;
+        else
+            ss << setw(25) << left << item.spec.pattern;
+        ss << setw(25) << left << cea_gen_type_name[item.spec.gen_type];
+        ss << endl;
+    ss << endl;
+    cealog << ss.str();
+}
+
 void print(vector<cea_field_spec>tbl) {
     stringstream ss;
     ss.setf(ios_base::left);
@@ -1316,7 +1334,8 @@ void cea_stream::core::display_stream() {
             cealog << "  |--" << item.name << endl;
         }
     }
-    // print(properties);
+    print(properties);
+    print(mutables);
 }
 
 void cea_stream::core::build_payload_arrays() {
@@ -1476,6 +1495,16 @@ void cea_stream::core::build_payload_arrays() {
 }
 
 // TODO
+// assign default value to runtime
+// TODO CRITICAL
+// when assigning random spec to fields. the test first creates a empty spec,
+// sets random and assigns to the field. In this process the default value is
+// erased when assigning the empty spec+random to the field
+// so when build_runtime is called the default values/patterns are void and
+// hence results in error when trying to access default and convert default
+// values for patterns
+// TODO POSSIBLE SOLUTION: To be decided
+//      -> call build_runtime after the principal frame is generated ??
 void cea_stream::core::build_runtime() {
     for (auto &f : all_fields) {
         if (f.type == Integer) {
@@ -1575,7 +1604,9 @@ void cea_stream::core::convert_mac_to_uca(string address, unsigned char *op) {
 
     while(getline(check1, intermediate, ':')) {
         tokens.push_back(intermediate);
+        cealog << intermediate << endl;
     }
+    cealog << tokens.size() << endl;
     for (uint32_t i=0; i<6; i++) { // TODO remove hardcoded value
         op[i]= convert_char_to_int(tokens[i]);
     }
