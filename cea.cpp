@@ -836,6 +836,8 @@ public:
     // begin generation
     void mutate();
 
+    void start_mutation();
+
     // print the headers and fields in a tree structure
     void display_stream();
 
@@ -1538,6 +1540,9 @@ void cea_stream::core::build_runtime() {
 
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
+
+    mutate(); // generate the first frame
+
     // print(all_fields);
     splice_fields(pf);
 
@@ -1555,6 +1560,9 @@ void cea_stream::core::build_principal_frame() {
         memcpy(pf+ploffset, arr_payl_data, lenspec.value);
 
     print_cdata(pf, ploffset+lenspec.value);
+}
+
+void cea_stream::core::start_mutation() {
 }
 
 void cea_stream::core::mutate() {
