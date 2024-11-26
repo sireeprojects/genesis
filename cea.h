@@ -178,8 +178,8 @@ enum cea_gen_type {
 
 struct cea_gen_spec {
     cea_gen_type gen_type;
-    uint64_t in_value;
-    string in_pattern;
+    uint64_t value;
+    string pattern;
     uint32_t step;
     uint32_t min;
     uint32_t max;

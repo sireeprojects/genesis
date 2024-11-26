@@ -34,7 +34,7 @@ int main() {
     //
     // pl_spec.gen_type = Random;
     // pl_spec.gen_type = Fixed_Pattern;
-    // pl_spec.pattern = "010203040506070809101112131415";
+    // pl_spec.pattern = "010203040506070809101112131415"; // TODO
     // pl_spec.repeat = true;
     stream->set(PAYLOAD_Pattern, pl_spec);
 
