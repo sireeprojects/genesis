@@ -1516,29 +1516,59 @@ void cea_stream::core::build_payload_arrays() {
 }
 
 void cea_stream::core::build_runtime() {
-    // walk through the mutables
-    // if the gentype is is a value list
-    // copy the user specified value list to the runtime patterns
-    // if the gentype is a pattern list
-    //     remove : and . frm the pattern, convert to integer
-    //     and store in the runtime patterns
     for (auto &m : mutables) {
-        switch (m.spec.gen_type) {
-            case Increment: {
-                m.rt.value = m.spec.start;
+        switch (m.type) {
+            case Integer: {
+                switch (m.spec.gen_type) {
+                    case Fixed_Value: {
+                        m.rt.value = m.spec.value;
+                        break;
+                        }
+                    case Increment: {
+                        m.rt.value = m.spec.start;
+                        break;
+                        }
+                    case Decrement: {
+                        m.rt.value = m.spec.start;
+                        break;
+                        }
+                    case Value_List: {
+                        m.rt.patterns = m.spec.value_list;
+                        break;
+                        }
+                    case Random: {
+                        // TODO
+                        break;
+                        }
+                    default: {}
+                } // switch
                 break;
                 }
-            case Decrement: {
-                m.rt.value = m.spec.start;
-                break;
-                }
-            case Value_List: {
-                m.rt.patterns = m.spec.value_list;
-                break;
-                }
-            case Pattern_List: {
-                switch (m.type) {
-                    case Pattern_MAC: {
+            case Pattern_MAC: {
+                switch (m.spec.gen_type) {
+                    case Fixed_Pattern: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Increment: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Decrement: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Pattern_List: {
+                        m.rt.patterns.resize(0);
                         for (auto val : m.spec.pattern_list) {
                             val.erase(remove(val.begin(), val.end(), ':'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
@@ -1546,7 +1576,35 @@ void cea_stream::core::build_runtime() {
                         }
                         break;
                         }
-                    case Pattern_IPv4: {
+                    default: {}
+                } // switch
+                break;
+                }
+            case Pattern_IPv4: {
+                switch (m.spec.gen_type) {
+                    case Fixed_Pattern: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Increment: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Decrement: {
+                        string tmp_mac_string = m.spec.pattern;
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.rt.value = tmp_mac;
+                        break;
+                        }
+                    case Pattern_List: {
+                        m.rt.patterns.resize(0);
                         for (auto val : m.spec.pattern_list) {
                             val.erase(remove(val.begin(), val.end(), '.'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
@@ -1554,16 +1612,15 @@ void cea_stream::core::build_runtime() {
                         }
                         break;
                         }
-                    default: { // ignore
+                    default: {
+                        // ignore
                         }
-                }
+                } // switch
                 break;
                 }
-            default: {
-                // ignore
-                }
+            default: {}
         }
-    }
+    } // for
 }
 
 // TODO
@@ -1701,28 +1758,72 @@ void cea_stream::core::mutate() {
                         break;
                         }
                     case Random: {
+                        // TODO after research
                         break;
                         }
                     default: {}
                 }
                 break;
-                }
+                } // Integer
             case Pattern_MAC:
             case Pattern_IPv4: {
                 switch(m->spec.gen_type) {
                     case Fixed_Pattern: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
+                        m->is_mutable = false;
+                        mutables.erase(m); // m++; // TODO iterator increment
+                                           // fails if it is done after the last
+                                           // element is deleted, swap erase and
+                                           // increment
                         break;
                         }
                     case Pattern_List: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.patterns[m->rt.idx], m->len/8);
+                        if (m->rt.idx == m->rt.patterns.size()-1) {
+                            if (m->spec.repeat) {
+                                m->rt.idx = 0;
+                            } else {
+                                mutables.erase(m); // m++;
+                            }
+                        } else {
+                            m->rt.idx++;
+                        }
                         break;
                         }
                     case Increment: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
+                        if (m->rt.count == m->spec.count) {
+                            if (m->spec.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->spec.start;
+                            } else {
+                                mutables.erase(m); // m++;
+                            }
+                        } else {
+                            // TODO check overflow
+                            m->rt.value += m->spec.step;
+                            m->rt.count++;
+                        }
                         break;
                         }
                     case Decrement: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
+                        if (m->rt.count == m->spec.count) {
+                            if (m->spec.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->spec.start;
+                            } else {
+                                mutables.erase(m); // m++;
+                            }
+                        } else {
+                            // TODO check underflow
+                            m->rt.value -= m->spec.step;
+                            m->rt.count++;
+                        }
                         break;
                         }
                     case Random: {
+                        // TODO after research
                         break;
                         }
                     default: {}
