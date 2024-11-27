@@ -1591,14 +1591,14 @@ void cea_stream::core::build_runtime() {
                         }
                     case Increment: {
                         string tmp_mac_string = m.spec.pattern;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Decrement: {
                         string tmp_mac_string = m.spec.pattern;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
