@@ -846,8 +846,6 @@ public:
     // begin generation
     void mutate();
 
-    void start_mutation();
-
     // print the headers and fields in a tree structure
     void display_stream();
 
@@ -883,6 +881,17 @@ public:
     // mutables will be used to store only those fields that will used during
     // stream generation
     vector<cea_field_spec> mutables;
+    vector<cea_field_spec> mutables_bkp;
+    // whenthe mutables is populated, copy it to bkp
+    // at reset assign bkp to mutables
+    // WHY?
+    // at the end of the mutation logic, the mutables will be empty
+    // so if the user press start button agaon, the mutables will be empty
+    // so a bkp version is maintained to restore the content of mutables
+    // ELSE
+    // everytime the start is pressed we have to reset the stream and bootstrap
+    // again. this looks ok, but we need to check if by doing this we will lose
+    // any important data when we reset the stream
 
     // pcap handle for recording
     pcap *txpcap;
@@ -1515,6 +1524,14 @@ void cea_stream::core::build_runtime() {
     //     and store in the runtime patterns
     for (auto &m : mutables) {
         switch (m.spec.gen_type) {
+            case Increment: {
+                m.rt.value = m.spec.start;
+                break;
+                }
+            case Decrement: {
+                m.rt.value = m.spec.start;
+                break;
+                }
             case Value_List: {
                 m.rt.patterns = m.spec.value_list;
                 break;
@@ -1613,12 +1630,109 @@ void cea_stream::core::build_principal_frame() {
     print_cdata(pf, ploffset+lenspec.value);
 }
 
-void cea_stream::core::start_mutation() {
-}
-
-void cea_stream::core::mutate() {
-    for (auto &m : mutables) {
+/*
+for (auto it=begin(list); it!=end(list)) {
+    cout << *it << endl;
+    if (*it == 12) {
+        list.erase(it);
+    } else {
+        ++it;
     }
+}
+*/
+
+// TODO nof frames in outer loop    
+// TODO what if there are no mutables
+// TODO enclose mutate with perf timers
+void cea_stream::core::mutate() {
+    for (auto m=begin(mutables); m!=end(mutables); m++) {
+        switch(m->type) {
+            case Integer: {
+                switch(m->spec.gen_type) {
+                    case Fixed_Value: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->spec.value, m->len/8);
+                        m->is_mutable = false;
+                        mutables.erase(m); m++;
+                        break;
+                        }
+                    case Value_List: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.patterns[m->rt.idx], m->len/8);
+                        if (m->rt.idx == m->rt.patterns.size()-1) {
+                            if (m->spec.repeat) {
+                                m->rt.idx = 0;
+                            } else {
+                                mutables.erase(m); m++;
+                            }
+                        } else {
+                            m->rt.idx++;
+                        }
+                        break;
+                        }
+                    case Increment: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
+                        if (m->rt.count == m->spec.count) {
+                            if (m->spec.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->spec.start;
+                            } else {
+                                mutables.erase(m); m++;
+                            }
+                        } else {
+                            // TODO check overflow
+                            m->rt.value += m->spec.step;
+                            m->rt.count++;
+                        }
+                        break;
+                        }
+                    case Decrement: {
+                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
+                        if (m->rt.count == m->spec.count) {
+                            if (m->spec.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->spec.start;
+                            } else {
+                                mutables.erase(m); m++;
+                            }
+                        } else {
+                            // TODO check underflow
+                            m->rt.value -= m->spec.step;
+                            m->rt.count++;
+                        }
+                        break;
+                        }
+                    case Random: {
+                        break;
+                        }
+                    default: {}
+                }
+                break;
+                }
+            case Pattern_MAC:
+            case Pattern_IPv4: {
+                switch(m->spec.gen_type) {
+                    case Fixed_Pattern: {
+                        break;
+                        }
+                    case Pattern_List: {
+                        break;
+                        }
+                    case Increment: {
+                        break;
+                        }
+                    case Decrement: {
+                        break;
+                        }
+                    case Random: {
+                        break;
+                        }
+                    default: {}
+                }
+                break;
+                }
+            default: {}
+        }
+    }
+// TODO copy frame to transmit buffer    
 }
 
 void cea_stream::core::init_properties() {
@@ -1633,8 +1747,9 @@ void cea_stream::core::init_properties() {
 
 void cea_stream::core::reset() {
     headers.clear();
+
     // add metadata to headers by default
-    cea_header *meta = new cea_header(META);
+    // cea_header *meta = new cea_header(META);
     // headers.push_back(meta);
 
     all_fields.clear();
@@ -1642,8 +1757,9 @@ void cea_stream::core::reset() {
     udfs.clear();
     init_properties();
 
-    // TODO memory leak wh reset is done twice in same test
+    // TODO memory leak when reset is done twice in same test
     pf = new unsigned char [CEA_PF_SIZE];
+
     hdr_len = 0;
 }
 
