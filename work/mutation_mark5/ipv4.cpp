@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <fstream>
 #include <bits/stdc++.h>
-#define MAX_U8_VAL 0xF
-#define MAC_ADDR_BYTES 4
+#define MAX_U8_VAL 0xFF
+#define IPV4_ADDR_SIZE 4
 
 using namespace std;
 
@@ -17,49 +17,45 @@ void incr_ip_addr(unsigned char *pAddr, unsigned int max_val);
 void convert_string_to_uca(string address, unsigned char *op);
 
 int main() {
-    string user_addr = "a1:b2:c3:d4";
-    string user_mask = "ff:00:ff:ff";
-
-	unsigned char mask_value[MAC_ADDR_BYTES];
-	unsigned char addr_value[MAC_ADDR_BYTES];
+    string user_addr = "192.255.254.1";
+	unsigned char addr_value[IPV4_ADDR_SIZE];
 
     convert_string_to_uca(user_addr, addr_value);
-    convert_string_to_uca(user_mask, mask_value);
 
-    // TODO 
-    // first value is printed without the mask being applied
-    for (uint32_t i=0; i<5; i++) {
+    for (uint32_t i=0; i<520; i++) {
    	    char buf[256] ;
-        sprintf(buf, "%02x:%02x:%02x:%02x",
-            addr_value[0], addr_value[1], addr_value[2], addr_value[3]);
-
+        // sprintf(buf, "%02x:%02x:%02x:%02x",
+        sprintf(buf, "%d:%d:%d:%d",
+                addr_value[0], addr_value[1],
+                addr_value[2], addr_value[3]);
         incr_ip_addr(addr_value, MAX_U8_VAL);
-
-        for (uint32_t idx=0; idx<MAC_ADDR_BYTES; idx++) {
-            addr_value[idx] = addr_value[idx] & mask_value[idx];
-        }
-
         printf("Incremented Addr: %s\n", buf);
     }
-
     return 0;
 }
 
 void convert_string_to_uca(string address, unsigned char *op) {
-
     stringstream check1(address);
-
     vector <string> tokens;
     string intermediate;
+    int i = 0;
 
-    while(getline(check1, intermediate, ':')) {
-        tokens.push_back(intermediate);
+    while(getline(check1, intermediate, '.')) {
+        op[i] = stoi(intermediate);
+        i++;
     }
+}
 
-    for (uint32_t i=0; i<MAC_ADDR_BYTES; i++) {
-        op[i]= convert_char_to_int(tokens[i]);
-    }
-
+unsigned char convert_char_to_int(string hexNumber) {
+     unsigned char aChar;
+     char highOrderDig = hexNumber[0];
+     char lowOrderDig  = hexNumber[1];
+     int lowOrderValue = convert_nibble_to_int(lowOrderDig);
+     //  convert lowOrderDig to number from 0 to 15
+     int highOrderValue = convert_nibble_to_int(highOrderDig);
+     // convert highOrderDig to number from 0 to 15
+     aChar = lowOrderValue + 16 * highOrderValue;
+     return aChar;
 }
 
 int convert_nibble_to_int (char digit) {
@@ -88,21 +84,8 @@ int convert_nibble_to_int (char digit) {
     return 0;
 }
 
-unsigned char convert_char_to_int(string hexNumber) {
-     unsigned char aChar;
-     char highOrderDig = hexNumber[0];
-     char lowOrderDig  = hexNumber[1];
-     int lowOrderValue = convert_nibble_to_int(lowOrderDig);
-     //  convert lowOrderDig to number from 0 to 15
-     int highOrderValue = convert_nibble_to_int(highOrderDig);
-     // convert highOrderDig to number from 0 to 15
-     aChar = lowOrderValue + 16 * highOrderValue;
-     return aChar;
-}
-
 void incr_ip_addr(unsigned char *pAddr, unsigned int max_val) {
-
-	unsigned int MSB = MAC_ADDR_BYTES - 1;
+	unsigned int MSB = IPV4_ADDR_SIZE - 1;
 
 	if (pAddr[MSB] == MAX_U8_VAL) {
 		pAddr[MSB] = 0x00;
@@ -124,51 +107,4 @@ void incr_ip_addr(unsigned char *pAddr, unsigned int max_val) {
 	} else {
 		pAddr[MSB]++;
 	}
-}
-
-#define MAC_ADDR_SIZE 8
-void incr_mac_addr(unsigned char *pAddr, unsigned int max_val) {
-
-	unsigned int MSB = MAC_ADDR_SIZE - 1;
-
-	if (pAddr[MSB] == MAX_U8_VAL) {
-		pAddr[MSB] = 0x00;
-		if (pAddr[MSB-1] == MAX_U8_VAL) {
-			pAddr[MSB-1] = 0x00;
-			if (pAddr[MSB-2] == MAX_U8_VAL) {
-				pAddr[MSB-2] = 0x00;
-				if (pAddr[MSB-3] == MAX_U8_VAL) {
-					pAddr[MSB-3] = 0x00;
-                    if (pAddr[MSB-4] == MAX_U8_VAL) {
-                        pAddr[MSB-4] = 0x00;
-                        if (pAddr[MSB-5] == MAX_U8_VAL) {
-                            pAddr[MSB-5] = 0x00;
-                            if (pAddr[MSB-6] == MAX_U8_VAL) {
-                                pAddr[MSB-6] = 0x00;
-                                if (pAddr[MSB-7] == MAX_U8_VAL) {
-                                    pAddr[MSB-7] = 0x00;
-                                } else {
-                                    pAddr[MSB-7]++;
-                                }
-                            } else {
-                                pAddr[MSB-6]++;
-                            }
-                        } else {
-                            pAddr[MSB-5]++;
-                        }
-                    } else {
-                        pAddr[MSB-4]++;
-                    }
-                } else {
-                    pAddr[MSB-3]++;
-                }
-            } else {
-                pAddr[MSB-2]++;
-            }
-        } else {
-            pAddr[MSB-1]++;
-        }
-    } else {
-        pAddr[MSB-0]++;
-    }
 }
