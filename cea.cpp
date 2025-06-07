@@ -293,17 +293,6 @@ void signal_handler(int signal) {
     exit(EXIT_FAILURE);
 }
 
-void print_ftable(vector<cea_field_spec>tbl) {
-    stringstream ss;
-    ss.setf(ios_base::left);
-
-    for(auto item : tbl) {
-        ss << item.name << endl;
-    }
-    ss << endl;
-    cealog << ss.str();
-}
-
 // map header type to list of associated fields
 map <cea_header_type, vector <cea_field_id>> hfmap = {
     {PROPERTIES, {
@@ -656,7 +645,7 @@ string cea_timer::elapsed_in_string(int precision) {
     return ss.str();
 }
 
-void print_cdata (unsigned char* tmp, int len) {
+void print_uchar_array (unsigned char* tmp, int len) {
     stringstream s;
     s.str("");
     uint32_t idx = 0;
@@ -814,7 +803,7 @@ public:
 
     // Based on user specification of the frame, build a vector of 
     // field ids in the sequence required by the specification
-    void gather_fields();
+    void collate_fields();
 
     // The addition of mpls/vlan/llc/snap affects the position of ethertype and
     // length fields. update/insert type or len after arranging all fields in
@@ -823,14 +812,13 @@ public:
     void update_ethertype_and_len();
 
     // evaluate field length and calculate offset of all fields of this stream
-    void build_offsets();
-    uint32_t hdr_len;
+    void build_field_offsets();
 
     // build cseq by parsing fseq and adding only mutable fields
-    void filter_mutables();
+    void filter_mutable_fields();
 
     // concatenate all fields reuired by the frame spec
-    uint32_t splice_fields(unsigned char *buf);
+    uint32_t splice_frame_fields(unsigned char *buf);
 
     // build size and payload pattern arrays
     void build_payload_arrays();
@@ -841,57 +829,53 @@ public:
     void build_principal_frame();
 
     // process the headers and fields and prepare for generation
-    void bootstrap();
+    void bootstrap_stream();
 
     // begin generation
     void mutate();
 
-    // print the headers and fields in a tree structure
-    void display_stream();
+    // print the frame structure, mutable fields and stream properties
+    void print_stream();
+
+    // print a vector of field specs
+    void print_fields(vector<cea_field_spec> field_group);
 
     // Factory reset of the stream core
     void reset();
 
     // Store the header pointers added to the stream
     // for generation
-    vector<cea_header*> headers;
+    vector<cea_header*> frame_headers;
     
-    // all_fields will be used to store all the fields added
+    // frame_fields will be used to store all the fields added
     // by user by the way of adding headers
-    vector<cea_field_spec> all_fields;
-
-    // a copy of the all the default fields and it values
-    vector<cea_field_spec> stream_db;
+    vector<cea_field_spec> frame_fields;
 
     // store stream properties
-    vector<cea_field_spec> properties;
+    vector<cea_field_spec> stream_properties;
     
+    // initialize stream to its default values
+    void init_stream_properties();
+
     // store user defined fields
     vector<cea_field_spec> udfs;
 
-    void init_properties();
+    // mutable_fields will be used to store only those fields that will used during
+    // stream generation
+    vector<cea_field_spec> mutable_fields;
 
+    // at the end of the mutation logic, the mutables will be empty
+    // so if the user press start button again, the mutables will be empty
+    // so a bkp version is maintained to restore the content of mutables
+    vector<cea_field_spec> mutable_fields_bkp;
+
+    // functions used during mutation of strings
     void convert_string_to_uca(string address, unsigned char *op);
     void convert_mac_to_uca(string address, unsigned char *op);
     void convert_ipv4_to_uca(string address, unsigned char *op);
     void convert_ipv6_to_uca(string address, unsigned char *op);
     unsigned char convert_char_to_int(string hexNumber);
     int convert_nibble_to_int(char digit);
-
-    // mutables will be used to store only those fields that will used during
-    // stream generation
-    vector<cea_field_spec> mutables;
-    vector<cea_field_spec> mutables_bkp;
-    // whenthe mutables is populated, copy it to bkp
-    // at reset assign bkp to mutables
-    // WHY?
-    // at the end of the mutation logic, the mutables will be empty
-    // so if the user press start button agaon, the mutables will be empty
-    // so a bkp version is maintained to restore the content of mutables
-    // ELSE
-    // everytime the start is pressed we have to reset the stream and bootstrap
-    // again. this looks ok, but we need to check if by doing this we will lose
-    // any important data when we reset the stream
 
     // pcap handle for recording
     pcap *txpcap;
@@ -902,16 +886,17 @@ public:
     uint32_t stream_id;
     string msg_prefix;
 
+    uint32_t hdr_len; // #CHECK rename
     uint32_t nof_sizes;
     uint32_t hdr_size;
     uint32_t meta_size;
     uint32_t crc_len;
-    vector<uint32_t> arof_frm_sizes;
-    vector<uint32_t> arof_computed_frm_sizes;
-    vector<uint32_t> arof_pl_sizes;
+    vector<uint32_t> vof_frame_sizes;
+    vector<uint32_t> vof_computed_frame_sizes;
+    vector<uint32_t> vof_payload_sizes;
 
-    unsigned char *arr_payl_data;
-    unsigned char *arr_rnd_payl_data[CEA_MAX_RND_ARRAYS];
+    unsigned char *arof_payload_data;
+    unsigned char *arof_rnd_payload_data[CEA_MAX_RND_ARRAYS];
     unsigned char *payload_pattern; // TODO what is this
     uint32_t payload_pattern_size; // TODO what is this?
 
@@ -1149,7 +1134,7 @@ void cea_stream::set(cea_stream_feature_id feature) {
 
 void cea_stream::add_header(cea_header *hdr) {
     hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
-    impl->headers.push_back(hdr);
+    impl->frame_headers.push_back(hdr);
 }
 
 // TODO pending implementation
@@ -1169,11 +1154,11 @@ cea_stream::core::~core() = default;
 void cea_stream::core::set(cea_field_id id, uint64_t value) {
 
     // check if id is a property and then add to properties
-    auto prop = find_if(properties.begin(), properties.end(),
+    auto prop = find_if(stream_properties.begin(), stream_properties.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (prop != properties.end()) {
+    if (prop != stream_properties.end()) {
         prop->spec.value = value;
         prop->is_mutable = false;
     } else {
@@ -1185,11 +1170,11 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
 
     // check if id is a property and then add to properties
-    auto prop = find_if(properties.begin(), properties.end(),
+    auto prop = find_if(stream_properties.begin(), stream_properties.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (prop != properties.end()) {
+    if (prop != stream_properties.end()) {
         prop->spec = spec;
 
         if (prop->spec.gen_type != Fixed_Value || prop->spec.gen_type != Fixed_Pattern) {
@@ -1223,7 +1208,7 @@ void cea_stream::core::set(cea_stream_feature_id feature) {
 }
 
 // TODO Pending verification
-uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
+uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     uint32_t offset = 0;
     uint64_t mrg_data = 0;
     uint64_t mrg_len = 0;
@@ -1231,7 +1216,7 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     uint64_t mrg_cntr = 0;
     bool mrg_start = false;
 
-    for (auto f : all_fields) {
+    for (auto f : frame_fields) {
         if(f.merge==0) {
             if (f.type == Integer) {
                 cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.def_value, f.len/8);
@@ -1265,22 +1250,22 @@ uint32_t cea_stream::core::splice_fields(unsigned char *buf) {
     return offset;
 }
 
-void cea_stream::core::bootstrap() {
-    gather_fields();
+void cea_stream::core::bootstrap_stream() {
+    collate_fields();
     update_ethertype_and_len();
-    build_offsets();
+    build_field_offsets();
     build_runtime();
-    filter_mutables();
-    display_stream();
+    filter_mutable_fields();
+    print_stream();
     build_payload_arrays();
     build_principal_frame();
 }
 
-void cea_stream::core::gather_fields() {
-    all_fields.clear();
-    for (auto f : headers) {
-        all_fields.insert(
-            all_fields.end(),
+void cea_stream::core::collate_fields() {
+    frame_fields.clear();
+    for (auto f : frame_headers) {
+        frame_fields.insert(
+            frame_fields.end(),
             f->impl->hdrs.begin(),
             f->impl->hdrs.end()
         );
@@ -1291,19 +1276,19 @@ void cea_stream::core::gather_fields() {
 void cea_stream::core::update_ethertype_and_len() {
 }
 
-void cea_stream::core::build_offsets() {
+void cea_stream::core::build_field_offsets() {
     vector<cea_field_spec>::iterator it;
-    for(it=all_fields.begin(); it<all_fields.end(); it++) {
+    for(it=frame_fields.begin(); it<frame_fields.end(); it++) {
         it->offset = prev(it)->len + prev(it)->offset;
         hdr_len = hdr_len + it->len;
     }
 }
 
-void cea_stream::core::filter_mutables() {
-    mutables.clear();
-    for (auto f : all_fields) {
+void cea_stream::core::filter_mutable_fields() {
+    mutable_fields.clear();
+    for (auto f : frame_fields) {
         if (f.is_mutable) {
-            mutables.push_back(f);
+            mutable_fields.push_back(f);
         }
     }
     // TODO peniding implementaton: init runtime values
@@ -1328,11 +1313,11 @@ void print_field(cea_field_spec item) {
     cealog << ss.str();
 }
 
-void print(vector<cea_field_spec>tbl) {
+void cea_stream::core::print_fields(vector<cea_field_spec> field_group) {
     stringstream ss;
     ss.setf(ios_base::left);
 
-    for(auto item : tbl) {
+    for(auto item : field_group) {
         ss << setw(5) << left << item.id ;
         ss << setw(25) << left << item.name;
         ss << setw(25) << left << item.len;
@@ -1348,22 +1333,22 @@ void print(vector<cea_field_spec>tbl) {
     cealog << ss.str();
 }
 
-void cea_stream::core::display_stream() {
-    for (auto f : headers) {
+void cea_stream::core::print_stream() {
+    for (auto f : frame_headers) {
         cealog << cea_header_name[f->impl->htype] << endl;
         for (auto item : f->impl->hdrs) {
             cealog << "  |--" << item.name << endl;
         }
     }
-    print(properties);
-    print(mutables);
+    print_fields(stream_properties);
+    print_fields(mutable_fields);
 }
 
 void cea_stream::core::build_payload_arrays() {
     //-------------
     // size arrays
     //-------------
-    auto len_item = get_field(properties, FRAME_Len);
+    auto len_item = get_field(stream_properties, FRAME_Len);
     cea_gen_spec spec = len_item.spec;
 
     nof_sizes = 0;
@@ -1371,55 +1356,55 @@ void cea_stream::core::build_payload_arrays() {
     switch (spec.gen_type) {
         case Fixed_Value: {
             nof_sizes = 1;
-            arof_frm_sizes.resize(nof_sizes);
-            arof_computed_frm_sizes.resize(nof_sizes);
-            arof_pl_sizes.resize(nof_sizes);
-            arof_frm_sizes[0] = spec.value;
-            arof_computed_frm_sizes[0] = arof_frm_sizes[0] + meta_size;
-            arof_pl_sizes[0] = arof_frm_sizes[0] - (hdr_size - meta_size) - crc_len;
+            vof_frame_sizes.resize(nof_sizes);
+            vof_computed_frame_sizes.resize(nof_sizes);
+            vof_payload_sizes.resize(nof_sizes);
+            vof_frame_sizes[0] = spec.value;
+            vof_computed_frame_sizes[0] = vof_frame_sizes[0] + meta_size;
+            vof_payload_sizes[0] = vof_frame_sizes[0] - (hdr_size - meta_size) - crc_len;
             break;
             }
         case Increment: {
             nof_sizes = ((spec.max - spec.min)/spec.step)+1;
-            arof_frm_sizes.resize(nof_sizes);
-            arof_computed_frm_sizes.resize(nof_sizes);
-            arof_pl_sizes.resize(nof_sizes);
+            vof_frame_sizes.resize(nof_sizes);
+            vof_computed_frame_sizes.resize(nof_sizes);
+            vof_payload_sizes.resize(nof_sizes);
             uint32_t szidx=0;
             for (uint32_t i=spec.min; i<=spec.max; i=i+spec.step) {
-                arof_frm_sizes[szidx] = i;
-                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+                vof_frame_sizes[szidx] = i;
+                vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
+                vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
                 szidx++;
             }
             break;
             }
         case Decrement: {
             nof_sizes = ((spec.min - spec.max)/spec.step)+1;
-            arof_frm_sizes.resize(nof_sizes);
-            arof_computed_frm_sizes.resize(nof_sizes);
-            arof_pl_sizes.resize(nof_sizes);
+            vof_frame_sizes.resize(nof_sizes);
+            vof_computed_frame_sizes.resize(nof_sizes);
+            vof_payload_sizes.resize(nof_sizes);
             uint32_t szidx=0;
             for (uint32_t i=spec.min; i>=spec.max; i=i-spec.step) {
-                arof_frm_sizes[szidx] = i;
-                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+                vof_frame_sizes[szidx] = i;
+                vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
+                vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
                 szidx++;
             }
             break;
             }
         case Random: {
             nof_sizes = (spec.max - spec.min) + 1;
-            arof_frm_sizes.resize(nof_sizes);
-            arof_computed_frm_sizes.resize(nof_sizes);
-            arof_pl_sizes.resize(nof_sizes);
+            vof_frame_sizes.resize(nof_sizes);
+            vof_computed_frame_sizes.resize(nof_sizes);
+            vof_payload_sizes.resize(nof_sizes);
             random_device rd;
             mt19937 gen(rd());
             uniform_int_distribution<> distr(spec.max, spec.min);
             uint32_t szidx=0;
             for (uint32_t szidx=spec.min; szidx>spec.max; szidx++) {
-                arof_frm_sizes[szidx] = distr(gen);
-                arof_computed_frm_sizes[szidx] = arof_frm_sizes[szidx] + meta_size;
-                arof_pl_sizes[szidx] = arof_frm_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+                vof_frame_sizes[szidx] = distr(gen);
+                vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
+                vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
             }
             break;
             }
@@ -1432,8 +1417,8 @@ void cea_stream::core::build_payload_arrays() {
     //---------------
     // payload array
     //---------------
-    arr_payl_data = new unsigned char[CEA_MAX_FRAME_SIZE];
-    auto pl_item = get_field(properties, PAYLOAD_Pattern);
+    arof_payload_data = new unsigned char[CEA_MAX_FRAME_SIZE];
+    auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
     cea_gen_spec plspec = pl_item.spec;
 
     switch (plspec.gen_type) {
@@ -1442,10 +1427,10 @@ void cea_stream::core::build_payload_arrays() {
             srand(time(NULL));
             for (uint32_t idx=0; idx<CEA_MAX_RND_ARRAYS; idx++) {
                 uint32_t array_size = CEA_MAX_FRAME_SIZE + CEA_RND_ARRAY_SIZE;
-                arr_rnd_payl_data[idx] = new unsigned char[array_size];
+                arof_rnd_payload_data[idx] = new unsigned char[array_size];
                 for(uint32_t offset=0; offset<array_size; offset++) {
                     int num = rand()%255;
-                    memcpy(arr_rnd_payl_data[idx]+offset, (unsigned char*)&num, 1);
+                    memcpy(arof_rnd_payload_data[idx]+offset, (unsigned char*)&num, 1);
                 }
             }
             break;
@@ -1461,12 +1446,12 @@ void cea_stream::core::build_payload_arrays() {
 
             if (plspec.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
-                    memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
+                    memcpy(arof_payload_data+offset, payload_pattern, payload_pattern_size);
                     offset += payload_pattern_size;
                 }
-                memcpy(arr_payl_data+offset, payload_pattern, remainder);
+                memcpy(arof_payload_data+offset, payload_pattern, remainder);
             } else {
-                memcpy(arr_payl_data+offset, payload_pattern, payload_pattern_size);
+                memcpy(arof_payload_data+offset, payload_pattern, payload_pattern_size);
             }
             delete [] payload_pattern;
             break;
@@ -1475,7 +1460,7 @@ void cea_stream::core::build_payload_arrays() {
             uint32_t offset = 0;
             for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
                 for (uint16_t val=0; val<256; val++) {
-                    memcpy(arr_payl_data+offset, (char*)&val, 1);
+                    memcpy(arof_payload_data+offset, (char*)&val, 1);
                     offset++;
                 }
             }
@@ -1484,7 +1469,7 @@ void cea_stream::core::build_payload_arrays() {
         case Increment_Word: {
             uint32_t offset = 0;
             for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/2; idx++) {
-                cea_memcpy_ntw_byte_order(arr_payl_data+offset, (char*)&idx, 2);
+                cea_memcpy_ntw_byte_order(arof_payload_data+offset, (char*)&idx, 2);
                 offset += 2;
             }
             break;
@@ -1493,7 +1478,7 @@ void cea_stream::core::build_payload_arrays() {
             uint32_t offset = 0;
             for (uint32_t idx=0; idx<CEA_MAX_FRAME_SIZE/256; idx++) {
                 for (int16_t val=255; val>=0; val--) {
-                    memcpy(arr_payl_data+offset, (char*)&val, 1);
+                    memcpy(arof_payload_data+offset, (char*)&val, 1);
                     offset++;
                 }
             }
@@ -1502,7 +1487,7 @@ void cea_stream::core::build_payload_arrays() {
         case Decrement_Word: {
             uint32_t offset = 0;
             for (uint32_t val=0xFFFF; val>=0; val--) {
-                memcpy(arr_payl_data+offset, (char*)&val, 2);
+                memcpy(arof_payload_data+offset, (char*)&val, 2);
                 offset += 2;
                 if (offset > CEA_MAX_FRAME_SIZE) break;
             }
@@ -1516,7 +1501,7 @@ void cea_stream::core::build_payload_arrays() {
 }
 
 void cea_stream::core::build_runtime() {
-    for (auto &m : mutables) {
+    for (auto &m : mutable_fields) {
         switch (m.type) {
             case Integer: {
                 switch (m.spec.gen_type) {
@@ -1635,7 +1620,7 @@ void cea_stream::core::build_runtime() {
 // TODO POSSIBLE SOLUTION: To be decided
 //      -> call build_runtime after the principal frame is generated ??
 void cea_stream::core::build_runtime_mark0() {
-//    for (auto &f : all_fields) {
+//    for (auto &f : frame_fields) {
 //        if (f.type == Integer) {
 //            f.rt.gen_value = f.spec.value;
 //        } else {
@@ -1668,23 +1653,23 @@ void cea_stream::core::build_runtime_mark0() {
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
 
-    // print(all_fields);
-    splice_fields(pf);
+    // print_fields(frame_fields);
+    splice_frame_fields(pf);
 
-    auto len_item = get_field(properties, FRAME_Len);
+    auto len_item = get_field(stream_properties, FRAME_Len);
     cea_gen_spec lenspec = len_item.spec;
 
-    auto pl_item = get_field(properties, PAYLOAD_Pattern);
+    auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
     cea_gen_spec plspec = pl_item.spec;
 
     uint32_t ploffset = hdr_len/8;
 
     if (plspec.gen_type == Random)
-        memcpy(pf+ploffset, arr_rnd_payl_data[0], lenspec.value);
+        memcpy(pf+ploffset, arof_rnd_payload_data[0], lenspec.value);
     else 
-        memcpy(pf+ploffset, arr_payl_data, lenspec.value);
+        memcpy(pf+ploffset, arof_payload_data, lenspec.value);
 
-    print_cdata(pf, ploffset+lenspec.value);
+    print_uchar_array(pf, ploffset+lenspec.value);
 }
 
 /*
@@ -1702,14 +1687,14 @@ for (auto it=begin(list); it!=end(list)) {
 // TODO what if there are no mutables
 // TODO enclose mutate with perf timers
 void cea_stream::core::mutate() {
-    for (auto m=begin(mutables); m!=end(mutables); m++) {
+    for (auto m=begin(mutable_fields); m!=end(mutable_fields); m++) {
         switch(m->type) {
             case Integer: {
                 switch(m->spec.gen_type) {
                     case Fixed_Value: {
                         cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->spec.value, m->len/8);
                         m->is_mutable = false;
-                        mutables.erase(m); m++;
+                        mutable_fields.erase(m); m++;
                         break;
                         }
                     case Value_List: {
@@ -1718,7 +1703,7 @@ void cea_stream::core::mutate() {
                             if (m->spec.repeat) {
                                 m->rt.idx = 0;
                             } else {
-                                mutables.erase(m); m++;
+                                mutable_fields.erase(m); m++;
                             }
                         } else {
                             m->rt.idx++;
@@ -1732,7 +1717,7 @@ void cea_stream::core::mutate() {
                                 m->rt.count = 0;
                                 m->rt.value = m->spec.start;
                             } else {
-                                mutables.erase(m); m++;
+                                mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check overflow
@@ -1748,7 +1733,7 @@ void cea_stream::core::mutate() {
                                 m->rt.count = 0;
                                 m->rt.value = m->spec.start;
                             } else {
-                                mutables.erase(m); m++;
+                                mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check underflow
@@ -1771,7 +1756,7 @@ void cea_stream::core::mutate() {
                     case Fixed_Pattern: {
                         cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
                         m->is_mutable = false;
-                        mutables.erase(m); // m++; // TODO iterator increment
+                        mutable_fields.erase(m); // m++; // TODO iterator increment
                                            // fails if it is done after the last
                                            // element is deleted, swap erase and
                                            // increment
@@ -1783,7 +1768,7 @@ void cea_stream::core::mutate() {
                             if (m->spec.repeat) {
                                 m->rt.idx = 0;
                             } else {
-                                mutables.erase(m); // m++;
+                                mutable_fields.erase(m); // m++;
                             }
                         } else {
                             m->rt.idx++;
@@ -1797,7 +1782,7 @@ void cea_stream::core::mutate() {
                                 m->rt.count = 0;
                                 m->rt.value = m->spec.start;
                             } else {
-                                mutables.erase(m); // m++;
+                                mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check overflow
@@ -1813,7 +1798,7 @@ void cea_stream::core::mutate() {
                                 m->rt.count = 0;
                                 m->rt.value = m->spec.start;
                             } else {
-                                mutables.erase(m); // m++;
+                                mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check underflow
@@ -1836,27 +1821,26 @@ void cea_stream::core::mutate() {
 // TODO copy frame to transmit buffer    
 }
 
-void cea_stream::core::init_properties() {
-    properties.clear();
+void cea_stream::core::init_stream_properties() {
+    stream_properties.clear();
     vector<cea_field_id> prop_ids =  hfmap[PROPERTIES];
 
     for (auto id : prop_ids) {
         auto item = get_field(fdb, id);
-        properties.push_back(item);
+        stream_properties.push_back(item);
     }
 }
 
 void cea_stream::core::reset() {
-    headers.clear();
+    frame_headers.clear();
 
     // add metadata to headers by default
     // cea_header *meta = new cea_header(META);
-    // headers.push_back(meta);
+    // frame_headers.push_back(meta);
 
-    all_fields.clear();
-    stream_db = fdb;
+    frame_fields.clear();
     udfs.clear();
-    init_properties();
+    init_stream_properties();
 
     // TODO memory leak when reset is done twice in same test
     pf = new unsigned char [CEA_PF_SIZE];
@@ -2053,7 +2037,7 @@ void cea_port::core::worker() {
 
     for (it = streamq.begin(); it != streamq.end(); it++) {
         cur_stream = *it;
-        cur_stream->impl->bootstrap();
+        cur_stream->impl->bootstrap_stream();
         cur_stream->impl->mutate();
     }
 }
