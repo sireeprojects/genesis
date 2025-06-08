@@ -1,9 +1,3 @@
-/*
-NOTES:
-marco CEA_DEBUG - to include debug code and to generate debug library
-THINGS TO DO:
-*/
-
 #include <thread>
 #include <iomanip>
 #include <algorithm>
@@ -80,61 +74,11 @@ string msg_prefix = "cea";
 
 // global variable to track proxy and stream id
 // TODO This will become a problem in multi-process mode
-//       Every workstation will have a port_id and stream_id = 0
-//       Re-design in such a way that these values continue over multiple w/s
 uint32_t stream_id = 0;
 uint32_t port_id = 0;
 
-// CRC32
-const uint32_t crc32_tab[] = {
-    0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
-    0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
-    0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91, 0x1db71064, 0x6ab020f2,
-    0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
-    0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9,
-    0xfa0f3d63, 0x8d080df5, 0x3b6e20c8, 0x4c69105e, 0xd56041e4, 0xa2677172,
-    0x3c03e4d1, 0x4b04d447, 0xd20d85fd, 0xa50ab56b, 0x35b5a8fa, 0x42b2986c,
-    0xdbbbc9d6, 0xacbcf940, 0x32d86ce3, 0x45df5c75, 0xdcd60dcf, 0xabd13d59,
-    0x26d930ac, 0x51de003a, 0xc8d75180, 0xbfd06116, 0x21b4f4b5, 0x56b3c423,
-    0xcfba9599, 0xb8bda50f, 0x2802b89e, 0x5f058808, 0xc60cd9b2, 0xb10be924,
-    0x2f6f7c87, 0x58684c11, 0xc1611dab, 0xb6662d3d, 0x76dc4190, 0x01db7106,
-    0x98d220bc, 0xefd5102a, 0x71b18589, 0x06b6b51f, 0x9fbfe4a5, 0xe8b8d433,
-    0x7807c9a2, 0x0f00f934, 0x9609a88e, 0xe10e9818, 0x7f6a0dbb, 0x086d3d2d,
-    0x91646c97, 0xe6635c01, 0x6b6b51f4, 0x1c6c6162, 0x856530d8, 0xf262004e,
-    0x6c0695ed, 0x1b01a57b, 0x8208f4c1, 0xf50fc457, 0x65b0d9c6, 0x12b7e950,
-    0x8bbeb8ea, 0xfcb9887c, 0x62dd1ddf, 0x15da2d49, 0x8cd37cf3, 0xfbd44c65,
-    0x4db26158, 0x3ab551ce, 0xa3bc0074, 0xd4bb30e2, 0x4adfa541, 0x3dd895d7,
-    0xa4d1c46d, 0xd3d6f4fb, 0x4369e96a, 0x346ed9fc, 0xad678846, 0xda60b8d0,
-    0x44042d73, 0x33031de5, 0xaa0a4c5f, 0xdd0d7cc9, 0x5005713c, 0x270241aa,
-    0xbe0b1010, 0xc90c2086, 0x5768b525, 0x206f85b3, 0xb966d409, 0xce61e49f,
-    0x5edef90e, 0x29d9c998, 0xb0d09822, 0xc7d7a8b4, 0x59b33d17, 0x2eb40d81,
-    0xb7bd5c3b, 0xc0ba6cad, 0xedb88320, 0x9abfb3b6, 0x03b6e20c, 0x74b1d29a,
-    0xead54739, 0x9dd277af, 0x04db2615, 0x73dc1683, 0xe3630b12, 0x94643b84,
-    0x0d6d6a3e, 0x7a6a5aa8, 0xe40ecf0b, 0x9309ff9d, 0x0a00ae27, 0x7d079eb1,
-    0xf00f9344, 0x8708a3d2, 0x1e01f268, 0x6906c2fe, 0xf762575d, 0x806567cb,
-    0x196c3671, 0x6e6b06e7, 0xfed41b76, 0x89d32be0, 0x10da7a5a, 0x67dd4acc,
-    0xf9b9df6f, 0x8ebeeff9, 0x17b7be43, 0x60b08ed5, 0xd6d6a3e8, 0xa1d1937e,
-    0x38d8c2c4, 0x4fdff252, 0xd1bb67f1, 0xa6bc5767, 0x3fb506dd, 0x48b2364b,
-    0xd80d2bda, 0xaf0a1b4c, 0x36034af6, 0x41047a60, 0xdf60efc3, 0xa867df55,
-    0x316e8eef, 0x4669be79, 0xcb61b38c, 0xbc66831a, 0x256fd2a0, 0x5268e236,
-    0xcc0c7795, 0xbb0b4703, 0x220216b9, 0x5505262f, 0xc5ba3bbe, 0xb2bd0b28,
-    0x2bb45a92, 0x5cb36a04, 0xc2d7ffa7, 0xb5d0cf31, 0x2cd99e8b, 0x5bdeae1d,
-    0x9b64c2b0, 0xec63f226, 0x756aa39c, 0x026d930a, 0x9c0906a9, 0xeb0e363f,
-    0x72076785, 0x05005713, 0x95bf4a82, 0xe2b87a14, 0x7bb12bae, 0x0cb61b38,
-    0x92d28e9b, 0xe5d5be0d, 0x7cdcefb7, 0x0bdbdf21, 0x86d3d2d4, 0xf1d4e242,
-    0x68ddb3f8, 0x1fda836e, 0x81be16cd, 0xf6b9265b, 0x6fb077e1, 0x18b74777,
-    0x88085ae6, 0xff0f6a70, 0x66063bca, 0x11010b5c, 0x8f659eff, 0xf862ae69,
-    0x616bffd3, 0x166ccf45, 0xa00ae278, 0xd70dd2ee, 0x4e048354, 0x3903b3c2,
-    0xa7672661, 0xd06016f7, 0x4969474d, 0x3e6e77db, 0xaed16a4a, 0xd9d65adc,
-    0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
-    0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
-    0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
-    0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
-};
-
 enum cea_field_type {
     Integer,
-    // Pattern, // TODO Required?
     Pattern_PRE,
     Pattern_MAC,
     Pattern_IPv4,
@@ -154,29 +98,29 @@ struct cea_field_runtime {
 };
 
 struct cea_field_spec {
-    bool                is_mutable;
-    uint32_t            merge;
-    cea_field_id        id;
-    uint32_t            len;
-    uint32_t            offset;
-    bool                proto_list_specified;
-    bool                auto_field;
-    string              name;
-    uint64_t            def_value;
+    uint32_t merge;
+    cea_field_id id;
+    uint32_t len;
+    bool proto_list_specified;
+    bool auto_field;
+    string name;
+    uint64_t def_value;
     vector <unsigned char> def_pattern;
-    cea_field_type      type;
-    cea_field_genspec   spec;
-    cea_field_runtime   rt;
+    cea_field_type type;
+    cea_field_genspec spec;
+    cea_field_runtime rt;
 };
 
-struct cea_field_mutation_helper {
+struct cea_field_mutation_data {
+    bool is_mutable;
+    uint32_t offset;
 };
  
-struct cea_field_int {
-    cea_field_spec            defaults;
-    cea_field_genspec         uspec;
-    cea_field_runtime         rt;
-    cea_field_mutation_helper mhelper;
+struct cea_field_mutation_spec {
+    cea_field_spec defaults;
+    cea_field_genspec gspec;
+    cea_field_runtime rt;
+    cea_field_mutation_data mdata;
 };
 
 vector<unsigned char>def_pre_pattern    = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x5d};
@@ -187,111 +131,111 @@ vector<unsigned char>def_dstip4_pattern = {0xff, 0xff, 0xff, 0xff};
 vector<unsigned char>def_srcip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 vector<unsigned char>def_dstip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-vector<cea_field_spec> fdb = {
-{false, 0, MAC_Preamble          , 64 , 0, 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE,  { Fixed_Pattern, 0                , "55555555555555d"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Dest_Addr         , 48 , 0, 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC,  { Fixed_Pattern, 0                , "01:02:03:04:05:06", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Src_Addr          , 48 , 0, 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC,  { Fixed_Pattern, 0                , "0a:0b:0c:0d:0e:0f", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Len               , 16 , 0, 0, 0, "MAC_Len               ", 46               , {0x00}             , Integer,      { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Ether_Type        , 16 , 0, 0, 0, "MAC_Ether_Type        ", 0x0800           , {0x00}             , Integer,      { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Fcs               , 32 , 0, 0, 0, "MAC_Fcs               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, LLC_Dsap              , 8  , 0, 0, 0, "LLC_Dsap              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, LLC_Ssap              , 8  , 0, 0, 0, "LLC_Ssap              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, LLC_Control           , 8  , 0, 0, 0, "LLC_Control           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, SNAP_Oui              , 24 , 0, 0, 0, "SNAP_Oui              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, SNAP_Pid              , 16 , 0, 0, 0, "SNAP_Pid              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv4_Version          , 4  , 0, 0, 0, "IPv4_Version          ", 4                , {0x00}             , Integer,      { Fixed_Value  , 4                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv4_IHL              , 4  , 0, 0, 0, "IPv4_IHL              ", 5                , {0x00}             , Integer,      { Fixed_Value  , 5                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Tos              , 8  , 0, 0, 0, "IPv4_Tos              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Total_Len        , 16 , 0, 0, 0, "IPv4_Total_Len        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Id               , 16 , 0, 0, 0, "IPv4_Id               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv4_Flags            , 3  , 0, 0, 0, "IPv4_Flags            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv4_Frag_Offset      , 13 , 0, 0, 0, "IPv4_Frag_Offset      ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_TTL              , 8  , 0, 0, 0, "IPv4_TTL              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Protocol         , 8  , 0, 0, 0, "IPv4_Protocol         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Hdr_Csum         , 16 , 0, 0, 0, "IPv4_Hdr_Csum         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Src_Addr         , 32 , 0, 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4, { Fixed_Pattern, 0                , "192.168.0.1"      , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Dest_Addr        , 32 , 0, 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4, { Fixed_Pattern, 0                , "255.255.255.255"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Opts             , 0  , 0, 0, 0, "IPv4_Opts             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv4_Pad              , 0  , 0, 0, 0, "IPv4_Pad              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 2, IPv6_Version          , 4  , 0, 0, 0, "IPv6_Version          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv6_Traffic_Class    , 8  , 0, 0, 0, "IPv6_Traffic_Class    ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, IPv6_Flow_Label       , 20 , 0, 0, 0, "IPv6_Flow_Label       ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv6_Payload_Len      , 16 , 0, 0, 0, "IPv6_Payload_Len      ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv6_Next_Hdr         , 8  , 0, 0, 0, "IPv6_Next_Hdr         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv6_Hop_Limit        , 8  , 0, 0, 0, "IPv6_Hop_Limit        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv6_Src_Addr         , 128, 0, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, IPv6_Dest_Addr        , 128, 0, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Src_Port          , 16 , 0, 0, 0, "TCP_Src_Port          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Dest_Port         , 16 , 0, 0, 0, "TCP_Dest_Port         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Seq_Num           , 32 , 0, 0, 0, "TCP_Seq_Num           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Ack_Num           , 32 , 0, 0, 0, "TCP_Ack_Num           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 7, TCP_Data_Offset       , 4  , 0, 0, 0, "TCP_Data_Offset       ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Reserved          , 6  , 0, 0, 0, "TCP_Reserved          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Urg               , 1  , 0, 0, 0, "TCP_Urg               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Ack               , 1  , 0, 0, 0, "TCP_Ack               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Psh               , 1  , 0, 0, 0, "TCP_Psh               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Rst               , 1  , 0, 0, 0, "TCP_Rst               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Syn               , 1  , 0, 0, 0, "TCP_Syn               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, TCP_Fin               , 1  , 0, 0, 0, "TCP_Fin               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Window            , 16 , 0, 0, 0, "TCP_Window            ", 64               , {0x00}             , Integer,      { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Csum              , 16 , 0, 0, 0, "TCP_Csum              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Urg_Ptr           , 16 , 0, 0, 0, "TCP_Urg_Ptr           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Opts              , 0  , 0, 0, 0, "TCP_Opts              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Pad               , 0  , 0, 0, 0, "TCP_Pad               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, UDP_Src_Port          , 16 , 0, 0, 0, "UDP_Src_Port          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, UDP_Dest_Port         , 16 , 0, 0, 0, "UDP_Dest_Port         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, UDP_Len               , 16 , 0, 0, 0, "UDP_Len               ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, UDP_Csum              , 16 , 0, 0, 0, "UDP_Csum              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Hw_Type           , 16 , 0, 0, 0, "ARP_Hw_Type           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Proto_Type        , 16 , 0, 0, 0, "ARP_Proto_Type        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Hw_Len            , 8  , 0, 0, 0, "ARP_Hw_Len            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Proto_Len         , 8  , 0, 0, 0, "ARP_Proto_Len         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Opcode            , 16 , 0, 0, 0, "ARP_Opcode            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Sender_Hw_Addr    , 48 , 0, 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC,  { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Sender_Proto_addr , 32 , 0, 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Target_Hw_Addr    , 48 , 0, 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC,  { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, ARP_Target_Proto_Addr , 32 , 0, 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 2, MPLS_Label            , 20 , 0, 0, 0, "MPLS_Label            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, MPLS_Exp              , 3  , 0, 0, 0, "MPLS_Exp              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, MPLS_Stack            , 1  , 0, 0, 0, "MPLS_Stack            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MPLS_Ttl              , 8  , 0, 0, 0, "MPLS_Ttl              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, VLAN_Tpi              , 16 , 0, 0, 0, "VLAN_Tpi              ", 0x8100           , {0x00}             , Integer,      { Fixed_Value  , 0x8100           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 2, VLAN_Tci_Pcp          , 3  , 0, 0, 0, "VLAN_Tci_Pcp          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, VLAN_Tci_Cfi          , 1  , 0, 0, 0, "VLAN_Tci_Cfi          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 1, VLAN_Vid              , 12 , 0, 0, 0, "VLAN_Vid              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Control           , 16 , 0, 0, 0, "MAC_Control           ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, MAC_Control_Opcode    , 16 , 0, 0, 0, "MAC_Control_Opcode    ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta          , 16 , 0, 0, 0, "Pause_Quanta          ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Priority_En_Vector    , 16 , 0, 0, 0, "Priority_En_Vector    ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_0        , 16 , 0, 0, 0, "Pause_Quanta_0        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_1        , 16 , 0, 0, 0, "Pause_Quanta_1        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_2        , 16 , 0, 0, 0, "Pause_Quanta_2        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_3        , 16 , 0, 0, 0, "Pause_Quanta_3        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_4        , 16 , 0, 0, 0, "Pause_Quanta_4        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_5        , 16 , 0, 0, 0, "Pause_Quanta_5        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_6        , 16 , 0, 0, 0, "Pause_Quanta_6        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Pause_Quanta_7        , 16 , 0, 0, 0, "Pause_Quanta_7        ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, FRAME_Len             , 32 , 0, 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer,      { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, PAYLOAD_Pattern       , 0  , 0, 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer,      { Fixed_Pattern, 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Traffic_Type   , 32 , 0, 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer,      { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Traffic_Control, 32 , 0, 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer,      { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Ipg            , 32 , 0, 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer,      { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Isg            , 32 , 0, 0, 0, "STREAM_Ifg            ", 12               , {0x00}             , Integer,      { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Ibg            , 32 , 0, 0, 0, "STREAM_Ibg            ", 12               , {0x00}             , Integer,      { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Bandwidth      , 32 , 0, 0, 0, "STREAM_Bandwidth      ", 100              , {0x00}             , Integer,      { Fixed_Value  , 100              , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, STREAM_Start_Delay    , 32 , 0, 0, 0, "STREAM_Start_Delay    ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, UDF                   , 0  , 0, 0, 0, "UDF                   ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Len              , 32 , 0, 0, 0, "META_Len              ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Ipg              , 32 , 0, 0, 0, "META_Ipg              ", 12               , {0x00}             , Integer,      { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Preamble         , 64 , 0, 0, 0, "META_Preamble         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad1             , 64 , 0, 0, 0, "META_Pad1             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad2             , 64 , 0, 0, 0, "META_Pad2             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad3             , 64 , 0, 0, 0, "META_Pad3             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad4             , 64 , 0, 0, 0, "META_Pad4             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad5             , 64 , 0, 0, 0, "META_Pad5             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, META_Pad6             , 64 , 0, 0, 0, "META_Pad6             ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, Zeros_8Bit            , 8  , 0, 0, 0, "Zeros_8Bit            ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
-{false, 0, TCP_Total_Len         , 16 , 0, 0, 0, "TCP_Total_Len         ", 0                , {0x00}             , Integer,      { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }},
+vector<cea_field_mutation_spec> mtable = {
+{{0, MAC_Preamble          , 64 , 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE }, { Fixed_Pattern, 0                , "55555555555555d"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Dest_Addr         , 48 , 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "01:02:03:04:05:06", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Src_Addr          , 48 , 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "0a:0b:0c:0d:0e:0f", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Len               , 16 , 0, 0, "MAC_Len               ", 46               , {0x00}             , Integer     }, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Ether_Type        , 16 , 0, 0, "MAC_Ether_Type        ", 0x0800           , {0x00}             , Integer     }, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Fcs               , 32 , 0, 0, "MAC_Fcs               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, LLC_Dsap              , 8  , 0, 0, "LLC_Dsap              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, LLC_Ssap              , 8  , 0, 0, "LLC_Ssap              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, LLC_Control           , 8  , 0, 0, "LLC_Control           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, SNAP_Oui              , 24 , 0, 0, "SNAP_Oui              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, SNAP_Pid              , 16 , 0, 0, "SNAP_Pid              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv4_Version          , 4  , 0, 0, "IPv4_Version          ", 4                , {0x00}             , Integer     }, { Fixed_Value  , 4                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv4_IHL              , 4  , 0, 0, "IPv4_IHL              ", 5                , {0x00}             , Integer     }, { Fixed_Value  , 5                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Tos              , 8  , 0, 0, "IPv4_Tos              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Total_Len        , 16 , 0, 0, "IPv4_Total_Len        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Id               , 16 , 0, 0, "IPv4_Id               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv4_Flags            , 3  , 0, 0, "IPv4_Flags            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv4_Frag_Offset      , 13 , 0, 0, "IPv4_Frag_Offset      ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_TTL              , 8  , 0, 0, "IPv4_TTL              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Protocol         , 8  , 0, 0, "IPv4_Protocol         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Hdr_Csum         , 16 , 0, 0, "IPv4_Hdr_Csum         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Src_Addr         , 32 , 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "192.168.0.1"      , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Dest_Addr        , 32 , 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "255.255.255.255"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Opts             , 0  , 0, 0, "IPv4_Opts             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv4_Pad              , 0  , 0, 0, "IPv4_Pad              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{2, IPv6_Version          , 4  , 0, 0, "IPv6_Version          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv6_Traffic_Class    , 8  , 0, 0, "IPv6_Traffic_Class    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, IPv6_Flow_Label       , 20 , 0, 0, "IPv6_Flow_Label       ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv6_Payload_Len      , 16 , 0, 0, "IPv6_Payload_Len      ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv6_Next_Hdr         , 8  , 0, 0, "IPv6_Next_Hdr         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv6_Hop_Limit        , 8  , 0, 0, "IPv6_Hop_Limit        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv6_Src_Addr         , 128, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6}, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, IPv6_Dest_Addr        , 128, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6}, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Src_Port          , 16 , 0, 0, "TCP_Src_Port          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Dest_Port         , 16 , 0, 0, "TCP_Dest_Port         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Seq_Num           , 32 , 0, 0, "TCP_Seq_Num           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Ack_Num           , 32 , 0, 0, "TCP_Ack_Num           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{7, TCP_Data_Offset       , 4  , 0, 0, "TCP_Data_Offset       ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Reserved          , 6  , 0, 0, "TCP_Reserved          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Urg               , 1  , 0, 0, "TCP_Urg               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Ack               , 1  , 0, 0, "TCP_Ack               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Psh               , 1  , 0, 0, "TCP_Psh               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Rst               , 1  , 0, 0, "TCP_Rst               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Syn               , 1  , 0, 0, "TCP_Syn               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, TCP_Fin               , 1  , 0, 0, "TCP_Fin               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Window            , 16 , 0, 0, "TCP_Window            ", 64               , {0x00}             , Integer     }, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Csum              , 16 , 0, 0, "TCP_Csum              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Urg_Ptr           , 16 , 0, 0, "TCP_Urg_Ptr           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Opts              , 0  , 0, 0, "TCP_Opts              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Pad               , 0  , 0, 0, "TCP_Pad               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, UDP_Src_Port          , 16 , 0, 0, "UDP_Src_Port          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, UDP_Dest_Port         , 16 , 0, 0, "UDP_Dest_Port         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, UDP_Len               , 16 , 0, 0, "UDP_Len               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, UDP_Csum              , 16 , 0, 0, "UDP_Csum              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Hw_Type           , 16 , 0, 0, "ARP_Hw_Type           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Proto_Type        , 16 , 0, 0, "ARP_Proto_Type        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Hw_Len            , 8  , 0, 0, "ARP_Hw_Len            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Proto_Len         , 8  , 0, 0, "ARP_Proto_Len         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Opcode            , 16 , 0, 0, "ARP_Opcode            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Sender_Hw_Addr    , 48 , 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Sender_Proto_addr , 32 , 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Target_Hw_Addr    , 48 , 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, ARP_Target_Proto_Addr , 32 , 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{2, MPLS_Label            , 20 , 0, 0, "MPLS_Label            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, MPLS_Exp              , 3  , 0, 0, "MPLS_Exp              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, MPLS_Stack            , 1  , 0, 0, "MPLS_Stack            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MPLS_Ttl              , 8  , 0, 0, "MPLS_Ttl              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, VLAN_Tpi              , 16 , 0, 0, "VLAN_Tpi              ", 0x8100           , {0x00}             , Integer     }, { Fixed_Value  , 0x8100           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{2, VLAN_Tci_Pcp          , 3  , 0, 0, "VLAN_Tci_Pcp          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, VLAN_Tci_Cfi          , 1  , 0, 0, "VLAN_Tci_Cfi          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{1, VLAN_Vid              , 12 , 0, 0, "VLAN_Vid              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Control           , 16 , 0, 0, "MAC_Control           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, MAC_Control_Opcode    , 16 , 0, 0, "MAC_Control_Opcode    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta          , 16 , 0, 0, "Pause_Quanta          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Priority_En_Vector    , 16 , 0, 0, "Priority_En_Vector    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_0        , 16 , 0, 0, "Pause_Quanta_0        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_1        , 16 , 0, 0, "Pause_Quanta_1        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_2        , 16 , 0, 0, "Pause_Quanta_2        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_3        , 16 , 0, 0, "Pause_Quanta_3        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_4        , 16 , 0, 0, "Pause_Quanta_4        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_5        , 16 , 0, 0, "Pause_Quanta_5        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_6        , 16 , 0, 0, "Pause_Quanta_6        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Pause_Quanta_7        , 16 , 0, 0, "Pause_Quanta_7        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, FRAME_Len             , 32 , 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer     }, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, { Fixed_Pattern, 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Traffic_Type   , 32 , 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer     }, { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Traffic_Control, 32 , 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer     }, { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Ipg            , 32 , 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Isg            , 32 , 0, 0, "STREAM_Ifg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Ibg            , 32 , 0, 0, "STREAM_Ibg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Bandwidth      , 32 , 0, 0, "STREAM_Bandwidth      ", 100              , {0x00}             , Integer     }, { Fixed_Value  , 100              , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, STREAM_Start_Delay    , 32 , 0, 0, "STREAM_Start_Delay    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, UDF                   , 0  , 0, 0, "UDF                   ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Len              , 32 , 0, 0, "META_Len              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Ipg              , 32 , 0, 0, "META_Ipg              ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Preamble         , 64 , 0, 0, "META_Preamble         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad1             , 64 , 0, 0, "META_Pad1             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad2             , 64 , 0, 0, "META_Pad2             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad3             , 64 , 0, 0, "META_Pad3             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad4             , 64 , 0, 0, "META_Pad4             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad5             , 64 , 0, 0, "META_Pad5             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, META_Pad6             , 64 , 0, 0, "META_Pad6             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, Zeros_8Bit            , 8  , 0, 0, "Zeros_8Bit            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{{0, TCP_Total_Len         , 16 , 0, 0, "TCP_Total_Len         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
 };
 
 void signal_handler(int signal) {
@@ -778,10 +722,10 @@ void pcap::write(unsigned char *buf, uint32_t len) {
 }
 
 // find_if with lambda predicate
-cea_field_spec get_field(vector<cea_field_spec> tbl, cea_field_id id) {
+cea_field_mutation_spec get_field(vector<cea_field_mutation_spec> tbl, cea_field_id id) {
     auto lit = find_if(tbl.begin(), tbl.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
 
     if (lit==tbl.end()) {
         CEA_ERR_MSG("Internal: Unrecognized field identifier: " << id);
@@ -802,14 +746,14 @@ public:
     // dtor
     ~core();
 
-    // Quickly set a fixed value to a field
+    // Quickly set a fixed value to a property
     void set(cea_field_id id, uint64_t value);
 
-    // Define a complete spec for the generation of a field
+    // Define a complete spec for the generation of a property
     void set(cea_field_id id, cea_field_genspec spec);
 
     // enable or disable a stream feature
-    void set(cea_stream_feature_id feature);
+    void set(cea_stream_feature_id feature, bool mode);
 
     // Based on user specification of the frame, build a vector of 
     // field ids in the sequence required by the specification
@@ -848,7 +792,7 @@ public:
     void print_stream();
 
     // print a vector of field specs
-    void print_fields(vector<cea_field_spec> field_group);
+    void print_fields(vector<cea_field_mutation_spec> field_group);
 
     // Factory reset of the stream core
     void reset();
@@ -859,10 +803,10 @@ public:
     
     // frame_fields will be used to store all the fields added
     // by user by the way of adding headers
-    vector<cea_field_spec> frame_fields;
+    vector<cea_field_mutation_spec> frame_fields;
 
     // store stream properties
-    vector<cea_field_spec> stream_properties;
+    vector<cea_field_mutation_spec> stream_properties;
     
     // initialize stream to its default values
     void init_stream_properties();
@@ -872,12 +816,12 @@ public:
 
     // mutable_fields will be used to store only those fields that will used during
     // stream generation
-    vector<cea_field_spec> mutable_fields;
+    vector<cea_field_mutation_spec> mutable_fields;
 
     // at the end of the mutation logic, the mutables will be empty
     // so if the user press start button again, the mutables will be empty
     // so a bkp version is maintained to restore the content of mutables
-    vector<cea_field_spec> mutable_fields_clone;
+    vector<cea_field_mutation_spec> mutable_fields_clone;
 
     // functions used during mutation of strings
     void convert_string_to_uca(string address, unsigned char *op);
@@ -933,11 +877,11 @@ public:
     void set(cea_field_genspec spec);
 
     // The protocol field type that this class represents
-    cea_field_id fid;
+    cea_field_id field_id;
 
     // A table of field structs that corresponds to the field identifiers
     // required by this field
-    cea_field_spec field;
+    cea_field_mutation_spec field;
 
     // prefixture to field messages
     string field_name;
@@ -961,7 +905,7 @@ public:
 
     // A table of field structs that corresponds to the field identifiers
     // required by this field
-    cea_field_spec field;
+    cea_field_mutation_spec field;
 
     // prefixture to field messages
     string field_name;
@@ -975,7 +919,7 @@ public:
 class cea_header::core {
 public:
     // ctor
-    core(cea_header_type hdr);
+    core(cea_header_type hdr_type);
 
     // dtor
     ~core();
@@ -989,6 +933,12 @@ public:
     // Define a complete spec for the generation of a field
     void set(cea_field_id id, cea_field_genspec spec);
 
+    // copy the un-modified field structs from fdb corresponding to the field
+    // identifiers that are required by this header
+    void build_header_fields();
+
+    // TODO reset()
+
     // The protocol header type that this class represents
     cea_header_type header_type;
 
@@ -997,11 +947,7 @@ public:
 
     // A table of field structs that corresponds to the field identifiers
     // required by this header
-    vector<cea_field_spec> headers;
-
-    // copy the un-modified field structs from fdb corresponding to the field
-    // identifiers that are required by this header
-    void build_header_fields();
+    vector<cea_field_mutation_spec> headers;
 
     // prefixture to header messages
     string header_name;
@@ -1014,7 +960,11 @@ public:
 
 class cea_port::core {
 public:
+    // ctor
     core(string name);
+
+    // dtor
+    ~core();
 
     // add stream to port queue
     void add_stream(cea_stream *stream);
@@ -1075,6 +1025,103 @@ public:
 };
 
 //------------------------------------------------------------------------------
+// Header implementation
+//------------------------------------------------------------------------------
+
+cea_header::cea_header(cea_header_type hdr_type) {
+    impl = make_unique<core>(hdr_type); 
+}
+
+cea_header::~cea_header() = default;
+
+void cea_header::set(cea_field_id id, uint64_t value) {
+    impl->set(id, value);
+}
+
+void cea_header::set(cea_field_id id, cea_field_genspec spec) {
+    impl->set(id, spec);
+}
+
+void cea_header::set(cea_field_id id, string value) {
+    impl->set(id, value);
+}
+
+cea_header::core::core(cea_header_type hdr_type) {
+    header_name = string("Header") + ":" + cea_header_name[hdr_type];
+    msg_prefix = header_name;
+    header_type = hdr_type;
+    build_header_fields();
+}
+
+cea_header::core::~core() = default;
+
+// TODO check if the field accepts pattern/string else error out
+void cea_header::core::set(cea_field_id id, string value) {
+    auto field = find_if(headers.begin(), headers.end(),
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
+
+    if (field != headers.end()) {
+        field->gspec.pattern = value;
+        field->mdata.is_mutable = true; // TODO check
+    } else {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " does not belong to the "
+        << cea_header_name[header_type] << " header");
+        abort();
+    }
+}
+
+// TODO check if the field accepts integer else error out
+void cea_header::core::set(cea_field_id id, uint64_t value) {
+    auto field = find_if(headers.begin(), headers.end(),
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
+
+    if (field != headers.end()) {
+        field->gspec.value = value;
+        field->mdata.is_mutable = true; // TODO check
+    } else {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " does not belong to the "
+        << cea_header_name[header_type] << " header");
+        abort();
+    }
+}
+
+// TODO spec will have both pattern and integer vales. use the field_type 
+// to determine which value to use
+void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
+    auto field = find_if(headers.begin(), headers.end(),
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
+
+    if (field != headers.end()) {
+        field->gspec = spec;
+        // if (field->spec.gen_type != Fixed_Value) // TODO check
+        field->mdata.is_mutable = true;
+    } else {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " does not belong to the "
+        << cea_header_name[header_type] << " header");
+        abort();
+    }
+}
+
+void cea_header::core::build_header_fields() {
+    fields_of_header.clear();
+    headers.clear();
+
+    // extract the list of field ids that make up this header
+    fields_of_header = header_to_field_map[header_type];
+
+    for (auto id : fields_of_header) {
+        auto item = get_field(mtable, id); // TODO
+        headers.push_back(item);
+    }
+}
+
+//------------------------------------------------------------------------------
 // Field implementation
 //------------------------------------------------------------------------------
 
@@ -1082,10 +1129,14 @@ cea_field::cea_field(cea_field_id id) {
     impl = make_unique<core>(id); 
 }
 
+cea_field::~cea_field() = default;
+
 cea_field::core::core(cea_field_id id) {
-    fid = id;
-    field = get_field(fdb, fid); // copy default values
+    field_id = id;
+    field = get_field(mtable, field_id);
 }
+
+cea_field::core::~core() = default;
 
 void cea_field::set(uint64_t value) {
     impl->set(value);
@@ -1096,29 +1147,26 @@ void cea_field::set(cea_field_genspec spec) {
 }
 
 void cea_field::core::set(uint64_t value) {
-    field.spec.value = value;
-    field.spec.gen_type = Fixed_Value;
+    field.gspec.value = value;
+    field.gspec.gen_type = Fixed_Value;
 }
 
 void cea_field::core::set(cea_field_genspec spec) {
-    field.spec.gen_type     = spec.gen_type;
-    field.spec.value        = spec.value;
-    field.spec.pattern      = spec.pattern;
-    field.spec.step         = spec.step;
-    field.spec.min          = spec.min;
-    field.spec.max          = spec.max;
-    field.spec.count        = spec.count;
-    field.spec.repeat       = spec.repeat;
-    field.spec.mask         = spec.mask;
-    field.spec.seed         = spec.seed;
-    field.spec.start        = spec.start;
-    field.spec.make_error   = spec.make_error;
-    field.spec.value_list   = spec.value_list;
-    field.spec.pattern_list = spec.pattern_list;
+    field.gspec.gen_type     = spec.gen_type;
+    field.gspec.value        = spec.value;
+    field.gspec.pattern      = spec.pattern;
+    field.gspec.step         = spec.step;
+    field.gspec.min          = spec.min;
+    field.gspec.max          = spec.max;
+    field.gspec.count        = spec.count;
+    field.gspec.repeat       = spec.repeat;
+    field.gspec.mask         = spec.mask;
+    field.gspec.seed         = spec.seed;
+    field.gspec.start        = spec.start;
+    field.gspec.make_error   = spec.make_error;
+    field.gspec.value_list   = spec.value_list;
+    field.gspec.pattern_list = spec.pattern_list;
 }
-
-cea_field::~cea_field() = default;
-cea_field::core::~core() = default;
 
 //------------------------------------------------------------------------------
 // Stream implementation
@@ -1138,13 +1186,14 @@ void cea_stream::set(cea_field_id id, cea_field_genspec spec) {
     impl->set(id, spec);
 }
 
-void cea_stream::set(cea_stream_feature_id feature) {
-    impl->set(feature);
+// TODO
+void cea_stream::set(cea_stream_feature_id feature, bool mode) {
+    impl->set(feature, mode);
 }
 
-void cea_stream::add_header(cea_header *hdr) {
-    hdr->impl->msg_prefix = impl->msg_prefix + "|" + hdr->impl->msg_prefix;
-    impl->frame_headers.push_back(hdr);
+void cea_stream::add_header(cea_header *header) {
+    header->impl->msg_prefix = impl->msg_prefix + "|" + header->impl->msg_prefix;
+    impl->frame_headers.push_back(header);
 }
 
 // TODO pending implementation
@@ -1162,15 +1211,14 @@ cea_stream::core::core(string name) {
 cea_stream::core::~core() = default;
 
 void cea_stream::core::set(cea_field_id id, uint64_t value) {
-
     // check if id is a property and then add to properties
     auto prop = find_if(stream_properties.begin(), stream_properties.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
 
     if (prop != stream_properties.end()) {
-        prop->spec.value = value;
-        prop->is_mutable = false;
+        prop->gspec.value = value;
+        prop->mdata.is_mutable = false;
     } else {
         CEA_ERR_MSG("The ID " << id << " does not belong to stream properties");
         abort();
@@ -1178,19 +1226,18 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 }
 
 void cea_stream::core::set(cea_field_id id, cea_field_genspec spec) {
-
     // check if id is a property and then add to properties
     auto prop = find_if(stream_properties.begin(), stream_properties.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
+        [&id](const cea_field_mutation_spec &item) {
+        return (item.defaults.id == id); });
 
     if (prop != stream_properties.end()) {
-        prop->spec = spec;
+        prop->gspec = spec;
 
-        if (prop->spec.gen_type != Fixed_Value || prop->spec.gen_type != Fixed_Pattern) {
-            prop->is_mutable = true;
+        if (prop->gspec.gen_type != Fixed_Value || prop->gspec.gen_type != Fixed_Pattern) {
+            prop->mdata.is_mutable = true;
         } else {
-            prop->is_mutable = false;
+            prop->mdata.is_mutable = false;
         }
     } else {
         CEA_ERR_MSG("The ID " << id << " does not belong to stream properties");
@@ -1198,7 +1245,7 @@ void cea_stream::core::set(cea_field_id id, cea_field_genspec spec) {
     }
 }
 
-void cea_stream::core::set(cea_stream_feature_id feature) {
+void cea_stream::core::set(cea_stream_feature_id feature, bool mode) {
     switch (feature) {
         case PCAP_Record_Tx_Enable: {
             CEA_MSG("PCAP capture enabled @ Transmit side");
@@ -1227,23 +1274,23 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     bool mrg_start = false;
 
     for (auto f : frame_fields) {
-        if(f.merge==0) {
-            if (f.type == Integer) {
-                cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.def_value, f.len/8);
+        if(f.defaults.merge==0) {
+            if (f.defaults.type == Integer) {
+                cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.defaults.def_value, f.defaults.len/8);
             }
             else {
-                memcpy(buf+offset, f.def_pattern.data(), f.len/8);
-                if (f.type == Pattern_IPv4) {
+                memcpy(buf+offset, f.defaults.def_pattern.data(), f.defaults.len/8);
+                if (f.defaults.type == Pattern_IPv4) {
                 }
             }
-            offset += f.len/8;
+            offset += f.defaults.len/8;
         } else {
             if (!mrg_start) {
                 mrg_start = true;
-                mrg_cnt_total = f.merge + 1;
+                mrg_cnt_total = f.defaults.merge + 1;
             }
-            mrg_data = (mrg_data << f.len) | f.def_value;
-            mrg_len = mrg_len + f.len;
+            mrg_data = (mrg_data << f.defaults.len) | f.defaults.def_value;
+            mrg_len = mrg_len + f.defaults.len;
             mrg_cntr++;
 
             if (mrg_cntr == mrg_cnt_total) {
@@ -1259,7 +1306,7 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     }
     return offset;
 }
-
+ 
 void cea_stream::core::bootstrap_stream() {
     collate_fields();
     update_ethertype_and_len();
@@ -1281,62 +1328,43 @@ void cea_stream::core::collate_fields() {
         );
     }
 }
-
+ 
 // TODO pending implementation
 void cea_stream::core::update_ethertype_and_len() {
 }
 
 void cea_stream::core::build_field_offsets() {
-    vector<cea_field_spec>::iterator it;
+    vector<cea_field_mutation_spec>::iterator it;
     for(it=frame_fields.begin(); it<frame_fields.end(); it++) {
-        it->offset = prev(it)->len + prev(it)->offset;
-        hdr_len = hdr_len + it->len;
+        it->mdata.offset = prev(it)->defaults.len + prev(it)->mdata.offset;
+        hdr_len = hdr_len + it->defaults.len;
     }
 }
 
 void cea_stream::core::filter_mutable_fields() {
     mutable_fields.clear();
     for (auto f : frame_fields) {
-        if (f.is_mutable) {
+        if (f.mdata.is_mutable) {
             mutable_fields.push_back(f);
         }
     }
-    // TODO peniding implementaton: init runtime values
-
+    // TODO pending implementaton: init runtime values
 }
-
-void print_field(cea_field_spec item) {
-    stringstream ss;
-    ss.setf(ios_base::left);
-
-        ss << setw(5) << left << item.id ;
-        ss << setw(25) << left << item.name;
-        ss << setw(25) << left << item.len;
-        ss << setw(25) << left << cea_field_type_name[item.type];;
-        if (item.type == Integer)
-            ss << setw(25) << left << item.spec.value;
-        else
-            ss << setw(25) << left << item.spec.pattern;
-        ss << setw(25) << left << cea_gen_type_name[item.spec.gen_type];
-        ss << endl;
-    ss << endl;
-    cealog << ss.str();
-}
-
-void cea_stream::core::print_fields(vector<cea_field_spec> field_group) {
+ 
+void cea_stream::core::print_fields(vector<cea_field_mutation_spec> field_group) {
     stringstream ss;
     ss.setf(ios_base::left);
 
     for(auto item : field_group) {
-        ss << setw(5) << left << item.id ;
-        ss << setw(25) << left << item.name;
-        ss << setw(25) << left << item.len;
-        ss << setw(25) << left << cea_field_type_name[item.type];;
-        if (item.type == Integer)
-            ss << setw(25) << left << item.spec.value;
+        ss << setw(5)  << left << item.defaults.id ;
+        ss << setw(25) << left << item.defaults.name;
+        ss << setw(25) << left << item.defaults.len;
+        ss << setw(25) << left << cea_field_type_name[item.defaults.type];;
+        if (item.defaults.type == Integer)
+            ss << setw(25) << left << item.gspec.value;
         else
-            ss << setw(25) << left << item.spec.pattern;
-        ss << setw(25) << left << cea_gen_type_name[item.spec.gen_type];
+            ss << setw(25) << left << item.gspec.pattern;
+        ss << setw(25) << left << cea_gen_type_name[item.gspec.gen_type];
         ss << endl;
     }
     ss << endl;
@@ -1347,7 +1375,7 @@ void cea_stream::core::print_stream() {
     for (auto f : frame_headers) {
         cealog << cea_header_name[f->impl->header_type] << endl;
         for (auto item : f->impl->headers) {
-            cealog << "  |--" << item.name << endl;
+            cealog << "  |--" << item.defaults.name << endl;
         }
     }
     print_fields(stream_properties);
@@ -1359,7 +1387,7 @@ void cea_stream::core::build_payload_arrays() {
     // size arrays
     //-------------
     auto len_item = get_field(stream_properties, FRAME_Len);
-    cea_field_genspec spec = len_item.spec;
+    cea_field_genspec spec = len_item.gspec;
 
     nof_sizes = 0;
 
@@ -1429,7 +1457,7 @@ void cea_stream::core::build_payload_arrays() {
     //---------------
     arof_payload_data = new unsigned char[CEA_MAX_FRAME_SIZE];
     auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
-    cea_field_genspec plspec = pl_item.spec;
+    cea_field_genspec plspec = pl_item.gspec;
 
     switch (plspec.gen_type) {
         case Random : {
@@ -1512,23 +1540,23 @@ void cea_stream::core::build_payload_arrays() {
 
 void cea_stream::core::build_runtime() {
     for (auto &m : mutable_fields) {
-        switch (m.type) {
+        switch (m.defaults.type) {
             case Integer: {
-                switch (m.spec.gen_type) {
+                switch (m.gspec.gen_type) {
                     case Fixed_Value: {
-                        m.rt.value = m.spec.value;
+                        m.rt.value = m.gspec.value;
                         break;
                         }
                     case Increment: {
-                        m.rt.value = m.spec.start;
+                        m.rt.value = m.gspec.start;
                         break;
                         }
                     case Decrement: {
-                        m.rt.value = m.spec.start;
+                        m.rt.value = m.gspec.start;
                         break;
                         }
                     case Value_List: {
-                        m.rt.patterns = m.spec.value_list;
+                        m.rt.patterns = m.gspec.value_list;
                         break;
                         }
                     case Random: {
@@ -1540,23 +1568,23 @@ void cea_stream::core::build_runtime() {
                 break;
                 }
             case Pattern_MAC: {
-                switch (m.spec.gen_type) {
+                switch (m.gspec.gen_type) {
                     case Fixed_Pattern: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Increment: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Decrement: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
@@ -1564,7 +1592,7 @@ void cea_stream::core::build_runtime() {
                         }
                     case Pattern_List: {
                         m.rt.patterns.resize(0);
-                        for (auto val : m.spec.pattern_list) {
+                        for (auto val : m.gspec.pattern_list) {
                             val.erase(remove(val.begin(), val.end(), ':'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
                             m.rt.patterns.push_back(tmp_mac);
@@ -1576,23 +1604,23 @@ void cea_stream::core::build_runtime() {
                 break;
                 }
             case Pattern_IPv4: {
-                switch (m.spec.gen_type) {
+                switch (m.gspec.gen_type) {
                     case Fixed_Pattern: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Increment: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Decrement: {
-                        string tmp_mac_string = m.spec.pattern;
+                        string tmp_mac_string = m.gspec.pattern;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
@@ -1600,7 +1628,7 @@ void cea_stream::core::build_runtime() {
                         }
                     case Pattern_List: {
                         m.rt.patterns.resize(0);
-                        for (auto val : m.spec.pattern_list) {
+                        for (auto val : m.gspec.pattern_list) {
                             val.erase(remove(val.begin(), val.end(), '.'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
                             m.rt.patterns.push_back(tmp_mac);
@@ -1618,47 +1646,47 @@ void cea_stream::core::build_runtime() {
     } // for
 }
 
-// TODO
-// assign default value to runtime
-// TODO CRITICAL
-// when assigning random spec to fields. the test first creates a empty spec,
-// sets random and assigns to the field. In this process the default value is
-// erased when assigning the empty spec+random to the field
-// so when build_runtime is called the default values/patterns are void and
-// hence results in error when trying to access default and convert default
-// values for patterns
-// TODO POSSIBLE SOLUTION: To be decided
-//      -> call build_runtime after the principal frame is generated ??
-void cea_stream::core::build_runtime_mark0() {
-//    for (auto &f : frame_fields) {
-//        if (f.type == Integer) {
-//            f.rt.gen_value = f.spec.value;
-//        } else {
-//            switch (f.type) {
-//                case Pattern_PRE:{
-//                    convert_string_to_uca(f.spec.pattern, f.rt.patterns);
-//                    break;
-//                    }
-//                case Pattern_MAC:{
-//                    convert_mac_to_uca(f.spec.pattern, f.rt.patterns);
-//                    break;
-//                    }
-//                case Pattern_IPv4:{
-//                    convert_ipv4_to_uca(f.spec.pattern, f.rt.patterns);
-//                    break;
-//                    }
-//                case Pattern_IPv6:{
-//                    convert_ipv6_to_uca(f.spec.pattern, f.rt.patterns);
-//                    break;
-//                    }
-//                default:{
-//                    CEA_ERR_MSG("Invalid Generation type Specified"); // TODO
-//                    break;
-//                }
-//            }    
-//        }
-//    }
-}
+// // TODO
+// // assign default value to runtime
+// // TODO CRITICAL
+// // when assigning random spec to fields. the test first creates a empty spec,
+// // sets random and assigns to the field. In this process the default value is
+// // erased when assigning the empty spec+random to the field
+// // so when build_runtime is called the default values/patterns are void and
+// // hence results in error when trying to access default and convert default
+// // values for patterns
+// // TODO POSSIBLE SOLUTION: To be decided
+// //      -> call build_runtime after the principal frame is generated ??
+// void cea_stream::core::build_runtime_mark0() {
+// //    for (auto &f : frame_fields) {
+// //        if (f.type == Integer) {
+// //            f.rt.gen_value = f.spec.value;
+// //        } else {
+// //            switch (f.type) {
+// //                case Pattern_PRE:{
+// //                    convert_string_to_uca(f.spec.pattern, f.rt.patterns);
+// //                    break;
+// //                    }
+// //                case Pattern_MAC:{
+// //                    convert_mac_to_uca(f.spec.pattern, f.rt.patterns);
+// //                    break;
+// //                    }
+// //                case Pattern_IPv4:{
+// //                    convert_ipv4_to_uca(f.spec.pattern, f.rt.patterns);
+// //                    break;
+// //                    }
+// //                case Pattern_IPv6:{
+// //                    convert_ipv6_to_uca(f.spec.pattern, f.rt.patterns);
+// //                    break;
+// //                    }
+// //                default:{
+// //                    CEA_ERR_MSG("Invalid Generation type Specified"); // TODO
+// //                    break;
+// //                }
+// //            }    
+// //        }
+// //    }
+// }
 
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
@@ -1667,10 +1695,10 @@ void cea_stream::core::build_principal_frame() {
     splice_frame_fields(pf);
 
     auto len_item = get_field(stream_properties, FRAME_Len);
-    cea_field_genspec lenspec = len_item.spec;
+    cea_field_genspec lenspec = len_item.gspec;
 
     auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
-    cea_field_genspec plspec = pl_item.spec;
+    cea_field_genspec plspec = pl_item.gspec;
 
     uint32_t ploffset = hdr_len/8;
 
@@ -1679,38 +1707,28 @@ void cea_stream::core::build_principal_frame() {
     else 
         memcpy(pf+ploffset, arof_payload_data, lenspec.value);
 
-    // print_uchar_array(pf, ploffset+lenspec.value);
+    print_uchar_array(pf, ploffset+lenspec.value);
 }
 
-/*
-for (auto it=begin(list); it!=end(list)) {
-    cout << *it << endl;
-    if (*it == 12) {
-        list.erase(it);
-    } else {
-        ++it;
-    }
-}
-*/
 
 // TODO nof frames in outer loop    
 // TODO what if there are no mutables
 // TODO enclose mutate with perf timers
 void cea_stream::core::mutate() {
     for (auto m=begin(mutable_fields); m!=end(mutable_fields); m++) {
-        switch(m->type) {
+        switch(m->defaults.type) {
             case Integer: {
-                switch(m->spec.gen_type) {
+                switch(m->gspec.gen_type) {
                     case Fixed_Value: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->spec.value, m->len/8);
-                        m->is_mutable = false;
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->gspec.value, m->defaults.len/8);
+                        m->mdata.is_mutable = false;
                         mutable_fields.erase(m); m++;
                         break;
                         }
                     case Value_List: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.patterns[m->rt.idx], m->len/8);
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                         if (m->rt.idx == m->rt.patterns.size()-1) {
-                            if (m->spec.repeat) {
+                            if (m->gspec.repeat) {
                                 m->rt.idx = 0;
                             } else {
                                 mutable_fields.erase(m); m++;
@@ -1721,33 +1739,33 @@ void cea_stream::core::mutate() {
                         break;
                         }
                     case Increment: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
-                        if (m->rt.count == m->spec.count) {
-                            if (m->spec.repeat) {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count == m->gspec.count) {
+                            if (m->gspec.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->spec.start;
+                                m->rt.value = m->gspec.start;
                             } else {
                                 mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check overflow
-                            m->rt.value += m->spec.step;
+                            m->rt.value += m->gspec.step;
                             m->rt.count++;
                         }
                         break;
                         }
                     case Decrement: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
-                        if (m->rt.count == m->spec.count) {
-                            if (m->spec.repeat) {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count == m->gspec.count) {
+                            if (m->gspec.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->spec.start;
+                                m->rt.value = m->gspec.start;
                             } else {
                                 mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check underflow
-                            m->rt.value -= m->spec.step;
+                            m->rt.value -= m->gspec.step;
                             m->rt.count++;
                         }
                         break;
@@ -1762,10 +1780,10 @@ void cea_stream::core::mutate() {
                 } // Integer
             case Pattern_MAC:
             case Pattern_IPv4: {
-                switch(m->spec.gen_type) {
+                switch(m->gspec.gen_type) {
                     case Fixed_Pattern: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
-                        m->is_mutable = false;
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                        m->mdata.is_mutable = false;
                         mutable_fields.erase(m); // m++; // TODO iterator increment
                                            // fails if it is done after the last
                                            // element is deleted, swap erase and
@@ -1773,9 +1791,9 @@ void cea_stream::core::mutate() {
                         break;
                         }
                     case Pattern_List: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.patterns[m->rt.idx], m->len/8);
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                         if (m->rt.idx == m->rt.patterns.size()-1) {
-                            if (m->spec.repeat) {
+                            if (m->gspec.repeat) {
                                 m->rt.idx = 0;
                             } else {
                                 mutable_fields.erase(m); // m++;
@@ -1786,33 +1804,33 @@ void cea_stream::core::mutate() {
                         break;
                         }
                     case Increment: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
-                        if (m->rt.count == m->spec.count) {
-                            if (m->spec.repeat) {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count == m->gspec.count) {
+                            if (m->gspec.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->spec.start;
+                                m->rt.value = m->gspec.start;
                             } else {
                                 mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check overflow
-                            m->rt.value += m->spec.step;
+                            m->rt.value += m->gspec.step;
                             m->rt.count++;
                         }
                         break;
                         }
                     case Decrement: {
-                        cea_memcpy_ntw_byte_order(pf+m->offset, (char*)&m->rt.value, m->len/8);
-                        if (m->rt.count == m->spec.count) {
-                            if (m->spec.repeat) {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count == m->gspec.count) {
+                            if (m->gspec.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->spec.start;
+                                m->rt.value = m->gspec.start;
                             } else {
                                 mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check underflow
-                            m->rt.value -= m->spec.step;
+                            m->rt.value -= m->gspec.step;
                             m->rt.count++;
                         }
                         break;
@@ -1830,17 +1848,17 @@ void cea_stream::core::mutate() {
     }
 // TODO copy frame to transmit buffer    
 }
-
+ 
 void cea_stream::core::init_stream_properties() {
     stream_properties.clear();
     vector<cea_field_id> prop_ids =  header_to_field_map[PROPERTIES];
 
     for (auto id : prop_ids) {
-        auto item = get_field(fdb, id);
+        auto item = get_field(mtable, id);
         stream_properties.push_back(item);
     }
 }
-
+ 
 void cea_stream::core::reset() {
     frame_headers.clear();
 
@@ -1944,99 +1962,24 @@ unsigned char cea_stream::core::convert_char_to_int(string hexNumber) {
 }
 
 //------------------------------------------------------------------------------
-// Header implementation
-//------------------------------------------------------------------------------
-
-void cea_header::set(cea_field_id id, uint64_t value) {
-    impl->set(id, value);
-}
-
-void cea_header::set(cea_field_id id, cea_field_genspec spec) {
-    impl->set(id, spec);
-}
-
-void cea_header::set(cea_field_id id, string value) {
-    impl->set(id, value);
-}
-
-void cea_header::core::set(cea_field_id id, string value) {
-    auto field = find_if(headers.begin(), headers.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
-
-    if (field != headers.end()) {
-        field->spec.pattern = value;
-        field->is_mutable = true; // TODO check
-    } else {
-        CEA_ERR_MSG("The field "
-        << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[header_type] << " header");
-        abort();
-    }
-}
-
-void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(headers.begin(), headers.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
-
-    if (field != headers.end()) {
-        field->spec.value = value;
-        field->is_mutable = true; // TODO check
-    } else {
-        CEA_ERR_MSG("The field "
-        << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[header_type] << " header");
-        abort();
-    }
-}
-
-void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
-    auto field = find_if(headers.begin(), headers.end(),
-        [&id](const cea_field_spec &item) {
-        return (item.id == id); });
-
-    if (field != headers.end()) {
-        field->spec = spec;
-        // if (field->spec.gen_type != Fixed_Value) // TODO check
-        field->is_mutable = true;
-    } else {
-        CEA_ERR_MSG("The field "
-        << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[header_type] << " header");
-        abort();
-    }
-}
-
-cea_header::cea_header(cea_header_type hdr) {
-    impl = make_unique<core>(hdr); 
-}
-
-cea_header::core::core(cea_header_type hdr) {
-    header_name = string("Header") + ":" + cea_header_name[hdr];
-    msg_prefix = header_name;
-    header_type = hdr;
-    build_header_fields();
-}
-
-void cea_header::core::build_header_fields() {
-    fields_of_header.clear();
-    headers.clear();
-
-    // extract the list of field ids that make up this header
-    fields_of_header = header_to_field_map[header_type];
-
-    for (auto id : fields_of_header) {
-        auto item = get_field(fdb, id);
-        headers.push_back(item);
-    }
-}
-
-cea_header::core::~core() = default;
-
-//------------------------------------------------------------------------------
 // Port Implementation
 //------------------------------------------------------------------------------
+
+cea_port::cea_port(string name) {
+    impl = make_unique<core>(name);
+}
+
+cea_port::~cea_port() = default;
+
+cea_port::core::core(string name) {
+    port_id = cea::port_id;
+    cea::port_id++;
+    port_name = name + ":" + to_string(port_id);
+    reset();
+    CEA_MSG("Proxy created with name=" << name << " and id=" << port_id);
+}
+
+cea_port::core::~core() = default;
 
 void cea_port::core::reset() {
     msg_prefix = port_name;
@@ -2059,19 +2002,6 @@ void cea_port::core::start_worker() {
     pthread_setname_np(worker_tid.native_handle(), name);
 }
 
-cea_port::~cea_port() = default;
-
-cea_port::cea_port(string name) {
-    impl = make_unique<core>(name);
-}
-
-cea_port::core::core(string name) {
-    port_id = cea::port_id;
-    cea::port_id++;
-    port_name = name + ":" + to_string(port_id);
-    reset();
-    CEA_MSG("Proxy created with name=" << name << " and id=" << port_id);
-}
 
 void cea_port::add_stream(cea_stream *stream) {
     impl->add_stream(stream);
@@ -2108,12 +2038,10 @@ void cea_port::core::stop() {
 void cea_port::core::pause() {
 // TODO pending implementation
 }
-
+ 
 //------------------------------------------------------------------------------
 // Testbench Implementation
 //------------------------------------------------------------------------------
-
-cea_testbench::core::~core() = default;
 
 cea_testbench::cea_testbench() {
     impl = make_unique<core>();
@@ -2123,6 +2051,9 @@ cea_testbench::~cea_testbench() = default;
 
 cea_testbench::core::core() {
 }
+
+cea_testbench::core::~core() = default;
+
 void cea_testbench::add_port(cea_port *port) {
     impl->add_port(port);
 }
@@ -2243,7 +2174,7 @@ void cea_testbench::core::pause(cea_port *port) {
         }
     }
 }
-
+ 
 //------------------------------------------------------------------------------
 // Udf implementation
 //------------------------------------------------------------------------------
@@ -2252,32 +2183,33 @@ cea_udf::cea_udf() {
     impl = make_unique<core>(); 
 }
 
+cea_udf::~cea_udf() = default;
+
 cea_udf::core::core() {
     field = {};
 }
+
+cea_udf::core::~core() = default;
 
 void cea_udf::set(cea_field_genspec spec) {
     impl->set(spec);
 }
 
 void cea_udf::core::set(cea_field_genspec spec) {
-    field.spec.gen_type     = spec.gen_type;
-    field.spec.value        = spec.value;
-    field.spec.pattern      = spec.pattern;
-    field.spec.step         = spec.step;
-    field.spec.min          = spec.min;
-    field.spec.max          = spec.max;
-    field.spec.count        = spec.count;
-    field.spec.repeat       = spec.repeat;
-    field.spec.mask         = spec.mask;
-    field.spec.seed         = spec.seed;
-    field.spec.start        = spec.start;
-    field.spec.make_error   = spec.make_error;
-    field.spec.value_list   = spec.value_list;
-    field.spec.pattern_list = spec.pattern_list;
+    field.gspec.gen_type     = spec.gen_type;
+    field.gspec.value        = spec.value;
+    field.gspec.pattern      = spec.pattern;
+    field.gspec.step         = spec.step;
+    field.gspec.min          = spec.min;
+    field.gspec.max          = spec.max;
+    field.gspec.count        = spec.count;
+    field.gspec.repeat       = spec.repeat;
+    field.gspec.mask         = spec.mask;
+    field.gspec.seed         = spec.seed;
+    field.gspec.start        = spec.start;
+    field.gspec.make_error   = spec.make_error;
+    field.gspec.value_list   = spec.value_list;
+    field.gspec.pattern_list = spec.pattern_list;
 }
-
-cea_udf::~cea_udf() = default;
-cea_udf::core::~core() = default;
 
 } // namespace
