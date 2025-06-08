@@ -146,7 +146,7 @@ enum cea_stream_add_type {
     Field
 };
 
-struct cea_runtime {
+struct cea_field_runtime {
     uint64_t value;
     vector<uint64_t> patterns;
     uint32_t count;
@@ -154,19 +154,29 @@ struct cea_runtime {
 };
 
 struct cea_field_spec {
-    bool is_mutable;
-    uint32_t merge;
-    cea_field_id id;
-    uint32_t len;
-    uint32_t offset;
-    bool proto_list_specified;
-    bool auto_field;
-    string name;
-    uint64_t def_value;
+    bool                is_mutable;
+    uint32_t            merge;
+    cea_field_id        id;
+    uint32_t            len;
+    uint32_t            offset;
+    bool                proto_list_specified;
+    bool                auto_field;
+    string              name;
+    uint64_t            def_value;
     vector <unsigned char> def_pattern;
-    cea_field_type type;
-    cea_gen_spec spec;
-    cea_runtime rt;
+    cea_field_type      type;
+    cea_field_genspec   spec;
+    cea_field_runtime   rt;
+};
+
+struct cea_field_mutation_helper {
+};
+ 
+struct cea_field_int {
+    cea_field_spec            defaults;
+    cea_field_genspec         uspec;
+    cea_field_runtime         rt;
+    cea_field_mutation_helper mhelper;
 };
 
 vector<unsigned char>def_pre_pattern    = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x5d};
@@ -294,7 +304,7 @@ void signal_handler(int signal) {
 }
 
 // map header type to list of associated fields
-map <cea_header_type, vector <cea_field_id>> hfmap = {
+map <cea_header_type, vector <cea_field_id>> header_to_field_map = {
     {PROPERTIES, {
              FRAME_Len,
              PAYLOAD_Pattern,
@@ -796,7 +806,7 @@ public:
     void set(cea_field_id id, uint64_t value);
 
     // Define a complete spec for the generation of a field
-    void set(cea_field_id id, cea_gen_spec spec);
+    void set(cea_field_id id, cea_field_genspec spec);
 
     // enable or disable a stream feature
     void set(cea_stream_feature_id feature);
@@ -867,7 +877,7 @@ public:
     // at the end of the mutation logic, the mutables will be empty
     // so if the user press start button again, the mutables will be empty
     // so a bkp version is maintained to restore the content of mutables
-    vector<cea_field_spec> mutable_fields_bkp;
+    vector<cea_field_spec> mutable_fields_clone;
 
     // functions used during mutation of strings
     void convert_string_to_uca(string address, unsigned char *op);
@@ -920,7 +930,7 @@ public:
     void set(uint64_t id);
 
     // Define a complete spec for the generation of a field
-    void set(cea_gen_spec spec);
+    void set(cea_field_genspec spec);
 
     // The protocol field type that this class represents
     cea_field_id fid;
@@ -947,7 +957,7 @@ public:
     ~core();
 
     // Define a complete spec for the generation of a field
-    void set(cea_gen_spec spec);
+    void set(cea_field_genspec spec);
 
     // A table of field structs that corresponds to the field identifiers
     // required by this field
@@ -977,21 +987,21 @@ public:
     void set(cea_field_id id, string value);
 
     // Define a complete spec for the generation of a field
-    void set(cea_field_id id, cea_gen_spec spec);
+    void set(cea_field_id id, cea_field_genspec spec);
 
     // The protocol header type that this class represents
-    cea_header_type htype;
+    cea_header_type header_type;
 
     // A list of field identifiers that is required by this header 
-    vector<cea_field_id> hfids;
+    vector<cea_field_id> fields_of_header;
 
     // A table of field structs that corresponds to the field identifiers
     // required by this header
-    vector<cea_field_spec> hdrs;
+    vector<cea_field_spec> headers;
 
     // copy the un-modified field structs from fdb corresponding to the field
     // identifiers that are required by this header
-    void build_hdr_fields();
+    void build_header_fields();
 
     // prefixture to header messages
     string header_name;
@@ -1029,7 +1039,7 @@ public:
     vector<cea_stream*> streamq;
 
     // handle to the stream being processed
-    cea_stream *cur_stream;
+    cea_stream *current_stream;
 
     // prefixture to all msgs from this port
     string msg_prefix;
@@ -1081,7 +1091,7 @@ void cea_field::set(uint64_t value) {
     impl->set(value);
 }
 
-void cea_field::set(cea_gen_spec spec) {
+void cea_field::set(cea_field_genspec spec) {
     impl->set(spec);
 }
 
@@ -1090,7 +1100,7 @@ void cea_field::core::set(uint64_t value) {
     field.spec.gen_type = Fixed_Value;
 }
 
-void cea_field::core::set(cea_gen_spec spec) {
+void cea_field::core::set(cea_field_genspec spec) {
     field.spec.gen_type     = spec.gen_type;
     field.spec.value        = spec.value;
     field.spec.pattern      = spec.pattern;
@@ -1124,7 +1134,7 @@ void cea_stream::set(cea_field_id id, uint64_t value) {
     impl->set(id, value);
 }
 
-void cea_stream::set(cea_field_id id, cea_gen_spec spec) {
+void cea_stream::set(cea_field_id id, cea_field_genspec spec) {
     impl->set(id, spec);
 }
 
@@ -1167,7 +1177,7 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
     }
 }
 
-void cea_stream::core::set(cea_field_id id, cea_gen_spec spec) {
+void cea_stream::core::set(cea_field_id id, cea_field_genspec spec) {
 
     // check if id is a property and then add to properties
     auto prop = find_if(stream_properties.begin(), stream_properties.end(),
@@ -1266,8 +1276,8 @@ void cea_stream::core::collate_fields() {
     for (auto f : frame_headers) {
         frame_fields.insert(
             frame_fields.end(),
-            f->impl->hdrs.begin(),
-            f->impl->hdrs.end()
+            f->impl->headers.begin(),
+            f->impl->headers.end()
         );
     }
 }
@@ -1335,8 +1345,8 @@ void cea_stream::core::print_fields(vector<cea_field_spec> field_group) {
 
 void cea_stream::core::print_stream() {
     for (auto f : frame_headers) {
-        cealog << cea_header_name[f->impl->htype] << endl;
-        for (auto item : f->impl->hdrs) {
+        cealog << cea_header_name[f->impl->header_type] << endl;
+        for (auto item : f->impl->headers) {
             cealog << "  |--" << item.name << endl;
         }
     }
@@ -1349,7 +1359,7 @@ void cea_stream::core::build_payload_arrays() {
     // size arrays
     //-------------
     auto len_item = get_field(stream_properties, FRAME_Len);
-    cea_gen_spec spec = len_item.spec;
+    cea_field_genspec spec = len_item.spec;
 
     nof_sizes = 0;
 
@@ -1419,7 +1429,7 @@ void cea_stream::core::build_payload_arrays() {
     //---------------
     arof_payload_data = new unsigned char[CEA_MAX_FRAME_SIZE];
     auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
-    cea_gen_spec plspec = pl_item.spec;
+    cea_field_genspec plspec = pl_item.spec;
 
     switch (plspec.gen_type) {
         case Random : {
@@ -1657,10 +1667,10 @@ void cea_stream::core::build_principal_frame() {
     splice_frame_fields(pf);
 
     auto len_item = get_field(stream_properties, FRAME_Len);
-    cea_gen_spec lenspec = len_item.spec;
+    cea_field_genspec lenspec = len_item.spec;
 
     auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
-    cea_gen_spec plspec = pl_item.spec;
+    cea_field_genspec plspec = pl_item.spec;
 
     uint32_t ploffset = hdr_len/8;
 
@@ -1669,7 +1679,7 @@ void cea_stream::core::build_principal_frame() {
     else 
         memcpy(pf+ploffset, arof_payload_data, lenspec.value);
 
-    print_uchar_array(pf, ploffset+lenspec.value);
+    // print_uchar_array(pf, ploffset+lenspec.value);
 }
 
 /*
@@ -1823,7 +1833,7 @@ void cea_stream::core::mutate() {
 
 void cea_stream::core::init_stream_properties() {
     stream_properties.clear();
-    vector<cea_field_id> prop_ids =  hfmap[PROPERTIES];
+    vector<cea_field_id> prop_ids =  header_to_field_map[PROPERTIES];
 
     for (auto id : prop_ids) {
         auto item = get_field(fdb, id);
@@ -1941,7 +1951,7 @@ void cea_header::set(cea_field_id id, uint64_t value) {
     impl->set(id, value);
 }
 
-void cea_header::set(cea_field_id id, cea_gen_spec spec) {
+void cea_header::set(cea_field_id id, cea_field_genspec spec) {
     impl->set(id, spec);
 }
 
@@ -1950,50 +1960,50 @@ void cea_header::set(cea_field_id id, string value) {
 }
 
 void cea_header::core::set(cea_field_id id, string value) {
-    auto field = find_if(hdrs.begin(), hdrs.end(),
+    auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (field != hdrs.end()) {
+    if (field != headers.end()) {
         field->spec.pattern = value;
         field->is_mutable = true; // TODO check
     } else {
         CEA_ERR_MSG("The field "
         << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[htype] << " header");
+        << cea_header_name[header_type] << " header");
         abort();
     }
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(hdrs.begin(), hdrs.end(),
+    auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (field != hdrs.end()) {
+    if (field != headers.end()) {
         field->spec.value = value;
         field->is_mutable = true; // TODO check
     } else {
         CEA_ERR_MSG("The field "
         << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[htype] << " header");
+        << cea_header_name[header_type] << " header");
         abort();
     }
 }
 
-void cea_header::core::set(cea_field_id id, cea_gen_spec spec) {
-    auto field = find_if(hdrs.begin(), hdrs.end(),
+void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
+    auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_spec &item) {
         return (item.id == id); });
 
-    if (field != hdrs.end()) {
+    if (field != headers.end()) {
         field->spec = spec;
         // if (field->spec.gen_type != Fixed_Value) // TODO check
         field->is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
         << cea_trim(fdb[id].name) << " does not belong to the "
-        << cea_header_name[htype] << " header");
+        << cea_header_name[header_type] << " header");
         abort();
     }
 }
@@ -2005,20 +2015,20 @@ cea_header::cea_header(cea_header_type hdr) {
 cea_header::core::core(cea_header_type hdr) {
     header_name = string("Header") + ":" + cea_header_name[hdr];
     msg_prefix = header_name;
-    htype = hdr;
-    build_hdr_fields();
+    header_type = hdr;
+    build_header_fields();
 }
 
-void cea_header::core::build_hdr_fields() {
-    hfids.clear();
-    hdrs.clear();
+void cea_header::core::build_header_fields() {
+    fields_of_header.clear();
+    headers.clear();
 
     // extract the list of field ids that make up this header
-    hfids = hfmap[htype];
+    fields_of_header = header_to_field_map[header_type];
 
-    for (auto id : hfids) {
+    for (auto id : fields_of_header) {
         auto item = get_field(fdb, id);
-        hdrs.push_back(item);
+        headers.push_back(item);
     }
 }
 
@@ -2036,9 +2046,9 @@ void cea_port::core::worker() {
     vector<cea_stream*>::iterator it;
 
     for (it = streamq.begin(); it != streamq.end(); it++) {
-        cur_stream = *it;
-        cur_stream->impl->bootstrap_stream();
-        cur_stream->impl->mutate();
+        current_stream = *it;
+        current_stream->impl->bootstrap_stream();
+        current_stream->impl->mutate();
     }
 }
 
@@ -2246,11 +2256,11 @@ cea_udf::core::core() {
     field = {};
 }
 
-void cea_udf::set(cea_gen_spec spec) {
+void cea_udf::set(cea_field_genspec spec) {
     impl->set(spec);
 }
 
-void cea_udf::core::set(cea_gen_spec spec) {
+void cea_udf::core::set(cea_field_genspec spec) {
     field.spec.gen_type     = spec.gen_type;
     field.spec.value        = spec.value;
     field.spec.pattern      = spec.pattern;

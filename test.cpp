@@ -15,7 +15,7 @@ int main() {
     cea_header *tcp =  new cea_header(TCP);
 
     // assign a modifier to mac desination address
-    cea_gen_spec dest_spec;
+    cea_field_genspec dest_spec;
     dest_spec.gen_type = Random;
     mac->set(MAC_Dest_Addr, dest_spec);
     // mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
@@ -25,7 +25,7 @@ int main() {
     stream->set(FRAME_Len, 128);
     // stream->set(STREAM_Start_Delay, 3);
 
-    cea_gen_spec pl_spec;
+    cea_field_genspec pl_spec;
     pl_spec.gen_type = Increment_Byte;
     // pl_spec.gen_type = Decrement_Byte;
     //

@@ -176,7 +176,7 @@ enum cea_gen_type {
     Goto_Next_Stream
 };
 
-struct cea_gen_spec {
+struct cea_field_genspec {
     cea_gen_type gen_type;
     uint64_t value;
     string pattern;
@@ -247,7 +247,7 @@ public:
     cea_stream(string name = "stream");
     ~cea_stream();
     void set(cea_field_id id, uint64_t value);
-    void set(cea_field_id id, cea_gen_spec spec);
+    void set(cea_field_id id, cea_field_genspec spec);
 
     // TODO rename set to enable and check if disable can also
     // be added
@@ -284,7 +284,7 @@ public:
     ~cea_header() = default;
     void set(cea_field_id id, uint64_t value);
     void set(cea_field_id id, string value);
-    void set(cea_field_id id, cea_gen_spec spec);
+    void set(cea_field_id id, cea_field_genspec spec);
 private:
     class core;
     unique_ptr<core> impl;
@@ -300,7 +300,7 @@ public:
     cea_field(cea_field_id id);
     ~cea_field();
     void set(uint64_t value);
-    void set(cea_gen_spec spec);
+    void set(cea_field_genspec spec);
 private:
     class core;
     unique_ptr<core> impl;
@@ -315,7 +315,7 @@ class cea_udf {
 public:
     cea_udf();
     ~cea_udf();
-    void set(cea_gen_spec spec);
+    void set(cea_field_genspec spec);
 private:
     class core;
     unique_ptr<core> impl;
