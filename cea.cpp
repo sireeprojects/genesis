@@ -950,11 +950,11 @@ public:
     cea_header_type header_type;
 
     // A list of field identifiers that is required by this header 
-    vector<cea_field_id> fields_of_header;
+    vector<cea_field_id> field_ids_of_header;
 
     // A table of field structs that corresponds to the field identifiers
     // required by this header
-    vector<cea_field_mutation_spec> headers;
+    vector<cea_field_mutation_spec> header_fields;
 
     // prefixture to header messages
     string header_name;
@@ -1063,7 +1063,7 @@ cea_header::core::core(cea_header_type hdr_type) {
 cea_header::core::~core() = default;
 
 void cea_header::core::set(cea_field_id id, string value) {
-    auto field = find_if(headers.begin(), headers.end(),
+    auto field = find_if(header_fields.begin(), header_fields.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
@@ -1109,9 +1109,10 @@ void cea_header::core::set(cea_field_id id, string value) {
             abort();
         }
     }
-    if (field != headers.end()) {
+    if (field != header_fields.end()) {
+        field->gspec.gen_type = Fixed_Pattern;
         field->gspec.pattern = value;
-        field->mdata.is_mutable = true; // TODO check
+        field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
         << cea_trim(mtable[id].defaults.name) << " does not belong to the "
@@ -1121,19 +1122,20 @@ void cea_header::core::set(cea_field_id id, string value) {
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
-    auto field = find_if(headers.begin(), headers.end(),
+    auto field = find_if(header_fields.begin(), header_fields.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
     // abort if field type is not a integer
     if (field->defaults.type != Integer) {
         CEA_ERR_MSG("The field "
-        << cea_trim(mtable[id].defaults.name) << " accepts only string values");
+        << cea_trim(mtable[id].defaults.name) << " accepts only string patterns");
         abort();
     }
-    if (field != headers.end()) {
+    if (field != header_fields.end()) {
+        field->gspec.gen_type = Fixed_Value;
         field->gspec.value = value;
-        field->mdata.is_mutable = true; // TODO check
+        field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
         << cea_trim(mtable[id].defaults.name) << " does not belong to the "
@@ -1143,15 +1145,12 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
 }
 
 void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
-    auto field = find_if(headers.begin(), headers.end(),
+    auto field = find_if(header_fields.begin(), header_fields.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
-    if (field != headers.end()) {
+    if (field != header_fields.end()) {
         field->gspec = spec;
-        // if (field->spec.gen_type != Fixed_Value) // TODO check
-        // TODO spec will have both pattern and integer vales. use the field_type 
-        // to determine which value to use
         field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
@@ -1162,15 +1161,15 @@ void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
 }
 
 void cea_header::core::build_header_fields() {
-    fields_of_header.clear();
-    headers.clear();
+    field_ids_of_header.clear();
+    header_fields.clear();
 
     // extract the list of field ids that make up this header
-    fields_of_header = header_to_field_map[header_type];
+    field_ids_of_header = header_to_field_map[header_type];
 
-    for (auto id : fields_of_header) {
+    for (auto id : field_ids_of_header) {
         auto item = get_field(mtable, id);
-        headers.push_back(item);
+        header_fields.push_back(item);
     }
 }
 
@@ -1364,8 +1363,8 @@ void cea_stream::core::bootstrap_stream() {
     collate_fields();
     update_ethertype_and_len();
     build_field_offsets();
-    build_runtime();
     filter_mutable_fields();
+    build_runtime();
     print_stream();
     build_payload_arrays();
     build_principal_frame();
@@ -1376,8 +1375,8 @@ void cea_stream::core::collate_fields() {
     for (auto f : frame_headers) {
         frame_fields.insert(
             frame_fields.end(),
-            f->impl->headers.begin(),
-            f->impl->headers.end()
+            f->impl->header_fields.begin(),
+            f->impl->header_fields.end()
         );
     }
 }
@@ -1427,7 +1426,7 @@ void cea_stream::core::print_fields(vector<cea_field_mutation_spec> field_group)
 void cea_stream::core::print_stream() {
     for (auto f : frame_headers) {
         cealog << cea_header_name[f->impl->header_type] << endl;
-        for (auto item : f->impl->headers) {
+        for (auto item : f->impl->header_fields) {
             cealog << "  |--" << item.defaults.name << endl;
         }
     }
