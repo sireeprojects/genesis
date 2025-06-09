@@ -21,6 +21,7 @@ int main() {
     // mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
     mac->set(MAC_Src_Addr, "11:22:33:44:55:aa");
     ipv4->set(IPv4_Dest_Addr, "127.0.0.1");
+    // ipv4->set(IPv4_Protocol, 2); //-> fatal error why?
 
     stream->set(FRAME_Len, 128);
     // stream->set(STREAM_Start_Delay, 3);

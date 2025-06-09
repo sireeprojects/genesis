@@ -15,6 +15,7 @@
 #include <cassert>
 #include <random>
 #include <csignal>
+#include <regex>
 #include "cea.h"
 
 using namespace std;
@@ -76,6 +77,12 @@ string msg_prefix = "cea";
 // TODO This will become a problem in multi-process mode
 uint32_t stream_id = 0;
 uint32_t port_id = 0;
+
+// regex pattern to check user inputs
+regex regex_mac("([[:xdigit:]]{2}[:]?){5}[[:xdigit:]]{2}");
+regex regex_ipv4("^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])[.]){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$");
+regex regex_ipv6("((([0-9a-fA-F]){1,4})[:]){7}([0-9a-fA-F]){1,4}");
+regex regex_pre("[[:xdigit:]]{16}");
 
 enum cea_field_type {
     Integer,
@@ -1055,12 +1062,53 @@ cea_header::core::core(cea_header_type hdr_type) {
 
 cea_header::core::~core() = default;
 
-// TODO check if the field accepts pattern/string else error out
 void cea_header::core::set(cea_field_id id, string value) {
     auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
+    // abort if field type is not a pattern
+    if (field->defaults.type == Integer) {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " accepts only integer values");
+        abort();
+    }
+
+    // validate input
+    switch(field->defaults.type) {
+        case Pattern_MAC: {
+            if(!regex_match(value, regex_mac)) {
+                CEA_ERR_MSG("The value " << value << 
+                " does not match the acceptable pattern for " 
+                << cea_trim(mtable[id].defaults.name));
+                abort();
+            }
+            break;
+        } 
+        case Pattern_IPv4: {
+            if(!regex_match(value, regex_ipv4)) {
+                CEA_ERR_MSG("The value " << value << 
+                " does not match the acceptable pattern for " 
+                << cea_trim(mtable[id].defaults.name));
+                abort();
+            }
+            break;
+        } 
+        case Pattern_IPv6: {
+            if(!regex_match(value, regex_ipv6)) {
+                CEA_ERR_MSG("The value " << value << 
+                " does not match the acceptable pattern for " 
+                << cea_trim(mtable[id].defaults.name));
+                abort();
+            }
+            break;
+        } 
+        default:{
+            CEA_ERR_MSG("Input validation error for the field: "
+            << cea_trim(mtable[id].defaults.name));
+            abort();
+        }
+    }
     if (field != headers.end()) {
         field->gspec.pattern = value;
         field->mdata.is_mutable = true; // TODO check
@@ -1072,12 +1120,17 @@ void cea_header::core::set(cea_field_id id, string value) {
     }
 }
 
-// TODO check if the field accepts integer else error out
 void cea_header::core::set(cea_field_id id, uint64_t value) {
     auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
+    // abort if field type is not a integer
+    if (field->defaults.type != Integer) {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " accepts only string values");
+        abort();
+    }
     if (field != headers.end()) {
         field->gspec.value = value;
         field->mdata.is_mutable = true; // TODO check
@@ -1089,8 +1142,6 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
     }
 }
 
-// TODO spec will have both pattern and integer vales. use the field_type 
-// to determine which value to use
 void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
     auto field = find_if(headers.begin(), headers.end(),
         [&id](const cea_field_mutation_spec &item) {
@@ -1099,6 +1150,8 @@ void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
     if (field != headers.end()) {
         field->gspec = spec;
         // if (field->spec.gen_type != Fixed_Value) // TODO check
+        // TODO spec will have both pattern and integer vales. use the field_type 
+        // to determine which value to use
         field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
@@ -1116,7 +1169,7 @@ void cea_header::core::build_header_fields() {
     fields_of_header = header_to_field_map[header_type];
 
     for (auto id : fields_of_header) {
-        auto item = get_field(mtable, id); // TODO
+        auto item = get_field(mtable, id);
         headers.push_back(item);
     }
 }
