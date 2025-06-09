@@ -1,3 +1,31 @@
+/*
+Pending features   
+-----------------
+- ethertype/len field is not yet handled properly
+- support for vlan/mpls etc
+  - do it after mutate starts working
+- implement reset() for all classes
+- make sure to release temp memory allocation
+- add API documenation in cea.h file
+- multi process support (stream_id and port_id)
+- multi reset support
+- multi iteration support
+- multi queue support (CoS, QoS)
+- during multi reset/iteration, what if user wants to update only 
+  certain field/header/property. Do I need to add API to update
+  stream field/header/property? Or the user needs to reset the stream
+  and set the fiels/header/properties again.
+  - test.cpp creates headers as pointers, hence the user needs to be
+    able to reuse those and not create another pointer
+  - add support to update the stream (field/header/property)
+- add support to define a stream in a single API
+- add support for avip style test case
+
+Notes to improve performance
+-----------------------------
+- check if we can allocate large memories in NUMA, hugepage memory
+*/  
+
 #include <thread>
 #include <iomanip>
 #include <algorithm>
@@ -741,6 +769,7 @@ cea_field_mutation_spec get_field(vector<cea_field_mutation_spec> tbl, cea_field
     return (*lit);
 }
 
+// STREAMH
 //-------------
 // Stream Core
 //-------------
@@ -764,7 +793,7 @@ public:
 
     // Based on user specification of the frame, build a vector of 
     // field ids in the sequence required by the specification
-    void collate_fields();
+    void collate_frame_fields();
 
     // The addition of mpls/vlan/llc/snap affects the position of ethertype and
     // length fields. update/insert type or len after arranging all fields in
@@ -828,6 +857,8 @@ public:
     // at the end of the mutation logic, the mutables will be empty
     // so if the user press start button again, the mutables will be empty
     // so a bkp version is maintained to restore the content of mutables
+    // TODO check if this backup is required because we can simply call
+    //      filter_mutable_fields() to regenerate the mutable fields
     vector<cea_field_mutation_spec> mutable_fields_clone;
 
     // functions used during mutation of strings
@@ -847,7 +878,7 @@ public:
     uint32_t stream_id;
     string msg_prefix;
 
-    uint32_t hdr_len; // #CHECK rename
+    uint32_t hdr_len; // TODO check and rename to match intent
     uint32_t nof_sizes;
     uint32_t hdr_size;
     uint32_t meta_size;
@@ -855,16 +886,18 @@ public:
     vector<uint32_t> vof_frame_sizes;
     vector<uint32_t> vof_computed_frame_sizes;
     vector<uint32_t> vof_payload_sizes;
-
     unsigned char *arof_payload_data;
     unsigned char *arof_rnd_payload_data[CEA_MAX_RND_ARRAYS];
-    unsigned char *payload_pattern; // TODO what is this
-    uint32_t payload_pattern_size; // TODO what is this?
+
+    // TODO what are these
+    unsigned char *payload_pattern;
+    uint32_t payload_pattern_size;
 
     // principal frame
     unsigned char *pf;
 };
 
+// FIELDH
 //-------------
 // Field Core
 //-------------
@@ -895,8 +928,9 @@ public:
     string msg_prefix;
 };
 
+// UDFH
 //-------------
-// Field Core
+// Udf Core
 //-------------
 
 class cea_udf::core {
@@ -919,6 +953,7 @@ public:
     string msg_prefix;
 };
 
+// HEADERH
 //-------------
 // Header Core
 //-------------
@@ -944,7 +979,7 @@ public:
     // identifiers that are required by this header
     void build_header_fields();
 
-    // TODO reset()
+    void reset();
 
     // The protocol header type that this class represents
     cea_header_type header_type;
@@ -961,6 +996,7 @@ public:
     string msg_prefix;
 };
 
+// PORTH
 //-----------
 // Port Core
 //-----------
@@ -1012,6 +1048,7 @@ public:
     void pause();
 };
 
+// TBH
 //----------------
 // Testbench Core
 //----------------
@@ -1031,6 +1068,7 @@ public:
     string msg_prefix;
 };
 
+// HEADERI
 //------------------------------------------------------------------------------
 // Header implementation
 //------------------------------------------------------------------------------
@@ -1173,6 +1211,11 @@ void cea_header::core::build_header_fields() {
     }
 }
 
+// TODO
+void cea_header::core::reset() {
+}
+
+// FIELDI
 //------------------------------------------------------------------------------
 // Field implementation
 //------------------------------------------------------------------------------
@@ -1220,6 +1263,7 @@ void cea_field::core::set(cea_field_genspec spec) {
     field.gspec.pattern_list = spec.pattern_list;
 }
 
+// STREAMI
 //------------------------------------------------------------------------------
 // Stream implementation
 //------------------------------------------------------------------------------
@@ -1238,7 +1282,6 @@ void cea_stream::set(cea_field_id id, cea_field_genspec spec) {
     impl->set(id, spec);
 }
 
-// TODO
 void cea_stream::set(cea_stream_feature_id feature, bool mode) {
     impl->set(feature, mode);
 }
@@ -1248,8 +1291,10 @@ void cea_stream::add_header(cea_header *header) {
     impl->frame_headers.push_back(header);
 }
 
-// TODO pending implementation
+// TODO
 void cea_stream::add_udf(cea_field *fld) {
+// remember that UDF always overlays on the frame
+// it does not insert new fields in the headerr or frames    
 }
 
 cea_stream::core::core(string name) {
@@ -1263,12 +1308,18 @@ cea_stream::core::core(string name) {
 cea_stream::core::~core() = default;
 
 void cea_stream::core::set(cea_field_id id, uint64_t value) {
+    if (id == PAYLOAD_Pattern) {
+        CEA_ERR_MSG("The field "
+        << cea_trim(mtable[id].defaults.name) << " does not accepts integer values");
+        abort();
+    }
     // check if id is a property and then add to properties
     auto prop = find_if(stream_properties.begin(), stream_properties.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
     if (prop != stream_properties.end()) {
+        prop->gspec.gen_type = Fixed_Value; // TODO Check
         prop->gspec.value = value;
         prop->mdata.is_mutable = false;
     } else {
@@ -1285,7 +1336,12 @@ void cea_stream::core::set(cea_field_id id, cea_field_genspec spec) {
 
     if (prop != stream_properties.end()) {
         prop->gspec = spec;
-
+        // TODO 
+        // properties are different from mutable fields
+        // check if is_mutation is applicable and needs to be set here
+        // who will do the property mutation?
+        //      mutate function
+        //      what about runtime of the properties
         if (prop->gspec.gen_type != Fixed_Value || prop->gspec.gen_type != Fixed_Pattern) {
             prop->mdata.is_mutable = true;
         } else {
@@ -1359,8 +1415,9 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     return offset;
 }
  
+// TODO handle PROPERTIES mutation and runtime 
 void cea_stream::core::bootstrap_stream() {
-    collate_fields();
+    collate_frame_fields();
     update_ethertype_and_len();
     build_field_offsets();
     filter_mutable_fields();
@@ -1370,7 +1427,7 @@ void cea_stream::core::bootstrap_stream() {
     build_principal_frame();
 }
 
-void cea_stream::core::collate_fields() {
+void cea_stream::core::collate_frame_fields() {
     frame_fields.clear();
     for (auto f : frame_headers) {
         frame_fields.insert(
@@ -1400,7 +1457,6 @@ void cea_stream::core::filter_mutable_fields() {
             mutable_fields.push_back(f);
         }
     }
-    // TODO pending implementaton: init runtime values
 }
  
 void cea_stream::core::print_fields(vector<cea_field_mutation_spec> field_group) {
@@ -1423,6 +1479,7 @@ void cea_stream::core::print_fields(vector<cea_field_mutation_spec> field_group)
     cealog << ss.str();
 }
 
+// TODO display in a better format with sub headings
 void cea_stream::core::print_stream() {
     for (auto f : frame_headers) {
         cealog << cea_header_name[f->impl->header_type] << endl;
@@ -1435,6 +1492,10 @@ void cea_stream::core::print_stream() {
 }
 
 void cea_stream::core::build_payload_arrays() {
+// TODO Support API to quickly set payload without a spec
+// void set(cea_field_id id, enum of PREDFINED_PAYLOAD_PATTERN);
+// void set(cea_field_id id, string pattern, bool fill=true);
+
     //-------------
     // size arrays
     //-------------
@@ -1590,6 +1651,7 @@ void cea_stream::core::build_payload_arrays() {
     }
 }
 
+//TODO preamble and ipv6 support is pending
 void cea_stream::core::build_runtime() {
     for (auto &m : mutable_fields) {
         switch (m.defaults.type) {
@@ -1925,6 +1987,13 @@ void cea_stream::core::reset() {
     // TODO memory leak when reset is done twice in same test
     pf = new unsigned char [CEA_PF_SIZE];
 
+    payload_pattern_size = 0;
+    // TODO why does the following crash
+    // if (payload_pattern != nullptr) {
+    //     delete [] payload_pattern;
+    //     payload_pattern = nullptr;
+    // }
+
     hdr_len = 0;
 }
 
@@ -2013,6 +2082,7 @@ unsigned char cea_stream::core::convert_char_to_int(string hexNumber) {
      return aChar;
 }
 
+// PORTI
 //------------------------------------------------------------------------------
 // Port Implementation
 //------------------------------------------------------------------------------
@@ -2091,6 +2161,7 @@ void cea_port::core::pause() {
 // TODO pending implementation
 }
  
+// TBI
 //------------------------------------------------------------------------------
 // Testbench Implementation
 //------------------------------------------------------------------------------
@@ -2227,6 +2298,7 @@ void cea_testbench::core::pause(cea_port *port) {
     }
 }
  
+// UDFI
 //------------------------------------------------------------------------------
 // Udf implementation
 //------------------------------------------------------------------------------
