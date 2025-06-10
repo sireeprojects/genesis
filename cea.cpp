@@ -869,6 +869,9 @@ public:
     unsigned char convert_char_to_int(string hexNumber);
     int convert_nibble_to_int(char digit);
 
+    string convert_int_to_ipv4(uint64_t ipAddress);
+    uint64_t convert_string_ipv4_internal(string addr);
+
     // pcap handle for recording
     pcap *txpcap;
     pcap *rxpcap;
@@ -1988,6 +1991,7 @@ void cea_stream::core::reset() {
     pf = new unsigned char [CEA_PF_SIZE];
 
     payload_pattern_size = 0;
+
     // TODO why does the following crash
     // if (payload_pattern != nullptr) {
     //     delete [] payload_pattern;
@@ -2045,6 +2049,29 @@ void cea_stream::core::convert_ipv6_to_uca(string address, unsigned char *op) {
     for (uint32_t i=0; i<16; i++) { // TODO remove hardcoded value
         op[i]= convert_char_to_int(tokens[i]);
     }
+}
+
+string cea_stream::core::convert_int_to_ipv4(uint64_t ipAddress) {
+    uint32_t octet1 = (ipAddress >> 24) & 0xFF;
+    uint32_t octet2 = (ipAddress >> 16) & 0xFF;
+    uint32_t octet3 = (ipAddress >> 8) & 0xFF;
+    uint32_t octet4 = ipAddress & 0xFF;
+    return (to_string(octet1) + "." +
+        to_string(octet2) + "." +
+        to_string(octet3) + "." +
+        to_string(octet4));
+}
+
+uint64_t cea_stream::core::convert_string_ipv4_internal(string addr) {
+    stringstream s;
+    string intermediate;
+    stringstream check1(addr);
+    int i = 0;
+    while(getline(check1, intermediate, '.')) {
+        s << setfill('0') << setw(2) << hex << stoi(intermediate);
+        i++;
+    }
+    return stoul(s.str(), 0, 16);
 }
 
 int cea_stream::core::convert_nibble_to_int (char digit) {
