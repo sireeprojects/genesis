@@ -27,37 +27,78 @@ uint64_t convert_string_ipv4_internal(string addr) {
 }
 
 int main() {
-    //--------------------------------------
-    // Exercise:1 Copy 64B into uchar array
-    //--------------------------------------
-    cout << "EXERCISE-1" << string (80, '-') << endl;
-    uint64_t dstAddr = 0xaabbccddeeff;
-    cout << "Destination Address: " << hex << dstAddr << endl;
-    
-    unsigned char data[12];
-    memcpy(data, (char*)&dstAddr, 6);
-    print_array(data, 6);
-    dstAddr++;
-    memcpy(data, (char*)&dstAddr, 6);
-    print_array(data, 6);
-    
-    //--------------------------------------------
-    // Exercise2: Convert string of hex into long
-    //--------------------------------------------
-    cout << "EXERCISE-2" << string (80, '-') << endl;
-    string hexStr = "aabbccddeeff1122";
-    unsigned long long hexNum = stoul(hexStr, 0, 16);
-    cout << "hexNum: " << hex << hexNum << endl << endl;
-    
-    //---------------------------------------
-    // Exercise3: Convert IPv4 to hex string
-    //---------------------------------------
-    cout << "EXERCISE-3" << string (80, '-') << endl;
-    string ipaddr = "255.255.255.250";
-    uint64_t ipinternal = convert_string_ipv4_internal(ipaddr);
-    for (uint32_t i=0; i<10; i++) {
-        ipinternal++;
-        cout << convert_int_to_ipv4(ipinternal) << endl;
+    // //--------------------------------------
+    // // Exercise:1 Copy 64B into uchar array
+    // //--------------------------------------
+    // cout << "EXERCISE-1" << string (80, '-') << endl;
+    // uint64_t dstAddr = 0xffffffffffff;
+    // cout << "Destination Address: " << hex << dstAddr << endl;
+    // 
+    // unsigned char data[12];
+    // memcpy(data, (char*)&dstAddr, 6);
+    // print_array(data, 6);
+    // dstAddr++;
+    // memcpy(data, (char*)&dstAddr, 6);
+    // print_array(data, 6);
+    // 
+    // //--------------------------------------------
+    // // Exercise2: Convert string of hex into long
+    // //--------------------------------------------
+    // cout << "EXERCISE-2" << string (80, '-') << endl;
+    // string hexStr = "aabbccddeeff11ff";
+    //  uint64_t hexNum = stoul(hexStr, 0, 16);
+    // cout << "hexNum: " << hex << hexNum << endl << endl;
+    // hexNum++;
+    // cout << "hexNum: " << hex << hexNum << endl << endl;
+    // 
+    // //---------------------------------------
+    // // Exercise3: Convert IPv4 to hex string
+    // //---------------------------------------
+    // cout << "EXERCISE-3" << string (80, '-') << endl;
+    // string ipaddr = "255.255.255.250";
+    // uint64_t ipinternal = convert_string_ipv4_internal(ipaddr);
+    // for (uint32_t i=0; i<10; i++) {
+    //     ipinternal++;
+    //     cout << convert_int_to_ipv4(ipinternal) << endl;
+    // }
+
+    //------------------------------------------------
+    // Exercise4: memcpy string of hex and hex integer
+    //------------------------------------------------
+    cout << "EXERCISE-4" << string (80, '-') << endl;
+    string hStr = "aabbccddeeff1122";
+    uint64_t hInt = 0xaabbccddeeff1122;
+    cout << "Hex String: " << hStr << endl;
+    cout << "Hex Number: " << hex << hInt << endl;
+
+    unsigned char cpStr[16];
+
+    memcpy(cpStr, (char*)hStr.c_str(), 16);
+    print_array(cpStr, 16);
+
+    memcpy(cpStr, (char*)&hInt, 8);
+    print_array(cpStr, 8);
+
+    convert_string_to_uca(hStr, cpStr);
+    print_array(cpStr, 8);
+
+    cout << "-------------------------------" << endl;
+    unsigned char dataStr[16];
+    for (uint32_t i=0; i<16; i++) {
+        // dataStr[i] = (uint16_t)i + 61;
+        dataStr[i] = (uint16_t) i;
     }
+    print_array(dataStr, 16);
+
+    unsigned char hhStr[16];
+    uint64_t hhInt = 0xaabbccdd;
+    memcpy(hhStr, (char*)&hhInt, 4);
+    print_array(hhStr, 4);
+
+    unsigned char ssStr[16];
+    string ssInt = "abcd";
+    memcpy(ssStr, (char*)ssInt.c_str(), 4);
+    print_array(ssStr, 4);
+
     return 0;
 }

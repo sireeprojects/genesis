@@ -11,7 +11,7 @@
 
 using namespace std;
 
-void print_array (unsigned char* tmp, int len) {
+void print_array(unsigned char* tmp, int len) {
     stringstream s;
     s.str("");
     uint32_t idx = 0;
@@ -81,7 +81,6 @@ void convert_string_to_uca(string address, unsigned char *op) {
     for (uint32_t i=0; i<address.size()/2; i++) {
         op[i]= convert_char_to_int(tokens[i]);
     }
-    print_array(op,4);
 }
 
 void convert_mac_to_uca(string address, unsigned char *op) {
