@@ -142,8 +142,6 @@ struct cea_field_spec {
     uint64_t def_value;
     vector <unsigned char> def_pattern;
     cea_field_type type;
-    cea_field_genspec spec;
-    cea_field_runtime rt;
 };
 
 struct cea_field_mutation_data {
@@ -813,7 +811,6 @@ public:
     // build size and payload pattern arrays
     void build_payload_arrays();
 
-    void build_runtime_mark0();
     void build_runtime();
 
     void build_principal_frame();
@@ -1762,48 +1759,6 @@ void cea_stream::core::build_runtime() {
         }
     } // for
 }
-
-// // TODO
-// // assign default value to runtime
-// // TODO CRITICAL
-// // when assigning random spec to fields. the test first creates a empty spec,
-// // sets random and assigns to the field. In this process the default value is
-// // erased when assigning the empty spec+random to the field
-// // so when build_runtime is called the default values/patterns are void and
-// // hence results in error when trying to access default and convert default
-// // values for patterns
-// // TODO POSSIBLE SOLUTION: To be decided
-// //      -> call build_runtime after the principal frame is generated ??
-// void cea_stream::core::build_runtime_mark0() {
-// //    for (auto &f : frame_fields) {
-// //        if (f.type == Integer) {
-// //            f.rt.gen_value = f.spec.value;
-// //        } else {
-// //            switch (f.type) {
-// //                case Pattern_PRE:{
-// //                    convert_string_to_uca(f.spec.pattern, f.rt.patterns);
-// //                    break;
-// //                    }
-// //                case Pattern_MAC:{
-// //                    convert_mac_to_uca(f.spec.pattern, f.rt.patterns);
-// //                    break;
-// //                    }
-// //                case Pattern_IPv4:{
-// //                    convert_ipv4_to_uca(f.spec.pattern, f.rt.patterns);
-// //                    break;
-// //                    }
-// //                case Pattern_IPv6:{
-// //                    convert_ipv6_to_uca(f.spec.pattern, f.rt.patterns);
-// //                    break;
-// //                    }
-// //                default:{
-// //                    CEA_ERR_MSG("Invalid Generation type Specified"); // TODO
-// //                    break;
-// //                }
-// //            }    
-// //        }
-// //    }
-// }
 
 // TODO Incomplete implementation
 void cea_stream::core::build_principal_frame() {
