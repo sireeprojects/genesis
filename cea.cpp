@@ -165,110 +165,110 @@ vector<unsigned char>def_srcip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 vector<unsigned char>def_dstip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 vector<cea_field_mutation_spec> mtable = {
-{{0, MAC_Preamble          , 64 , 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE }, { Fixed_Pattern, 0                , "55555555555555d"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Dest_Addr         , 48 , 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "01:02:03:04:05:06", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Src_Addr          , 48 , 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "0a:0b:0c:0d:0e:0f", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Len               , 16 , 0, 0, "MAC_Len               ", 46               , {0x00}             , Integer     }, { Fixed_Value  , 46               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Ether_Type        , 16 , 0, 0, "MAC_Ether_Type        ", 0x0800           , {0x00}             , Integer     }, { Fixed_Value  , 0x0800           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Fcs               , 32 , 0, 0, "MAC_Fcs               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, LLC_Dsap              , 8  , 0, 0, "LLC_Dsap              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, LLC_Ssap              , 8  , 0, 0, "LLC_Ssap              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, LLC_Control           , 8  , 0, 0, "LLC_Control           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, SNAP_Oui              , 24 , 0, 0, "SNAP_Oui              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, SNAP_Pid              , 16 , 0, 0, "SNAP_Pid              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv4_Version          , 4  , 0, 0, "IPv4_Version          ", 4                , {0x00}             , Integer     }, { Fixed_Value  , 4                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv4_IHL              , 4  , 0, 0, "IPv4_IHL              ", 5                , {0x00}             , Integer     }, { Fixed_Value  , 5                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Tos              , 8  , 0, 0, "IPv4_Tos              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Total_Len        , 16 , 0, 0, "IPv4_Total_Len        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Id               , 16 , 0, 0, "IPv4_Id               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv4_Flags            , 3  , 0, 0, "IPv4_Flags            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv4_Frag_Offset      , 13 , 0, 0, "IPv4_Frag_Offset      ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_TTL              , 8  , 0, 0, "IPv4_TTL              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Protocol         , 8  , 0, 0, "IPv4_Protocol         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Hdr_Csum         , 16 , 0, 0, "IPv4_Hdr_Csum         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Src_Addr         , 32 , 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "192.168.0.1"      , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Dest_Addr        , 32 , 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "255.255.255.255"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Opts             , 0  , 0, 0, "IPv4_Opts             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv4_Pad              , 0  , 0, 0, "IPv4_Pad              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{2, IPv6_Version          , 4  , 0, 0, "IPv6_Version          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv6_Traffic_Class    , 8  , 0, 0, "IPv6_Traffic_Class    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, IPv6_Flow_Label       , 20 , 0, 0, "IPv6_Flow_Label       ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv6_Payload_Len      , 16 , 0, 0, "IPv6_Payload_Len      ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv6_Next_Hdr         , 8  , 0, 0, "IPv6_Next_Hdr         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv6_Hop_Limit        , 8  , 0, 0, "IPv6_Hop_Limit        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv6_Src_Addr         , 128, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6}, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, IPv6_Dest_Addr        , 128, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6}, { Fixed_Pattern, 0                , "0.0.0.0.0.0.0.0"  , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Src_Port          , 16 , 0, 0, "TCP_Src_Port          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Dest_Port         , 16 , 0, 0, "TCP_Dest_Port         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Seq_Num           , 32 , 0, 0, "TCP_Seq_Num           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Ack_Num           , 32 , 0, 0, "TCP_Ack_Num           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{7, TCP_Data_Offset       , 4  , 0, 0, "TCP_Data_Offset       ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Reserved          , 6  , 0, 0, "TCP_Reserved          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Urg               , 1  , 0, 0, "TCP_Urg               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Ack               , 1  , 0, 0, "TCP_Ack               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Psh               , 1  , 0, 0, "TCP_Psh               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Rst               , 1  , 0, 0, "TCP_Rst               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Syn               , 1  , 0, 0, "TCP_Syn               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, TCP_Fin               , 1  , 0, 0, "TCP_Fin               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Window            , 16 , 0, 0, "TCP_Window            ", 64               , {0x00}             , Integer     }, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Csum              , 16 , 0, 0, "TCP_Csum              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Urg_Ptr           , 16 , 0, 0, "TCP_Urg_Ptr           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Opts              , 0  , 0, 0, "TCP_Opts              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Pad               , 0  , 0, 0, "TCP_Pad               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, UDP_Src_Port          , 16 , 0, 0, "UDP_Src_Port          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, UDP_Dest_Port         , 16 , 0, 0, "UDP_Dest_Port         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, UDP_Len               , 16 , 0, 0, "UDP_Len               ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, UDP_Csum              , 16 , 0, 0, "UDP_Csum              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Hw_Type           , 16 , 0, 0, "ARP_Hw_Type           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Proto_Type        , 16 , 0, 0, "ARP_Proto_Type        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Hw_Len            , 8  , 0, 0, "ARP_Hw_Len            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Proto_Len         , 8  , 0, 0, "ARP_Proto_Len         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Opcode            , 16 , 0, 0, "ARP_Opcode            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Sender_Hw_Addr    , 48 , 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Sender_Proto_addr , 32 , 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Target_Hw_Addr    , 48 , 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC }, { Fixed_Pattern, 0                , "00:00:00:00:00:00", 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, ARP_Target_Proto_Addr , 32 , 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4}, { Fixed_Pattern, 0                , "0.0.0.0"          , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{2, MPLS_Label            , 20 , 0, 0, "MPLS_Label            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, MPLS_Exp              , 3  , 0, 0, "MPLS_Exp              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, MPLS_Stack            , 1  , 0, 0, "MPLS_Stack            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MPLS_Ttl              , 8  , 0, 0, "MPLS_Ttl              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, VLAN_Tpi              , 16 , 0, 0, "VLAN_Tpi              ", 0x8100           , {0x00}             , Integer     }, { Fixed_Value  , 0x8100           , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{2, VLAN_Tci_Pcp          , 3  , 0, 0, "VLAN_Tci_Pcp          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, VLAN_Tci_Cfi          , 1  , 0, 0, "VLAN_Tci_Cfi          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{1, VLAN_Vid              , 12 , 0, 0, "VLAN_Vid              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Control           , 16 , 0, 0, "MAC_Control           ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, MAC_Control_Opcode    , 16 , 0, 0, "MAC_Control_Opcode    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta          , 16 , 0, 0, "Pause_Quanta          ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Priority_En_Vector    , 16 , 0, 0, "Priority_En_Vector    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_0        , 16 , 0, 0, "Pause_Quanta_0        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_1        , 16 , 0, 0, "Pause_Quanta_1        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_2        , 16 , 0, 0, "Pause_Quanta_2        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_3        , 16 , 0, 0, "Pause_Quanta_3        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_4        , 16 , 0, 0, "Pause_Quanta_4        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_5        , 16 , 0, 0, "Pause_Quanta_5        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_6        , 16 , 0, 0, "Pause_Quanta_6        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Pause_Quanta_7        , 16 , 0, 0, "Pause_Quanta_7        ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, FRAME_Len             , 32 , 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer     }, { Fixed_Value  , 64               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, { Fixed_Pattern, 0                , "00"               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Traffic_Type   , 32 , 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer     }, { Fixed_Value  , Continuous       , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Traffic_Control, 32 , 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer     }, { Fixed_Value  , Stop_After_Stream, ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Ipg            , 32 , 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Isg            , 32 , 0, 0, "STREAM_Ifg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Ibg            , 32 , 0, 0, "STREAM_Ibg            ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Bandwidth      , 32 , 0, 0, "STREAM_Bandwidth      ", 100              , {0x00}             , Integer     }, { Fixed_Value  , 100              , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, STREAM_Start_Delay    , 32 , 0, 0, "STREAM_Start_Delay    ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, UDF                   , 0  , 0, 0, "UDF                   ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Len              , 32 , 0, 0, "META_Len              ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Ipg              , 32 , 0, 0, "META_Ipg              ", 12               , {0x00}             , Integer     }, { Fixed_Value  , 12               , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Preamble         , 64 , 0, 0, "META_Preamble         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad1             , 64 , 0, 0, "META_Pad1             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad2             , 64 , 0, 0, "META_Pad2             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad3             , 64 , 0, 0, "META_Pad3             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad4             , 64 , 0, 0, "META_Pad4             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad5             , 64 , 0, 0, "META_Pad5             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, META_Pad6             , 64 , 0, 0, "META_Pad6             ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, Zeros_8Bit            , 8  , 0, 0, "Zeros_8Bit            ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
-{{0, TCP_Total_Len         , 16 , 0, 0, "TCP_Total_Len         ", 0                , {0x00}             , Integer     }, { Fixed_Value  , 0                , ""                 , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {} }, { 0, {}, 0, 0 }, {}},
+{ {0, MAC_Preamble          , 64 , 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"55555555555555d"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Dest_Addr         , 48 , 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"01:02:03:04:05:06", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Src_Addr          , 48 , 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0a:0b:0c:0d:0e:0f", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Len               , 16 , 0, 0, "MAC_Len               ", 46               , {0x00}             , Integer     }, {Fixed_Value   , {46               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Ether_Type        , 16 , 0, 0, "MAC_Ether_Type        ", 0x0800           , {0x00}             , Integer     }, {Fixed_Value   , {0x0800           , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Fcs               , 32 , 0, 0, "MAC_Fcs               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, LLC_Dsap              , 8  , 0, 0, "LLC_Dsap              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, LLC_Ssap              , 8  , 0, 0, "LLC_Ssap              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, LLC_Control           , 8  , 0, 0, "LLC_Control           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, SNAP_Oui              , 24 , 0, 0, "SNAP_Oui              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, SNAP_Pid              , 16 , 0, 0, "SNAP_Pid              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv4_Version          , 4  , 0, 0, "IPv4_Version          ", 4                , {0x00}             , Integer     }, {Fixed_Value   , {4                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv4_IHL              , 4  , 0, 0, "IPv4_IHL              ", 5                , {0x00}             , Integer     }, {Fixed_Value   , {5                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Tos              , 8  , 0, 0, "IPv4_Tos              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Total_Len        , 16 , 0, 0, "IPv4_Total_Len        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Id               , 16 , 0, 0, "IPv4_Id               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv4_Flags            , 3  , 0, 0, "IPv4_Flags            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv4_Frag_Offset      , 13 , 0, 0, "IPv4_Frag_Offset      ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_TTL              , 8  , 0, 0, "IPv4_TTL              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Protocol         , 8  , 0, 0, "IPv4_Protocol         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Hdr_Csum         , 16 , 0, 0, "IPv4_Hdr_Csum         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Src_Addr         , 32 , 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"192.168.0.1"      , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Dest_Addr        , 32 , 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"255.255.255.255"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Opts             , 0  , 0, 0, "IPv4_Opts             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Pad              , 0  , 0, 0, "IPv4_Pad              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {2, IPv6_Version          , 4  , 0, 0, "IPv6_Version          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv6_Traffic_Class    , 8  , 0, 0, "IPv6_Traffic_Class    ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, IPv6_Flow_Label       , 20 , 0, 0, "IPv6_Flow_Label       ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Payload_Len      , 16 , 0, 0, "IPv6_Payload_Len      ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Next_Hdr         , 8  , 0, 0, "IPv6_Next_Hdr         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Hop_Limit        , 8  , 0, 0, "IPv6_Hop_Limit        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Src_Addr         , 128, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Dest_Addr        , 128, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Src_Port          , 16 , 0, 0, "TCP_Src_Port          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Dest_Port         , 16 , 0, 0, "TCP_Dest_Port         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Seq_Num           , 32 , 0, 0, "TCP_Seq_Num           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Ack_Num           , 32 , 0, 0, "TCP_Ack_Num           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {7, TCP_Data_Offset       , 4  , 0, 0, "TCP_Data_Offset       ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Reserved          , 6  , 0, 0, "TCP_Reserved          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Urg               , 1  , 0, 0, "TCP_Urg               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Ack               , 1  , 0, 0, "TCP_Ack               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Psh               , 1  , 0, 0, "TCP_Psh               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Rst               , 1  , 0, 0, "TCP_Rst               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Syn               , 1  , 0, 0, "TCP_Syn               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, TCP_Fin               , 1  , 0, 0, "TCP_Fin               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Window            , 16 , 0, 0, "TCP_Window            ", 64               , {0x00}             , Integer     }, {Fixed_Value   , {64               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Csum              , 16 , 0, 0, "TCP_Csum              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Urg_Ptr           , 16 , 0, 0, "TCP_Urg_Ptr           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Opts              , 0  , 0, 0, "TCP_Opts              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Pad               , 0  , 0, 0, "TCP_Pad               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, UDP_Src_Port          , 16 , 0, 0, "UDP_Src_Port          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, UDP_Dest_Port         , 16 , 0, 0, "UDP_Dest_Port         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, UDP_Len               , 16 , 0, 0, "UDP_Len               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, UDP_Csum              , 16 , 0, 0, "UDP_Csum              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Hw_Type           , 16 , 0, 0, "ARP_Hw_Type           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Proto_Type        , 16 , 0, 0, "ARP_Proto_Type        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Hw_Len            , 8  , 0, 0, "ARP_Hw_Len            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Proto_Len         , 8  , 0, 0, "ARP_Proto_Len         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Opcode            , 16 , 0, 0, "ARP_Opcode            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Sender_Hw_Addr    , 48 , 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Sender_Proto_addr , 32 , 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Target_Hw_Addr    , 48 , 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Target_Proto_Addr , 32 , 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {2, MPLS_Label            , 20 , 0, 0, "MPLS_Label            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, MPLS_Exp              , 3  , 0, 0, "MPLS_Exp              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, MPLS_Stack            , 1  , 0, 0, "MPLS_Stack            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MPLS_Ttl              , 8  , 0, 0, "MPLS_Ttl              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, VLAN_Tpi              , 16 , 0, 0, "VLAN_Tpi              ", 0x8100           , {0x00}             , Integer     }, {Fixed_Value   , {0x8100           , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {2, VLAN_Tci_Pcp          , 3  , 0, 0, "VLAN_Tci_Pcp          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, VLAN_Tci_Cfi          , 1  , 0, 0, "VLAN_Tci_Cfi          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {1, VLAN_Vid              , 12 , 0, 0, "VLAN_Vid              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Control           , 16 , 0, 0, "MAC_Control           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Control_Opcode    , 16 , 0, 0, "MAC_Control_Opcode    ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta          , 16 , 0, 0, "Pause_Quanta          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Priority_En_Vector    , 16 , 0, 0, "Priority_En_Vector    ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_0        , 16 , 0, 0, "Pause_Quanta_0        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_1        , 16 , 0, 0, "Pause_Quanta_1        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_2        , 16 , 0, 0, "Pause_Quanta_2        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_3        , 16 , 0, 0, "Pause_Quanta_3        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_4        , 16 , 0, 0, "Pause_Quanta_4        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_5        , 16 , 0, 0, "Pause_Quanta_5        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_6        , 16 , 0, 0, "Pause_Quanta_6        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Pause_Quanta_7        , 16 , 0, 0, "Pause_Quanta_7        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, FRAME_Len             , 32 , 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer     }, {Fixed_Value   , {64               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00"               , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Traffic_Type   , 32 , 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer     }, {Fixed_Value   , {Continuous       , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Traffic_Control, 32 , 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer     }, {Fixed_Value   , {Stop_After_Stream, 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Ipg            , 32 , 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer     }, {Fixed_Value   , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Isg            , 32 , 0, 0, "STREAM_Ifg            ", 12               , {0x00}             , Integer     }, {Fixed_Value   , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Ibg            , 32 , 0, 0, "STREAM_Ibg            ", 12               , {0x00}             , Integer     }, {Fixed_Value   , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Bandwidth      , 32 , 0, 0, "STREAM_Bandwidth      ", 100              , {0x00}             , Integer     }, {Fixed_Value   , {100              , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Start_Delay    , 32 , 0, 0, "STREAM_Start_Delay    ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, UDF                   , 0  , 0, 0, "UDF                   ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Len              , 32 , 0, 0, "META_Len              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Ipg              , 32 , 0, 0, "META_Ipg              ", 12               , {0x00}             , Integer     }, {Fixed_Value   , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Preamble         , 64 , 0, 0, "META_Preamble         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad1             , 64 , 0, 0, "META_Pad1             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad2             , 64 , 0, 0, "META_Pad2             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad3             , 64 , 0, 0, "META_Pad3             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad4             , 64 , 0, 0, "META_Pad4             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad5             , 64 , 0, 0, "META_Pad5             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, META_Pad6             , 64 , 0, 0, "META_Pad6             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, Zeros_8Bit            , 8  , 0, 0, "Zeros_8Bit            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, TCP_Total_Len         , 16 , 0, 0, "TCP_Total_Len         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 };
 
 void signal_handler(int signal) {
@@ -1149,7 +1149,7 @@ void cea_header::core::set(cea_field_id id, string value) {
     }
     if (field != header_fields.end()) {
         field->gspec.gen_type = Fixed_Pattern;
-        field->gspec.pattern = value;
+        field->gspec.str.value = value;
         field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
@@ -1172,7 +1172,7 @@ void cea_header::core::set(cea_field_id id, uint64_t value) {
     }
     if (field != header_fields.end()) {
         field->gspec.gen_type = Fixed_Value;
-        field->gspec.value = value;
+        field->gspec.nmr.value = value;
         field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
@@ -1242,25 +1242,37 @@ void cea_field::set(cea_field_genspec spec) {
 }
 
 void cea_field::core::set(uint64_t value) {
-    field.gspec.value = value;
+    field.gspec.nmr.value = value;
     field.gspec.gen_type = Fixed_Value;
 }
 
 void cea_field::core::set(cea_field_genspec spec) {
+
     field.gspec.gen_type     = spec.gen_type;
-    field.gspec.value        = spec.value;
-    field.gspec.pattern      = spec.pattern;
-    field.gspec.step         = spec.step;
-    field.gspec.min          = spec.min;
-    field.gspec.max          = spec.max;
-    field.gspec.count        = spec.count;
-    field.gspec.repeat       = spec.repeat;
-    field.gspec.mask         = spec.mask;
-    field.gspec.seed         = spec.seed;
-    field.gspec.start        = spec.start;
-    field.gspec.make_error   = spec.make_error;
-    field.gspec.value_list   = spec.value_list;
-    field.gspec.pattern_list = spec.pattern_list;
+
+    field.gspec.nmr.value      = spec.nmr.value;
+    field.gspec.nmr.step       = spec.nmr.step;
+    field.gspec.nmr.min        = spec.nmr.min;
+    field.gspec.nmr.max        = spec.nmr.max;
+    field.gspec.nmr.count      = spec.nmr.count;
+    field.gspec.nmr.repeat     = spec.nmr.repeat;
+    field.gspec.nmr.mask       = spec.nmr.mask;
+    field.gspec.nmr.seed       = spec.nmr.seed;
+    field.gspec.nmr.start      = spec.nmr.start;
+    field.gspec.nmr.error = spec.nmr.error;
+    field.gspec.nmr.values     = spec.nmr.values;
+
+    field.gspec.str.value      = spec.str.value;
+    field.gspec.str.step       = spec.str.step;
+    field.gspec.str.min        = spec.str.min;
+    field.gspec.str.max        = spec.str.max;
+    field.gspec.str.count      = spec.str.count;
+    field.gspec.str.repeat     = spec.str.repeat;
+    field.gspec.str.mask       = spec.str.mask;
+    field.gspec.str.seed       = spec.str.seed;
+    field.gspec.str.start      = spec.str.start;
+    field.gspec.str.error = spec.str.error;
+    field.gspec.str.values     = spec.str.values;
 }
 
 // STREAMI
@@ -1320,7 +1332,7 @@ void cea_stream::core::set(cea_field_id id, uint64_t value) {
 
     if (prop != stream_properties.end()) {
         prop->gspec.gen_type = Fixed_Value; // TODO Check
-        prop->gspec.value = value;
+        prop->gspec.nmr.value = value;
         prop->mdata.is_mutable = false;
     } else {
         CEA_ERR_MSG("The ID " << id << " does not belong to stream properties");
@@ -1469,9 +1481,9 @@ void cea_stream::core::print_fields(vector<cea_field_mutation_spec> field_group)
         ss << setw(25) << left << item.defaults.len;
         ss << setw(25) << left << cea_field_type_name[item.defaults.type];;
         if (item.defaults.type == Integer)
-            ss << setw(25) << left << item.gspec.value;
+            ss << setw(25) << left << item.gspec.nmr.value;
         else
-            ss << setw(25) << left << item.gspec.pattern;
+            ss << setw(25) << left << item.gspec.str.value;
         ss << setw(25) << left << cea_gen_type_name[item.gspec.gen_type];
         ss << endl;
     }
@@ -1510,18 +1522,18 @@ void cea_stream::core::build_payload_arrays() {
             vof_frame_sizes.resize(nof_sizes);
             vof_computed_frame_sizes.resize(nof_sizes);
             vof_payload_sizes.resize(nof_sizes);
-            vof_frame_sizes[0] = spec.value;
+            vof_frame_sizes[0] = spec.nmr.value;
             vof_computed_frame_sizes[0] = vof_frame_sizes[0] + meta_size;
             vof_payload_sizes[0] = vof_frame_sizes[0] - (hdr_size - meta_size) - crc_len;
             break;
             }
         case Increment: {
-            nof_sizes = ((spec.max - spec.min)/spec.step)+1;
+            nof_sizes = ((spec.nmr.max - spec.nmr.min)/spec.nmr.step)+1;
             vof_frame_sizes.resize(nof_sizes);
             vof_computed_frame_sizes.resize(nof_sizes);
             vof_payload_sizes.resize(nof_sizes);
             uint32_t szidx=0;
-            for (uint32_t i=spec.min; i<=spec.max; i=i+spec.step) {
+            for (uint32_t i=spec.nmr.min; i<=spec.nmr.max; i=i+spec.nmr.step) {
                 vof_frame_sizes[szidx] = i;
                 vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
                 vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
@@ -1530,12 +1542,12 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         case Decrement: {
-            nof_sizes = ((spec.min - spec.max)/spec.step)+1;
+            nof_sizes = ((spec.nmr.min - spec.nmr.max)/spec.nmr.step)+1;
             vof_frame_sizes.resize(nof_sizes);
             vof_computed_frame_sizes.resize(nof_sizes);
             vof_payload_sizes.resize(nof_sizes);
             uint32_t szidx=0;
-            for (uint32_t i=spec.min; i>=spec.max; i=i-spec.step) {
+            for (uint32_t i=spec.nmr.min; i>=spec.nmr.max; i=i-spec.nmr.step) {
                 vof_frame_sizes[szidx] = i;
                 vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
                 vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
@@ -1544,15 +1556,15 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         case Random: {
-            nof_sizes = (spec.max - spec.min) + 1;
+            nof_sizes = (spec.nmr.max - spec.nmr.min) + 1;
             vof_frame_sizes.resize(nof_sizes);
             vof_computed_frame_sizes.resize(nof_sizes);
             vof_payload_sizes.resize(nof_sizes);
             random_device rd;
             mt19937 gen(rd());
-            uniform_int_distribution<> distr(spec.max, spec.min);
+            uniform_int_distribution<> distr(spec.nmr.max, spec.nmr.min);
             uint32_t szidx=0;
-            for (uint32_t szidx=spec.min; szidx>spec.max; szidx++) {
+            for (uint32_t szidx=spec.nmr.min; szidx>spec.nmr.max; szidx++) {
                 vof_frame_sizes[szidx] = distr(gen);
                 vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
                 vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
@@ -1587,15 +1599,15 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         case Fixed_Pattern: {
-            payload_pattern_size = plspec.pattern.size() / 2;
+            payload_pattern_size = plspec.str.value.size() / 2;
             payload_pattern = new unsigned char[payload_pattern_size];
-            convert_string_to_uca(plspec.pattern, payload_pattern);
+            convert_string_to_uca(plspec.str.value, payload_pattern);
 
             uint32_t quotient = CEA_MAX_FRAME_SIZE/payload_pattern_size; 
             uint32_t remainder = CEA_MAX_FRAME_SIZE%payload_pattern_size;
             uint32_t offset = 0;
 
-            if (plspec.repeat) {
+            if (plspec.str.repeat) {
                 for (uint32_t cnt=0; cnt<quotient; cnt++) {
                     memcpy(arof_payload_data+offset, payload_pattern, payload_pattern_size);
                     offset += payload_pattern_size;
@@ -1658,19 +1670,19 @@ void cea_stream::core::build_runtime() {
             case Integer: {
                 switch (m.gspec.gen_type) {
                     case Fixed_Value: {
-                        m.rt.value = m.gspec.value;
+                        m.rt.value = m.gspec.nmr.value;
                         break;
                         }
                     case Increment: {
-                        m.rt.value = m.gspec.start;
+                        m.rt.value = m.gspec.nmr.start;
                         break;
                         }
                     case Decrement: {
-                        m.rt.value = m.gspec.start;
+                        m.rt.value = m.gspec.nmr.start;
                         break;
                         }
                     case Value_List: {
-                        m.rt.patterns = m.gspec.value_list;
+                        m.rt.patterns = m.gspec.nmr.values;
                         break;
                         }
                     case Random: {
@@ -1684,21 +1696,21 @@ void cea_stream::core::build_runtime() {
             case Pattern_MAC: {
                 switch (m.gspec.gen_type) {
                     case Fixed_Pattern: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Increment: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Decrement: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
@@ -1706,7 +1718,7 @@ void cea_stream::core::build_runtime() {
                         }
                     case Pattern_List: {
                         m.rt.patterns.resize(0);
-                        for (auto val : m.gspec.pattern_list) {
+                        for (auto val : m.gspec.str.values) {
                             val.erase(remove(val.begin(), val.end(), ':'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
                             m.rt.patterns.push_back(tmp_mac);
@@ -1720,21 +1732,21 @@ void cea_stream::core::build_runtime() {
             case Pattern_IPv4: {
                 switch (m.gspec.gen_type) {
                     case Fixed_Pattern: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Increment: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
                         break;
                         }
                     case Decrement: {
-                        string tmp_mac_string = m.gspec.pattern;
+                        string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
                         m.rt.value = tmp_mac;
@@ -1742,7 +1754,7 @@ void cea_stream::core::build_runtime() {
                         }
                     case Pattern_List: {
                         m.rt.patterns.resize(0);
-                        for (auto val : m.gspec.pattern_list) {
+                        for (auto val : m.gspec.str.values) {
                             val.erase(remove(val.begin(), val.end(), '.'), val.end());
                             uint64_t tmp_mac = stol(val, 0, 16);
                             m.rt.patterns.push_back(tmp_mac);
@@ -1775,11 +1787,11 @@ void cea_stream::core::build_principal_frame() {
     uint32_t ploffset = hdr_len/8;
 
     if (plspec.gen_type == Random)
-        memcpy(pf+ploffset, arof_rnd_payload_data[0], lenspec.value);
+        memcpy(pf+ploffset, arof_rnd_payload_data[0], lenspec.nmr.value);
     else 
-        memcpy(pf+ploffset, arof_payload_data, lenspec.value);
+        memcpy(pf+ploffset, arof_payload_data, lenspec.nmr.value);
 
-    print_uchar_array(pf, ploffset+lenspec.value);
+    print_uchar_array(pf, ploffset+lenspec.nmr.value);
 }
 
 
@@ -1792,7 +1804,7 @@ void cea_stream::core::mutate() {
             case Integer: {
                 switch(m->gspec.gen_type) {
                     case Fixed_Value: {
-                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->gspec.value, m->defaults.len/8);
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->gspec.nmr.value, m->defaults.len/8);
                         m->mdata.is_mutable = false;
                         mutable_fields.erase(m); m++;
                         break;
@@ -1800,7 +1812,7 @@ void cea_stream::core::mutate() {
                     case Value_List: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                         if (m->rt.idx == m->rt.patterns.size()-1) {
-                            if (m->gspec.repeat) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.idx = 0;
                             } else {
                                 mutable_fields.erase(m); m++;
@@ -1812,32 +1824,32 @@ void cea_stream::core::mutate() {
                         }
                     case Increment: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                        if (m->rt.count == m->gspec.count) {
-                            if (m->gspec.repeat) {
+                        if (m->rt.count == m->gspec.nmr.count) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->gspec.start;
+                                m->rt.value = m->gspec.nmr.start;
                             } else {
                                 mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check overflow
-                            m->rt.value += m->gspec.step;
+                            m->rt.value += m->gspec.nmr.step;
                             m->rt.count++;
                         }
                         break;
                         }
                     case Decrement: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                        if (m->rt.count == m->gspec.count) {
-                            if (m->gspec.repeat) {
+                        if (m->rt.count == m->gspec.nmr.count) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->gspec.start;
+                                m->rt.value = m->gspec.nmr.start;
                             } else {
                                 mutable_fields.erase(m); m++;
                             }
                         } else {
                             // TODO check underflow
-                            m->rt.value -= m->gspec.step;
+                            m->rt.value -= m->gspec.nmr.step;
                             m->rt.count++;
                         }
                         break;
@@ -1865,7 +1877,7 @@ void cea_stream::core::mutate() {
                     case Pattern_List: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                         if (m->rt.idx == m->rt.patterns.size()-1) {
-                            if (m->gspec.repeat) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.idx = 0;
                             } else {
                                 mutable_fields.erase(m); // m++;
@@ -1877,32 +1889,32 @@ void cea_stream::core::mutate() {
                         }
                     case Increment: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                        if (m->rt.count == m->gspec.count) {
-                            if (m->gspec.repeat) {
+                        if (m->rt.count == m->gspec.nmr.count) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->gspec.start;
+                                m->rt.value = m->gspec.nmr.start;
                             } else {
                                 mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check overflow
-                            m->rt.value += m->gspec.step;
+                            m->rt.value += m->gspec.nmr.step;
                             m->rt.count++;
                         }
                         break;
                         }
                     case Decrement: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                        if (m->rt.count == m->gspec.count) {
-                            if (m->gspec.repeat) {
+                        if (m->rt.count == m->gspec.nmr.count) {
+                            if (m->gspec.nmr.repeat) {
                                 m->rt.count = 0;
-                                m->rt.value = m->gspec.start;
+                                m->rt.value = m->gspec.nmr.start;
                             } else {
                                 mutable_fields.erase(m); // m++;
                             }
                         } else {
                             // TODO check underflow
-                            m->rt.value -= m->gspec.step;
+                            m->rt.value -= m->gspec.nmr.step;
                             m->rt.count++;
                         }
                         break;
@@ -2303,19 +2315,30 @@ void cea_udf::set(cea_field_genspec spec) {
 
 void cea_udf::core::set(cea_field_genspec spec) {
     field.gspec.gen_type     = spec.gen_type;
-    field.gspec.value        = spec.value;
-    field.gspec.pattern      = spec.pattern;
-    field.gspec.step         = spec.step;
-    field.gspec.min          = spec.min;
-    field.gspec.max          = spec.max;
-    field.gspec.count        = spec.count;
-    field.gspec.repeat       = spec.repeat;
-    field.gspec.mask         = spec.mask;
-    field.gspec.seed         = spec.seed;
-    field.gspec.start        = spec.start;
-    field.gspec.make_error   = spec.make_error;
-    field.gspec.value_list   = spec.value_list;
-    field.gspec.pattern_list = spec.pattern_list;
+
+    field.gspec.nmr.value      = spec.nmr.value;
+    field.gspec.nmr.step       = spec.nmr.step;
+    field.gspec.nmr.min        = spec.nmr.min;
+    field.gspec.nmr.max        = spec.nmr.max;
+    field.gspec.nmr.count      = spec.nmr.count;
+    field.gspec.nmr.repeat     = spec.nmr.repeat;
+    field.gspec.nmr.mask       = spec.nmr.mask;
+    field.gspec.nmr.seed       = spec.nmr.seed;
+    field.gspec.nmr.start      = spec.nmr.start;
+    field.gspec.nmr.error = spec.nmr.error;
+    field.gspec.nmr.values     = spec.nmr.values;
+
+    field.gspec.str.value      = spec.str.value;
+    field.gspec.str.step       = spec.str.step;
+    field.gspec.str.min        = spec.str.min;
+    field.gspec.str.max        = spec.str.max;
+    field.gspec.str.count      = spec.str.count;
+    field.gspec.str.repeat     = spec.str.repeat;
+    field.gspec.str.mask       = spec.str.mask;
+    field.gspec.str.seed       = spec.str.seed;
+    field.gspec.str.start      = spec.str.start;
+    field.gspec.str.error = spec.str.error;
+    field.gspec.str.values     = spec.str.values;
 }
 
 } // namespace

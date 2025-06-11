@@ -178,19 +178,32 @@ enum cea_gen_type {
 
 struct cea_field_genspec {
     cea_gen_type gen_type;
-    uint64_t value;
-    string pattern;
-    uint32_t step;
-    uint32_t min;
-    uint32_t max;
-    uint32_t count;
-    uint32_t repeat;
-    uint32_t mask;
-    uint32_t seed;
-    uint32_t start;
-    bool make_error;
-    vector<uint64_t> value_list;
-    vector<string> pattern_list;
+    struct {
+        uint64_t value;
+        uint64_t step;
+        uint64_t min;
+        uint64_t max;
+        uint64_t count;
+        uint64_t repeat;
+        uint64_t mask;
+        uint64_t seed;
+        uint64_t start;
+        bool error;
+        vector<uint64_t> values;
+    } nmr;
+    struct {
+        string   value;
+        uint64_t step;
+        string   min;
+        string   max;
+        uint64_t count;
+        uint64_t repeat;
+        string   mask;
+        uint64_t seed;
+        string   start;
+        bool error;
+        vector<string> values;
+    } str;
 };
 
 // forward declaration
