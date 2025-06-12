@@ -165,9 +165,9 @@ vector<unsigned char>def_srcip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 vector<unsigned char>def_dstip6_pattern = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 vector<cea_field_mutation_spec> mtable = {
-{ {0, MAC_Preamble          , 64 , 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"55555555555555d"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, MAC_Dest_Addr         , 48 , 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"01:02:03:04:05:06", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, MAC_Src_Addr          , 48 , 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0a:0b:0c:0d:0e:0f", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Preamble          , 64 , 0, 0, "MAC_Preamble          ", 0                , def_pre_pattern    , Pattern_PRE }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"55555555555555d"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Dest_Addr         , 48 , 0, 0, "MAC_Dest_Addr         ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"01:02:03:04:05:06", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, MAC_Src_Addr          , 48 , 0, 0, "MAC_Src_Addr          ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0a:0b:0c:0d:0e:0f", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, MAC_Len               , 16 , 0, 0, "MAC_Len               ", 46               , {0x00}             , Integer     }, {Fixed_Value   , {46               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, MAC_Ether_Type        , 16 , 0, 0, "MAC_Ether_Type        ", 0x0800           , {0x00}             , Integer     }, {Fixed_Value   , {0x0800           , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, MAC_Fcs               , 32 , 0, 0, "MAC_Fcs               ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -186,8 +186,8 @@ vector<cea_field_mutation_spec> mtable = {
 { {0, IPv4_TTL              , 8  , 0, 0, "IPv4_TTL              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv4_Protocol         , 8  , 0, 0, "IPv4_Protocol         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv4_Hdr_Csum         , 16 , 0, 0, "IPv4_Hdr_Csum         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, IPv4_Src_Addr         , 32 , 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"192.168.0.1"      , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, IPv4_Dest_Addr        , 32 , 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"255.255.255.255"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Src_Addr         , 32 , 0, 0, "IPv4_Src_Addr         ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"192.168.0.1"      , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv4_Dest_Addr        , 32 , 0, 0, "IPv4_Dest_Addr        ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"255.255.255.255"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv4_Opts             , 0  , 0, 0, "IPv4_Opts             ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv4_Pad              , 0  , 0, 0, "IPv4_Pad              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {2, IPv6_Version          , 4  , 0, 0, "IPv6_Version          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -196,8 +196,8 @@ vector<cea_field_mutation_spec> mtable = {
 { {0, IPv6_Payload_Len      , 16 , 0, 0, "IPv6_Payload_Len      ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv6_Next_Hdr         , 8  , 0, 0, "IPv6_Next_Hdr         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, IPv6_Hop_Limit        , 8  , 0, 0, "IPv6_Hop_Limit        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, IPv6_Src_Addr         , 128, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, IPv6_Dest_Addr        , 128, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Src_Addr         , 128, 0, 0, "IPv6_Src_Addr         ", 0                , def_srcip6_pattern , Pattern_IPv6}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, IPv6_Dest_Addr        , 128, 0, 0, "IPv6_Dest_Addr        ", 0                , def_dstip6_pattern , Pattern_IPv6}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0.0.0.0.0"  , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, TCP_Src_Port          , 16 , 0, 0, "TCP_Src_Port          ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, TCP_Dest_Port         , 16 , 0, 0, "TCP_Dest_Port         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, TCP_Seq_Num           , 32 , 0, 0, "TCP_Seq_Num           ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -224,10 +224,10 @@ vector<cea_field_mutation_spec> mtable = {
 { {0, ARP_Hw_Len            , 8  , 0, 0, "ARP_Hw_Len            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, ARP_Proto_Len         , 8  , 0, 0, "ARP_Proto_Len         ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, ARP_Opcode            , 16 , 0, 0, "ARP_Opcode            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, ARP_Sender_Hw_Addr    , 48 , 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, ARP_Sender_Proto_addr , 32 , 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, ARP_Target_Hw_Addr    , 48 , 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, ARP_Target_Proto_Addr , 32 , 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Sender_Hw_Addr    , 48 , 0, 0, "ARP_Sender_Hw_Addr    ", 0                , def_srcmac_pattern , Pattern_MAC }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Sender_Proto_addr , 32 , 0, 0, "ARP_Sender_Proto_addr ", 0                , def_srcip4_pattern , Pattern_IPv4}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Target_Hw_Addr    , 48 , 0, 0, "ARP_Target_Hw_Addr    ", 0                , def_dstmac_pattern , Pattern_MAC }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00:00:00:00:00:00", 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, ARP_Target_Proto_Addr , 32 , 0, 0, "ARP_Target_Proto_Addr ", 0                , def_dstip4_pattern , Pattern_IPv4}, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"0.0.0.0"          , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {2, MPLS_Label            , 20 , 0, 0, "MPLS_Label            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {1, MPLS_Exp              , 3  , 0, 0, "MPLS_Exp              ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {1, MPLS_Stack            , 1  , 0, 0, "MPLS_Stack            ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -249,7 +249,7 @@ vector<cea_field_mutation_spec> mtable = {
 { {0, Pause_Quanta_6        , 16 , 0, 0, "Pause_Quanta_6        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, Pause_Quanta_7        , 16 , 0, 0, "Pause_Quanta_7        ", 0                , {0x00}             , Integer     }, {Fixed_Value   , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, FRAME_Len             , 32 , 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer     }, {Fixed_Value   , {64               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
-{ {0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, {Fixed_Pattern , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00"               , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00"               , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Traffic_Type   , 32 , 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer     }, {Fixed_Value   , {Continuous       , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Traffic_Control, 32 , 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer     }, {Fixed_Value   , {Stop_After_Stream, 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Ipg            , 32 , 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer     }, {Fixed_Value   , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -445,9 +445,7 @@ vector<string> cea_header_name = {
 
 vector<string> cea_gen_type_name = {
     "Fixed_Value",
-    "Fixed_Pattern",
     "Value_List",
-    "Pattern_List",
     "Increment",
     "Decrement",
     "Random",
@@ -463,7 +461,6 @@ vector<string> cea_gen_type_name = {
 
 vector<string> cea_field_type_name = {
     "Integer",
-    "Pattern",
     "Pattern_PRE",
     "Pattern_MAC",
     "Pattern_IPv4",
@@ -1148,7 +1145,7 @@ void cea_header::core::set(cea_field_id id, string value) {
         }
     }
     if (field != header_fields.end()) {
-        field->gspec.gen_type = Fixed_Pattern;
+        field->gspec.gen_type = Fixed_Value;
         field->gspec.str.value = value;
         field->mdata.is_mutable = true;
     } else {
@@ -1354,7 +1351,7 @@ void cea_stream::core::set(cea_field_id id, cea_field_genspec spec) {
         // who will do the property mutation?
         //      mutate function
         //      what about runtime of the properties
-        if (prop->gspec.gen_type != Fixed_Value || prop->gspec.gen_type != Fixed_Pattern) {
+        if (prop->gspec.gen_type != Fixed_Value) {
             prop->mdata.is_mutable = true;
         } else {
             prop->mdata.is_mutable = false;
@@ -1598,7 +1595,7 @@ void cea_stream::core::build_payload_arrays() {
             }
             break;
             }
-        case Fixed_Pattern: {
+        case Fixed_Value: {
             payload_pattern_size = plspec.str.value.size() / 2;
             payload_pattern = new unsigned char[payload_pattern_size];
             convert_string_to_uca(plspec.str.value, payload_pattern);
@@ -1695,7 +1692,7 @@ void cea_stream::core::build_runtime() {
                 }
             case Pattern_MAC: {
                 switch (m.gspec.gen_type) {
-                    case Fixed_Pattern: {
+                    case Fixed_Value: {
                         string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
@@ -1716,7 +1713,7 @@ void cea_stream::core::build_runtime() {
                         m.rt.value = tmp_mac;
                         break;
                         }
-                    case Pattern_List: {
+                    case Value_List: {
                         m.rt.patterns.resize(0);
                         for (auto val : m.gspec.str.values) {
                             val.erase(remove(val.begin(), val.end(), ':'), val.end());
@@ -1731,7 +1728,7 @@ void cea_stream::core::build_runtime() {
                 }
             case Pattern_IPv4: {
                 switch (m.gspec.gen_type) {
-                    case Fixed_Pattern: {
+                    case Fixed_Value: {
                         string tmp_mac_string = m.gspec.str.value;
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
@@ -1752,7 +1749,7 @@ void cea_stream::core::build_runtime() {
                         m.rt.value = tmp_mac;
                         break;
                         }
-                    case Pattern_List: {
+                    case Value_List: {
                         m.rt.patterns.resize(0);
                         for (auto val : m.gspec.str.values) {
                             val.erase(remove(val.begin(), val.end(), '.'), val.end());
@@ -1865,7 +1862,7 @@ void cea_stream::core::mutate() {
             case Pattern_MAC:
             case Pattern_IPv4: {
                 switch(m->gspec.gen_type) {
-                    case Fixed_Pattern: {
+                    case Fixed_Value: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
                         m->mdata.is_mutable = false;
                         mutable_fields.erase(m); // m++; // TODO iterator increment
@@ -1874,7 +1871,7 @@ void cea_stream::core::mutate() {
                                            // increment
                         break;
                         }
-                    case Pattern_List: {
+                    case Value_List: {
                         cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                         if (m->rt.idx == m->rt.patterns.size()-1) {
                             if (m->gspec.nmr.repeat) {

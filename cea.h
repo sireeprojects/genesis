@@ -160,9 +160,7 @@ enum cea_unit {
 
 enum cea_gen_type {
     Fixed_Value,
-    Fixed_Pattern,
     Value_List,
-    Pattern_List,
     Increment,
     Decrement,
     Random,
