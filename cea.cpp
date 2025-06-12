@@ -136,11 +136,11 @@ struct cea_field_spec {
     uint32_t merge;
     cea_field_id id;
     uint32_t len;
-    bool proto_list_specified;
-    bool auto_field;
+    bool is_protolist;
+    bool is_auto;
     string name;
-    uint64_t def_value;
-    vector <unsigned char> def_pattern;
+    uint64_t value;
+    vector <unsigned char> pattern;
     cea_field_type type;
 };
 
@@ -753,15 +753,15 @@ void pcap::write(unsigned char *buf, uint32_t len) {
 
 // find_if with lambda predicate
 cea_field_mutation_spec get_field(vector<cea_field_mutation_spec> tbl, cea_field_id id) {
-    auto lit = find_if(tbl.begin(), tbl.end(),
+    auto result = find_if(tbl.begin(), tbl.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
-    if (lit==tbl.end()) {
-        CEA_ERR_MSG("Internal: Unrecognized field identifier: " << id);
+    if (result == tbl.end()) {
+        CEA_ERR_MSG("FATAL ERROR: " << "Unrecognized field id (" << id <<") passed to " << __func__);
         abort();
     }
-    return (*lit);
+    return (*result);
 }
 
 // STREAMH
@@ -907,8 +907,11 @@ public:
     // dtor
     ~core();
 
-    // Quickly set a fixed value to a field
-    void set(uint64_t id);
+    // Quickly set a fixed integer value to a field
+    void set(uint64_t value);
+
+    // Quickly set a fixed string value to a field
+    void set(string value);
 
     // Define a complete spec for the generation of a field
     void set(cea_field_genspec spec);
@@ -1098,53 +1101,54 @@ cea_header::core::core(cea_header_type hdr_type) {
 cea_header::core::~core() = default;
 
 void cea_header::core::set(cea_field_id id, string value) {
+    // try to extract the field represented by id
     auto field = find_if(header_fields.begin(), header_fields.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
-    // abort if field type is not a pattern
-    if (field->defaults.type == Integer) {
-        CEA_ERR_MSG("The field "
-        << cea_trim(mtable[id].defaults.name) << " accepts only integer values");
-        abort();
-    }
-
-    // validate input
-    switch(field->defaults.type) {
-        case Pattern_MAC: {
-            if(!regex_match(value, regex_mac)) {
-                CEA_ERR_MSG("The value " << value << 
-                " does not match the acceptable pattern for " 
-                << cea_trim(mtable[id].defaults.name));
-                abort();
-            }
-            break;
-        } 
-        case Pattern_IPv4: {
-            if(!regex_match(value, regex_ipv4)) {
-                CEA_ERR_MSG("The value " << value << 
-                " does not match the acceptable pattern for " 
-                << cea_trim(mtable[id].defaults.name));
-                abort();
-            }
-            break;
-        } 
-        case Pattern_IPv6: {
-            if(!regex_match(value, regex_ipv6)) {
-                CEA_ERR_MSG("The value " << value << 
-                " does not match the acceptable pattern for " 
-                << cea_trim(mtable[id].defaults.name));
-                abort();
-            }
-            break;
-        } 
-        default:{
-            CEA_ERR_MSG("Input validation error for the field: "
-            << cea_trim(mtable[id].defaults.name));
+    if (field != header_fields.end()) { // if field id is valid
+        // abort if field type is not a pattern
+        if (field->defaults.type == Integer) {
+            CEA_ERR_MSG("The field "
+            << cea_trim(mtable[id].defaults.name) << " accepts only integer values");
             abort();
         }
-    }
-    if (field != header_fields.end()) {
+        // validate input
+        switch(field->defaults.type) {
+            case Pattern_MAC: {
+                if(!regex_match(value, regex_mac)) {
+                    CEA_ERR_MSG("The value " << value << 
+                    " does not match the acceptable pattern for " 
+                    << cea_trim(mtable[id].defaults.name));
+                    abort();
+                }
+                break;
+            } 
+            case Pattern_IPv4: {
+                if(!regex_match(value, regex_ipv4)) {
+                    CEA_ERR_MSG("The value " << value << 
+                    " does not match the acceptable pattern for " 
+                    << cea_trim(mtable[id].defaults.name));
+                    abort();
+                }
+                break;
+            } 
+            case Pattern_IPv6: {
+                if(!regex_match(value, regex_ipv6)) {
+                    CEA_ERR_MSG("The value " << value << 
+                    " does not match the acceptable pattern for " 
+                    << cea_trim(mtable[id].defaults.name));
+                    abort();
+                }
+                break;
+            } 
+            default:{
+                CEA_ERR_MSG("Input validation error for the field: "
+                << cea_trim(mtable[id].defaults.name));
+                abort();
+            }
+        }
+        // accept user value
         field->gspec.gen_type = Fixed_Value;
         field->gspec.str.value = value;
         field->mdata.is_mutable = true;
@@ -1157,17 +1161,19 @@ void cea_header::core::set(cea_field_id id, string value) {
 }
 
 void cea_header::core::set(cea_field_id id, uint64_t value) {
+    // try to extract the field represented by id
     auto field = find_if(header_fields.begin(), header_fields.end(),
         [&id](const cea_field_mutation_spec &item) {
         return (item.defaults.id == id); });
 
-    // abort if field type is not a integer
-    if (field->defaults.type != Integer) {
-        CEA_ERR_MSG("The field "
-        << cea_trim(mtable[id].defaults.name) << " accepts only string patterns");
-        abort();
-    }
-    if (field != header_fields.end()) {
+    if (field != header_fields.end()) { // if field id is valid
+        // abort if field type is not a integer
+        if (field->defaults.type != Integer) {
+            CEA_ERR_MSG("The field "
+            << cea_trim(mtable[id].defaults.name) << " accepts only string patterns");
+            abort();
+        }
+        // accept user value
         field->gspec.gen_type = Fixed_Value;
         field->gspec.nmr.value = value;
         field->mdata.is_mutable = true;
@@ -1185,7 +1191,8 @@ void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
         return (item.defaults.id == id); });
 
     if (field != header_fields.end()) {
-        field->gspec = spec;
+        // TODO Is it possible to validate spec before assigning to gspec?
+        field->gspec = spec; // TODO check if vectors also get copied
         field->mdata.is_mutable = true;
     } else {
         CEA_ERR_MSG("The field "
@@ -1196,6 +1203,9 @@ void cea_header::core::set(cea_field_id id, cea_field_genspec spec) {
 }
 
 void cea_header::core::build_header_fields() {
+    // TODO are the clear() ok in multi-reset/multi-iteration scenario?
+    // TODO what if user re-configures the header fields from test and starts
+    //      the test again
     field_ids_of_header.clear();
     header_fields.clear();
 
@@ -1225,7 +1235,7 @@ cea_field::~cea_field() = default;
 
 cea_field::core::core(cea_field_id id) {
     field_id = id;
-    field = get_field(mtable, field_id);
+    field = get_field(mtable, id);
 }
 
 cea_field::core::~core() = default;
@@ -1234,42 +1244,60 @@ void cea_field::set(uint64_t value) {
     impl->set(value);
 }
 
+void cea_field::set(string value) {
+    impl->set(value);
+}
+
 void cea_field::set(cea_field_genspec spec) {
     impl->set(spec);
 }
 
 void cea_field::core::set(uint64_t value) {
+    if (field.defaults.type != Integer) {
+        CEA_ERR_MSG("The field "
+        << cea_trim(field.defaults.name) << " accepts only string patterns");
+        abort();
+    }
     field.gspec.nmr.value = value;
     field.gspec.gen_type = Fixed_Value;
 }
 
+void cea_field::core::set(string value) {
+    if (field.defaults.type == Integer) {
+        CEA_ERR_MSG("The field "
+        << cea_trim(field.defaults.name) << " accepts only integer values");
+        abort();
+    }
+    field.gspec.str.value = value;
+    field.gspec.gen_type = Fixed_Value;
+}
+
 void cea_field::core::set(cea_field_genspec spec) {
-
-    field.gspec.gen_type     = spec.gen_type;
-
-    field.gspec.nmr.value      = spec.nmr.value;
-    field.gspec.nmr.step       = spec.nmr.step;
-    field.gspec.nmr.min        = spec.nmr.min;
-    field.gspec.nmr.max        = spec.nmr.max;
-    field.gspec.nmr.count      = spec.nmr.count;
-    field.gspec.nmr.repeat     = spec.nmr.repeat;
-    field.gspec.nmr.mask       = spec.nmr.mask;
-    field.gspec.nmr.seed       = spec.nmr.seed;
-    field.gspec.nmr.start      = spec.nmr.start;
-    field.gspec.nmr.error = spec.nmr.error;
-    field.gspec.nmr.values     = spec.nmr.values;
-
-    field.gspec.str.value      = spec.str.value;
-    field.gspec.str.step       = spec.str.step;
-    field.gspec.str.min        = spec.str.min;
-    field.gspec.str.max        = spec.str.max;
-    field.gspec.str.count      = spec.str.count;
-    field.gspec.str.repeat     = spec.str.repeat;
-    field.gspec.str.mask       = spec.str.mask;
-    field.gspec.str.seed       = spec.str.seed;
-    field.gspec.str.start      = spec.str.start;
-    field.gspec.str.error = spec.str.error;
-    field.gspec.str.values     = spec.str.values;
+    field.gspec = spec;
+    // TODO check why this invidual assignment was required
+    // field.gspec.gen_type   = spec.gen_type;
+    // field.gspec.nmr.value  = spec.nmr.value;
+    // field.gspec.nmr.step   = spec.nmr.step;
+    // field.gspec.nmr.min    = spec.nmr.min;
+    // field.gspec.nmr.max    = spec.nmr.max;
+    // field.gspec.nmr.count  = spec.nmr.count;
+    // field.gspec.nmr.repeat = spec.nmr.repeat;
+    // field.gspec.nmr.mask   = spec.nmr.mask;
+    // field.gspec.nmr.seed   = spec.nmr.seed;
+    // field.gspec.nmr.start  = spec.nmr.start;
+    // field.gspec.nmr.error  = spec.nmr.error;
+    // field.gspec.nmr.values = spec.nmr.values;
+    // field.gspec.str.value  = spec.str.value;
+    // field.gspec.str.step   = spec.str.step;
+    // field.gspec.str.min    = spec.str.min;
+    // field.gspec.str.max    = spec.str.max;
+    // field.gspec.str.count  = spec.str.count;
+    // field.gspec.str.repeat = spec.str.repeat;
+    // field.gspec.str.mask   = spec.str.mask;
+    // field.gspec.str.seed   = spec.str.seed;
+    // field.gspec.str.start  = spec.str.start;
+    // field.gspec.str.error  = spec.str.error;
+    // field.gspec.str.values = spec.str.values;
 }
 
 // STREAMI
@@ -1377,6 +1405,7 @@ void cea_stream::core::set(cea_stream_feature_id feature, bool mode) {
             break;
             }
         default:{
+            // TODO error out with feature id not available and abort
             }
     }
 }
@@ -1393,10 +1422,10 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     for (auto f : frame_fields) {
         if(f.defaults.merge==0) {
             if (f.defaults.type == Integer) {
-                cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.defaults.def_value, f.defaults.len/8);
+                cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.defaults.value, f.defaults.len/8);
             }
             else {
-                memcpy(buf+offset, f.defaults.def_pattern.data(), f.defaults.len/8);
+                memcpy(buf+offset, f.defaults.pattern.data(), f.defaults.len/8);
                 if (f.defaults.type == Pattern_IPv4) {
                 }
             }
@@ -1406,7 +1435,7 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
                 mrg_start = true;
                 mrg_cnt_total = f.defaults.merge + 1;
             }
-            mrg_data = (mrg_data << f.defaults.len) | f.defaults.def_value;
+            mrg_data = (mrg_data << f.defaults.len) | f.defaults.value;
             mrg_len = mrg_len + f.defaults.len;
             mrg_cntr++;
 
@@ -1436,6 +1465,7 @@ void cea_stream::core::bootstrap_stream() {
     build_principal_frame();
 }
 
+// TODO display warning (why?) when frame headers are empty
 void cea_stream::core::collate_frame_fields() {
     frame_fields.clear();
     for (auto f : frame_headers) {
@@ -1451,6 +1481,7 @@ void cea_stream::core::collate_frame_fields() {
 void cea_stream::core::update_ethertype_and_len() {
 }
 
+// TODO display warning (why?) when frame headers are empty
 void cea_stream::core::build_field_offsets() {
     vector<cea_field_mutation_spec>::iterator it;
     for(it=frame_fields.begin(); it<frame_fields.end(); it++) {
@@ -1459,6 +1490,7 @@ void cea_stream::core::build_field_offsets() {
     }
 }
 
+// TODO display info about the mutable fields
 void cea_stream::core::filter_mutable_fields() {
     mutable_fields.clear();
     for (auto f : frame_fields) {
@@ -1508,8 +1540,11 @@ void cea_stream::core::build_payload_arrays() {
     //-------------
     // size arrays
     //-------------
-    auto len_item = get_field(stream_properties, FRAME_Len);
-    cea_field_genspec spec = len_item.gspec;
+    // auto len_item = get_field(stream_properties, FRAME_Len);
+    // cea_field_genspec spec = len_item.gspec;
+
+    // TODO check if this works
+    cea_field_genspec spec = (get_field(stream_properties, FRAME_Len)).gspec;
 
     nof_sizes = 0;
 
@@ -1578,8 +1613,11 @@ void cea_stream::core::build_payload_arrays() {
     // payload array
     //---------------
     arof_payload_data = new unsigned char[CEA_MAX_FRAME_SIZE];
-    auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
-    cea_field_genspec plspec = pl_item.gspec;
+    // auto pl_item = get_field(stream_properties, PAYLOAD_Pattern);
+    // cea_field_genspec plspec = pl_item.gspec;
+
+    // TODO check if this works
+    cea_field_genspec plspec = (get_field(stream_properties, PAYLOAD_Pattern)).gspec;
 
     switch (plspec.gen_type) {
         case Random : {
@@ -1656,6 +1694,7 @@ void cea_stream::core::build_payload_arrays() {
         default:{
             CEA_MSG("Invalid Generation type Specified for Frame payload: " << cea_gen_type_name[plspec.gen_type]);
             exit(1);
+            // TODO exit or abort
             }
     }
 }
@@ -1686,7 +1725,9 @@ void cea_stream::core::build_runtime() {
                         // TODO
                         break;
                         }
-                    default: {}
+                    default: {
+                        // TODO add message
+                        }
                 } // switch
                 break;
                 }
@@ -1795,6 +1836,9 @@ void cea_stream::core::build_principal_frame() {
 // TODO nof frames in outer loop    
 // TODO what if there are no mutables
 // TODO enclose mutate with perf timers
+//
+// TODO check before erase of mutable fields after the mutation is complete
+//
 void cea_stream::core::mutate() {
     for (auto m=begin(mutable_fields); m!=end(mutable_fields); m++) {
         switch(m->defaults.type) {
@@ -1859,6 +1903,7 @@ void cea_stream::core::mutate() {
                 }
                 break;
                 } // Integer
+            // TODO add support for preamble and ipv6
             case Pattern_MAC:
             case Pattern_IPv4: {
                 switch(m->gspec.gen_type) {
