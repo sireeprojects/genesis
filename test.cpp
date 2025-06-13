@@ -8,6 +8,8 @@ int main() {
     tb->add_port(port);
 
     cea_stream *stream = new cea_stream("testStream");
+    stream->set(PCAP_Record_Tx_Enable, true);
+
     port->add_stream(stream);
 
     cea_header *mac =  new cea_header(MAC);
@@ -15,24 +17,22 @@ int main() {
     cea_header *tcp =  new cea_header(TCP);
 
     // assign a modifier to mac desination address
-    cea_field_genspec dest_spec;
-    dest_spec.gen_type = Random;
-    mac->set(MAC_Dest_Addr, dest_spec);
-    // mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
-    mac->set(MAC_Src_Addr, "11:22:33:44:55:aa");
-    ipv4->set(IPv4_Dest_Addr, "127.0.0.1");
-    // ipv4->set(IPv4_Protocol, 2); //-> fatal error why?
+    // cea_field_genspec dest_spec;
+    // dest_spec.gen_type = Random;
+    // mac->set(MAC_Dest_Addr, dest_spec);
+    mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
+    mac->set(MAC_Src_Addr, "11:22:33:44:55:66");
+    ipv4->set(IPv4_Dest_Addr, "127.255.255.255");
+    ipv4->set(IPv4_Src_Addr, "127.0.0.1");
+    ipv4->set(IPv4_Protocol, 2); // TODO did not mutate CRITICAL
 
     stream->set(FRAME_Len, 128);
-    // stream->set(STREAM_Start_Delay, 3);
 
     cea_field_genspec pl_spec;
     pl_spec.gen_type = Increment_Byte;
     // pl_spec.gen_type = Decrement_Byte;
-    //
     // pl_spec.gen_type = Increment_Word;
     // pl_spec.gen_type = Decrement_Word;
-    //
     // pl_spec.gen_type = Random;
     // pl_spec.gen_type = Fixed_Pattern;
     // pl_spec.pattern = "010203040506070809101112131415"; // TODO
@@ -45,6 +45,5 @@ int main() {
     // stream->add_header(tcp);
 
     tb->start();
-
     return 0;
 }
