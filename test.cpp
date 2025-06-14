@@ -15,16 +15,21 @@ int main() {
     cea_header *mac =  new cea_header(MAC);
     cea_header *ipv4 = new cea_header(IPv4);
     cea_header *tcp =  new cea_header(TCP);
+    
+    cea_field_genspec etype_spec;
+    etype_spec.gen_type = Fixed_Value;
+    etype_spec.nmr.value = 0xaabb;
+    mac->set(MAC_Ether_Type, etype_spec);
 
     // assign a modifier to mac desination address
     // cea_field_genspec dest_spec;
     // dest_spec.gen_type = Random;
     // mac->set(MAC_Dest_Addr, dest_spec);
-    mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
-    mac->set(MAC_Src_Addr, "11:22:33:44:55:66");
-    ipv4->set(IPv4_Dest_Addr, "127.255.255.255");
-    ipv4->set(IPv4_Src_Addr, "127.0.0.1");
-    ipv4->set(IPv4_Protocol, 2); // TODO did not mutate CRITICAL
+    // mac->set(MAC_Dest_Addr, "ff:ff:ff:ee:ee:ee");
+    // mac->set(MAC_Src_Addr, "11:22:33:44:55:66");
+    // ipv4->set(IPv4_Dest_Addr, "127.255.255.255");
+    // ipv4->set(IPv4_Src_Addr, "127.0.0.1");
+    // ipv4->set(IPv4_Protocol, 2);
 
     stream->set(FRAME_Len, 128);
 

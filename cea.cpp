@@ -1865,11 +1865,10 @@ void cea_stream::core::mutate() {
 
     auto burst_spec = (get_field(stream_properties, STREAM_Burst_Size)).gspec;
     uint32_t num_txn = burst_spec.nmr.value;
-
-    cealog << "Number of frames: " << num_txn << endl;
+    // cealog << "Number of frames: " << num_txn << endl;
 
     for (uint64_t nof_frames=0; nof_frames<num_txn; nof_frames++) {
-        cealog << "Mutables: " << mutable_fields.size() << endl;
+        // cealog << "Mutables: " << mutable_fields.size() << endl;
         for (auto m=begin(mutable_fields); m!=end(mutable_fields);) {
             switch(m->defaults.type) {
                 case Integer: {
@@ -1881,12 +1880,12 @@ void cea_stream::core::mutate() {
                             break;
                             }
                         case Value_List: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
                             if (m->rt.idx == m->rt.patterns.size()-1) {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.idx = 0;
                                 } else {
-                                    mutable_fields.erase(m); // m++;
+                                    mutable_fields.erase(m);
                                 }
                             } else {
                                 m->rt.idx++;
@@ -1894,32 +1893,32 @@ void cea_stream::core::mutate() {
                             break;
                             }
                         case Increment: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
                             if (m->rt.count == m->gspec.nmr.count) {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
                                 } else {
-                                    mutable_fields.erase(m); // m++;
+                                    mutable_fields.erase(m);
                                 }
                             } else {
-                                // TODO check overflow
+                                // TODO check overflow ?
                                 m->rt.value += m->gspec.nmr.step;
                                 m->rt.count++;
                             }
                             break;
                             }
                         case Decrement: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
                             if (m->rt.count == m->gspec.nmr.count) {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
                                 } else {
-                                    mutable_fields.erase(m); // m++;
+                                    mutable_fields.erase(m);
                                 }
                             } else {
-                                // TODO check underflow
+                                // TODO check underflow ?
                                 m->rt.value -= m->gspec.nmr.step;
                                 m->rt.count++;
                             }

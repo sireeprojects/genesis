@@ -17,6 +17,10 @@ sim:makelib
 	@g++ test.cpp -O3 -o sim.x -lcea -L${PWD} ${LIBPARAMS}
 	@./sim.x
 
+test:
+	@g++ test.cpp -O3 -o sim.x -lcea -L${PWD} ${LIBPARAMS}
+	@./sim.x
+
 makelib:clean
 	@g++ cea.cpp -O3 -s -fPIC -shared -o libcea.so -Wall -Wno-unused -lpthread ${LIBPARAMS}
 
