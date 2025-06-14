@@ -121,6 +121,7 @@ enum cea_field_id {
     FRAME_Len,
     PAYLOAD_Pattern,
     STREAM_Traffic_Type,
+    STREAM_Burst_Size,
     STREAM_Traffic_Control,
     STREAM_Ipg,
     STREAM_Isg,

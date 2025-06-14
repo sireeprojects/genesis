@@ -251,6 +251,7 @@ vector<cea_field_mutation_spec> mtable = {
 { {0, FRAME_Len             , 32 , 0, 0, "FRAME_Len             ", 64               , {0x00}             , Integer     }, {Fixed_Value , {64               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, PAYLOAD_Pattern       , 0  , 0, 0, "PAYLOAD_Pattern       ", 0                , {0x00}             , Integer     }, {Fixed_Value , {0                , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {"00"               , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Traffic_Type   , 32 , 0, 0, "STREAM_Traffic_Type   ", Continuous       , {0x00}             , Integer     }, {Fixed_Value , {Continuous       , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
+{ {0, STREAM_Burst_Size     , 32 , 0, 0, "STREAM_Burst_Size     ", 10               , {0x00}             , Integer     }, {Fixed_Value , {10               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Traffic_Control, 32 , 0, 0, "STREAM_Traffic_Control", Stop_After_Stream, {0x00}             , Integer     }, {Fixed_Value , {Stop_After_Stream, 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Ipg            , 32 , 0, 0, "STREAM_Ipg            ", 12               , {0x00}             , Integer     }, {Fixed_Value , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
 { {0, STREAM_Isg            , 32 , 0, 0, "STREAM_Ifg            ", 12               , {0x00}             , Integer     }, {Fixed_Value , {12               , 0, 0, 0, 0, 0, 0, 0, 0, 0, {}}, {""                 , 0, "", "", 0, 0, "", 0, "", 0, {}}}, {0, {}, 0, 0}, {0, 0}},
@@ -286,6 +287,7 @@ map <cea_header_type, vector <cea_field_id>> header_to_field_map = {
              FRAME_Len,
              PAYLOAD_Pattern,
              STREAM_Traffic_Type,
+             STREAM_Burst_Size,
              STREAM_Traffic_Control,
              STREAM_Ipg,
              STREAM_Isg,
@@ -1860,7 +1862,14 @@ void cea_stream::core::build_principal_frame() {
 // TODO what if there are no mutables
 // TODO check before erase of mutable fields after the mutation is complete
 void cea_stream::core::mutate() {
-    for (uint64_t nof_frames=0; nof_frames<1; nof_frames++) {
+
+    auto burst_spec = (get_field(stream_properties, STREAM_Burst_Size)).gspec;
+    uint32_t num_txn = burst_spec.nmr.value;
+
+    cealog << "Number of frames: " << num_txn << endl;
+
+    for (uint64_t nof_frames=0; nof_frames<num_txn; nof_frames++) {
+        cealog << "Mutables: " << mutable_fields.size() << endl;
         for (auto m=begin(mutable_fields); m!=end(mutable_fields);) {
             switch(m->defaults.type) {
                 case Integer: {
