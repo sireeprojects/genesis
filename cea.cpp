@@ -1879,73 +1879,59 @@ void cea_stream::core::build_principal_frame() {
 
 
 // TODO enclose mutate with perf timers
-//
-// TODO nof frames in outer loop    
 // TODO what if there are no mutables
-// TODO check before erase of mutable fields after the mutation is complete
 void cea_stream::core::mutate() {
-
     auto burst_spec = (get_field(stream_properties, STREAM_Burst_Size)).gspec;
     uint32_t num_txn = burst_spec.nmr.value;
-    // cealog << "Number of frames: " << num_txn << endl;
 
     vector<cea_field_mutation_spec> mut = mutable_fields;
 
     for (uint64_t nof_frames=0; nof_frames<num_txn; nof_frames++) {
-        // cealog << "Mutables: " << mutable_fields.size() << endl;
-        
         for (auto m=begin(mut); m!=end(mut); m++) {
             switch(m->defaults.type) {
                 case Integer: {
                     switch(m->gspec.gen_type) {
-                        case Fixed_Value: {
+                        case Fixed_Value: { // TESTED
                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->gspec.nmr.value, m->defaults.len/8);
                             m->mdata.is_mutable = false;
                             break;
                             }
-                        case Value_List: {
-                            cealog << "Inside: " << m->rt.idx << "  :" << hex << m->rt.patterns[m->rt.idx] << endl;
+                        case Value_List: { // TESTED
                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
-                            if (m->rt.idx == m->rt.patterns.size()-1) {
+                            if (m->rt.idx < m->rt.patterns.size()-1) {
+                                m->rt.idx++;
+                            } else {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.idx = 0;
                                 } else {
-                                    // mutable_fields.erase(m);
+                                    m->mdata.is_mutable = false;
                                 }
-                            } else {
-                                m->rt.idx++;
                             }
                             break;
                             }
-                        case Increment: {
+                        case Increment: { // TESTED
                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
-                            if (m->rt.count == m->gspec.nmr.count) {
-                                if (m->gspec.nmr.repeat) {
-                                    m->rt.count = 0;
-                                    m->rt.value = m->gspec.nmr.start;
-                                } else {
-                                    // mutable_fields.erase(m);
-                                }
-                            } else {
-                                // TODO check overflow ?
+                            if (m->rt.count < m->gspec.nmr.count-1) {
                                 m->rt.value += m->gspec.nmr.step;
                                 m->rt.count++;
-                            }
-                            break;
-                            }
-                        case Decrement: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
-                            if (m->rt.count == m->gspec.nmr.count) {
+                            } else {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
-                                } else {
-                                    // mutable_fields.erase(m);
                                 }
-                            } else {
-                                // TODO check underflow ?
+                            }
+                            break;
+                            }
+                        case Decrement: { // TESTED
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                            if (m->rt.count < m->gspec.nmr.count-1) {
                                 m->rt.value -= m->gspec.nmr.step;
                                 m->rt.count++;
+                            } else {
+                                if (m->gspec.nmr.repeat) {
+                                    m->rt.count = 0;
+                                    m->rt.value = m->gspec.nmr.start;
+                                }
                             }
                             break;
                             }
@@ -1962,13 +1948,8 @@ void cea_stream::core::mutate() {
                 case Pattern_IPv4: {
                     switch(m->gspec.gen_type) {
                         case Fixed_Value: {
-                            cealog << "Mutating: " << cea_trim(m->defaults.name) << string(30, '-') << endl;
-                            cealog << "Offset:    " << dec << m->mdata.offset/8 << endl;
-                            cealog << "value:     " << hex << m->rt.value << endl;
-                            cealog << "field len: " << dec << m->defaults.len/8 << endl;
                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
                             m->mdata.is_mutable = false;
-                            // mutable_fields.erase(m); // m++;
                             break;
                             }
                         case Value_List: {
@@ -1977,7 +1958,7 @@ void cea_stream::core::mutate() {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.idx = 0;
                                 } else {
-                                    // mutable_fields.erase(m); // m++;
+                                    m->mdata.is_mutable = false;
                                 }
                             } else {
                                 m->rt.idx++;
@@ -1991,10 +1972,9 @@ void cea_stream::core::mutate() {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
                                 } else {
-                                    // mutable_fields.erase(m); // m++;
+                                    m->mdata.is_mutable = false;
                                 }
                             } else {
-                                // TODO check overflow
                                 m->rt.value += m->gspec.nmr.step;
                                 m->rt.count++;
                             }
@@ -2007,10 +1987,9 @@ void cea_stream::core::mutate() {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
                                 } else {
-                                    // mutable_fields.erase(m); // m++;
+                                    m->mdata.is_mutable = false;
                                 }
                             } else {
-                                // TODO check underflow
                                 m->rt.value -= m->gspec.nmr.step;
                                 m->rt.count++;
                             }
@@ -2031,19 +2010,17 @@ void cea_stream::core::mutate() {
         cea_field_genspec lenspec = len_item.gspec;
 
         uint32_t ploffset = hdr_len/8;
-        print_uchar_array_1n(pf, ploffset+32, "Mutated Frame");
+        print_uchar_array_1n(pf, ploffset+14, "Mutated Frame");
+        // print_uchar_array_1n(pf, ploffset+32, "Mutated Frame");
         // print_uchar_array(pf, ploffset+lenspec.nmr.value, "Mutated Frame");
         // TODO copy frame to transmit buffer    
         txpcap->write(pf, ploffset+lenspec.nmr.value); 
 
-        // cealog << mut.size() << endl;
-
-        for (auto m=begin(mut); m!=end(mut);m++) {
-            // remove mutation done fields
-            // cealog << "removing" << endl;;
+        for (auto m=begin(mut); m!=end(mut);) {
             if (m->mdata.is_mutable == false) {
-                mutable_fields.erase(m);
-                // m++;
+                mut.erase(m);
+            } else {
+                m++;
             }
         }
     }

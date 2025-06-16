@@ -17,20 +17,25 @@ int main() {
     cea_header *tcp =  new cea_header(TCP);
     
     cea_field_genspec etype_spec;
-    //    // Fixed
-    //    etype_spec.gen_type = Fixed_Value;
-    //    etype_spec.nmr.value = 0xaabb;
-    //    // Value list
-    //    etype_spec.gen_type = Value_List;
-    //    etype_spec.nmr.values = {0x10,0x20,0x30,0x40,0x50};
-    //    mac->set(MAC_Ether_Type, etype_spec);
 
-    // Increment
+    // Fixed
+    // etype_spec.gen_type = Fixed_Value;
+    // etype_spec.nmr.value = 0xaabb;
+    // mac->set(MAC_Ether_Type, etype_spec);
+
+    // Value list
+    // etype_spec.gen_type = Value_List;
+    // etype_spec.nmr.values = {0x10,0x20,0x30,0x40,0x50};
+    // etype_spec.nmr.repeat = true;
+    // mac->set(MAC_Ether_Type, etype_spec);
+
+    // Increment/Decrement
     etype_spec.gen_type = Increment;
-    etype_spec.nmr.start = 0;
-    etype_spec.nmr.count = 3;
+    // etype_spec.gen_type = Decrement;
+    etype_spec.nmr.start = 0x0000;
+    etype_spec.nmr.count = 20;
     etype_spec.nmr.step = 1;
-    etype_spec.nmr.repeat = true;
+    // etype_spec.nmr.repeat = true;
     mac->set(MAC_Ether_Type, etype_spec);
 
     // assign a modifier to mac desination address
@@ -44,6 +49,7 @@ int main() {
     // ipv4->set(IPv4_Protocol, 2);
 
     stream->set(FRAME_Len, 128);
+    stream->set(STREAM_Burst_Size, 20);
 
     cea_field_genspec pl_spec;
     pl_spec.gen_type = Increment_Byte;
