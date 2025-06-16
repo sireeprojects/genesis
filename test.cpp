@@ -17,8 +17,20 @@ int main() {
     cea_header *tcp =  new cea_header(TCP);
     
     cea_field_genspec etype_spec;
-    etype_spec.gen_type = Fixed_Value;
-    etype_spec.nmr.value = 0xaabb;
+    //    // Fixed
+    //    etype_spec.gen_type = Fixed_Value;
+    //    etype_spec.nmr.value = 0xaabb;
+    //    // Value list
+    //    etype_spec.gen_type = Value_List;
+    //    etype_spec.nmr.values = {0x10,0x20,0x30,0x40,0x50};
+    //    mac->set(MAC_Ether_Type, etype_spec);
+
+    // Increment
+    etype_spec.gen_type = Increment;
+    etype_spec.nmr.start = 0;
+    etype_spec.nmr.count = 3;
+    etype_spec.nmr.step = 1;
+    etype_spec.nmr.repeat = true;
     mac->set(MAC_Ether_Type, etype_spec);
 
     // assign a modifier to mac desination address
