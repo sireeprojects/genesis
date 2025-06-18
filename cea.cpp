@@ -836,6 +836,8 @@ public:
     // build size and payload pattern arrays
     void build_payload_arrays();
 
+    void prepare_genspec();
+
     void build_runtime();
 
     void build_principal_frame();
@@ -1450,11 +1452,11 @@ uint32_t cea_stream::core::splice_frame_fields(unsigned char *buf) {
     for (auto f : frame_fields) {
         if(f.defaults.merge==0) {
             if (f.defaults.type == Integer) {
-                cealog << "INT Splicing: " << f.defaults.name  << "   Offset: " << offset << endl;
+                // cealog << "INT Splicing: " << f.defaults.name  << "   Offset: " << offset << endl;
                 cea_memcpy_ntw_byte_order(buf+offset, (char*)&f.defaults.value, f.defaults.len/8);
             }
             else {
-                cealog << "PAT Splicing: " << f.defaults.name  << "   Offset: " << offset << endl;
+                // cealog << "PAT Splicing: " << f.defaults.name  << "   Offset: " << offset << endl;
                 memcpy(buf+offset, f.defaults.pattern.data(), f.defaults.len/8);
                 if (f.defaults.type == Pattern_IPv4) {
                     // TODO handle patterns
@@ -1490,6 +1492,7 @@ void cea_stream::core::bootstrap_stream() {
     update_ethertype_and_len();
     build_field_offsets();
     filter_mutable_fields();
+    prepare_genspec();
     build_runtime();
     print_stream();
     build_payload_arrays();
@@ -1527,7 +1530,7 @@ void cea_stream::core::build_field_offsets() {
         hdr_len = hdr_len + it->defaults.len;
     }
     for(it=frame_fields.begin(); it<frame_fields.end(); it++) {
-        cealog << "Field: " << it->defaults.name << "  Offset: " << dec << it->mdata.offset << endl;
+        // cealog << "Field: " << it->defaults.name << "  Offset: " << dec << it->mdata.offset << endl;
         // it->mdata.offset = prev(it)->defaults.len + prev(it)->mdata.offset;
         // hdr_len = hdr_len + it->defaults.len;
     }
@@ -1742,115 +1745,266 @@ void cea_stream::core::build_payload_arrays() {
     }
 }
 
-//TODO preamble and ipv6 support is pending
-void cea_stream::core::build_runtime() {
+void cea_stream::core::prepare_genspec() {
     for (auto &m : mutable_fields) {
         switch (m.defaults.type) {
-            case Integer: {
-                switch (m.gspec.gen_type) {
-                    case Fixed_Value: {
-                        m.rt.value = m.gspec.nmr.value;
-                        break;
-                        }
-                    case Increment: {
-                        m.rt.value = m.gspec.nmr.start;
-                        break;
-                        }
-                    case Decrement: {
-                        m.rt.value = m.gspec.nmr.start;
-                        break;
-                        }
-                    case Value_List: {
-                        m.rt.patterns = m.gspec.nmr.values;
-                        break;
-                        }
-                    case Random: {
-                        // TODO
-                        break;
-                        }
-                    default: {
-                        // TODO add message
-                        }
-                } // switch
-                break;
-                }
             case Pattern_MAC: {
-                switch (m.gspec.gen_type) {
-                    case Fixed_Value: {
-                        string tmp_mac_string = m.gspec.str.value;
+                m.gspec.nmr.step = m.gspec.str.step;
+                m.gspec.nmr.count = m.gspec.str.count;
+                m.gspec.nmr.repeat = m.gspec.str.repeat;
+                m.gspec.nmr.seed = m.gspec.str.seed;
+                m.gspec.nmr.error = m.gspec.str.error;
+
+                uint64_t tmp_mac;
+                string tmp_mac_string;
+
+                if (m.gspec.str.value.size() > 0) {
+                    tmp_mac_string = m.gspec.str.value;
+                    tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                    tmp_mac = stoul(tmp_mac_string, 0, 16);
+                    m.gspec.nmr.value = tmp_mac;
+                }
+
+                if (m.gspec.str.min.size() > 0) {
+                    tmp_mac_string = m.gspec.str.min;
+                    tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                    tmp_mac = stol(tmp_mac_string, 0, 16);
+                    m.gspec.nmr.min = tmp_mac;
+                }
+
+                if (m.gspec.str.max.size() > 0) {
+                    tmp_mac_string = m.gspec.str.max;
+                    tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                    tmp_mac = stol(tmp_mac_string, 0, 16);
+                    m.gspec.nmr.max = tmp_mac;
+                }
+
+                if (m.gspec.str.mask.size() > 0) {
+                    tmp_mac_string = m.gspec.str.mask;
+                    tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                    tmp_mac = stol(tmp_mac_string, 0, 16);
+                    m.gspec.nmr.mask = tmp_mac;
+                }
+
+                if (m.gspec.str.start.size() > 0) {
+                    tmp_mac_string = m.gspec.str.start;
+                    tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+                    tmp_mac = stol(tmp_mac_string, 0, 16);
+                    m.gspec.nmr.start = tmp_mac;
+                }
+
+                for (uint32_t idx=0; idx<m.gspec.str.values.size(); idx++) {
+                    if (m.gspec.str.values[idx].size() > 0) {
+                        tmp_mac_string = m.gspec.str.values[idx];
                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
-                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Increment: {
-                        string tmp_mac_string = m.gspec.str.value;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
-                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Decrement: {
-                        string tmp_mac_string = m.gspec.str.value;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
-                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Value_List: {
-                        m.rt.patterns.resize(0);
-                        for (auto val : m.gspec.str.values) {
-                            val.erase(remove(val.begin(), val.end(), ':'), val.end());
-                            uint64_t tmp_mac = stol(val, 0, 16);
-                            m.rt.patterns.push_back(tmp_mac);
-                        }
-                        break;
-                        }
-                    default: {}
-                } // switch
+                        tmp_mac = stol(tmp_mac_string, 0, 16);
+                        m.gspec.nmr.values.push_back(tmp_mac);
+                    }
+                }
                 break;
                 }
             case Pattern_IPv4: {
-                switch (m.gspec.gen_type) {
-                    case Fixed_Value: {
-                        string tmp_mac_string = m.gspec.str.value;
-                        // tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
-                        uint64_t tmp_mac = convert_string_ipv4_internal(tmp_mac_string);
-                        // uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Increment: {
-                        string tmp_mac_string = m.gspec.str.value;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
-                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Decrement: {
-                        string tmp_mac_string = m.gspec.str.value;
-                        tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
-                        uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
-                        m.rt.value = tmp_mac;
-                        break;
-                        }
-                    case Value_List: {
-                        m.rt.patterns.resize(0);
-                        for (auto val : m.gspec.str.values) {
-                            val.erase(remove(val.begin(), val.end(), '.'), val.end());
-                            uint64_t tmp_mac = stol(val, 0, 16);
-                            m.rt.patterns.push_back(tmp_mac);
-                        }
-                        break;
-                        }
-                    default: {
-                        // ignore
-                        }
-                } // switch
+                m.gspec.nmr.step = m.gspec.str.step;
+                m.gspec.nmr.count = m.gspec.str.count;
+                m.gspec.nmr.repeat = m.gspec.str.repeat;
+                m.gspec.nmr.seed = m.gspec.str.seed;
+                m.gspec.nmr.error = m.gspec.str.error;
+
+                string tmp_ipv4_string;
+                uint64_t tmp_ipv4;
+
+                if (m.gspec.str.value.size() > 0) {
+                    tmp_ipv4_string = m.gspec.str.value;
+                    tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                    m.gspec.nmr.value = tmp_ipv4;
+                }
+
+                if (m.gspec.str.min.size() > 0) {
+                    tmp_ipv4_string = m.gspec.str.min;
+                    tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                    m.gspec.nmr.min = tmp_ipv4;
+                }
+
+                if (m.gspec.str.max.size() > 0) {
+                    tmp_ipv4_string = m.gspec.str.max;
+                    tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                    m.gspec.nmr.max = tmp_ipv4;
+                }
+
+                if (m.gspec.str.mask.size() > 0) {
+                    tmp_ipv4_string = m.gspec.str.mask;
+                    tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                    m.gspec.nmr.mask = tmp_ipv4;
+                }
+
+                if (m.gspec.str.start.size() > 0) {
+                    tmp_ipv4_string = m.gspec.str.start;
+                    tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                    m.gspec.nmr.start = tmp_ipv4;
+                }
+
+                for (uint32_t idx=0; idx<m.gspec.str.values.size(); idx++) {
+                    if (m.gspec.str.values[idx].size() > 0) {
+                        tmp_ipv4_string = m.gspec.str.values[idx];
+                        tmp_ipv4 = convert_string_ipv4_internal(tmp_ipv4_string);
+                        m.gspec.nmr.values.push_back(tmp_ipv4);
+                    }
+                }
+                break;
+                }
+            case Pattern_PRE: {
+                // Only Fixed size is allowed
+                m.gspec.nmr.seed = m.gspec.str.seed;
+                m.gspec.nmr.error = m.gspec.str.error;
+                if (m.gspec.str.value.size() > 0) {
+                    m.gspec.nmr.value = stoul(m.gspec.str.value, 0, 16);
+                }
                 break;
                 }
             default: {}
         }
+    }
+}
+
+// void cea_stream::core::build_runtime() {
+//     for (auto &m : mutable_fields) {
+//         switch (m.defaults.type) {
+//             case Integer: {
+//                 switch (m.gspec.gen_type) {
+//                     case Fixed_Value: {
+//                         m.rt.value = m.gspec.nmr.value;
+//                         break;
+//                         }
+//                     case Increment: {
+//                         m.rt.value = m.gspec.nmr.start;
+//                         break;
+//                         }
+//                     case Decrement: {
+//                         m.rt.value = m.gspec.nmr.start;
+//                         break;
+//                         }
+//                     case Value_List: {
+//                         m.rt.patterns = m.gspec.nmr.values;
+//                         break;
+//                         }
+//                     case Random: {
+//                         // TODO
+//                         break;
+//                         }
+//                     default: {
+//                         // TODO add message
+//                         }
+//                 } // switch
+//                 break;
+//                 }
+//             case Pattern_MAC: {
+//                 switch (m.gspec.gen_type) {
+//                     case Fixed_Value: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Increment: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Decrement: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), ':'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Value_List: {
+//                         m.rt.patterns.resize(0);
+//                         for (auto val : m.gspec.str.values) {
+//                             val.erase(remove(val.begin(), val.end(), ':'), val.end());
+//                             uint64_t tmp_mac = stol(val, 0, 16);
+//                             m.rt.patterns.push_back(tmp_mac);
+//                         }
+//                         break;
+//                         }
+//                     default: {}
+//                 } // switch
+//                 break;
+//                 }
+//             case Pattern_IPv4: {
+//                 switch (m.gspec.gen_type) {
+//                     case Fixed_Value: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         // tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = convert_string_ipv4_internal(tmp_mac_string);
+//                         // uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Increment: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Decrement: {
+//                         string tmp_mac_string = m.gspec.str.value;
+//                         tmp_mac_string.erase(remove(tmp_mac_string.begin(), tmp_mac_string.end(), '.'), tmp_mac_string.end());
+//                         uint64_t tmp_mac = stol(tmp_mac_string, 0, 16);
+//                         m.rt.value = tmp_mac;
+//                         break;
+//                         }
+//                     case Value_List: {
+//                         m.rt.patterns.resize(0);
+//                         for (auto val : m.gspec.str.values) {
+//                             val.erase(remove(val.begin(), val.end(), '.'), val.end());
+//                             uint64_t tmp_mac = stol(val, 0, 16);
+//                             m.rt.patterns.push_back(tmp_mac);
+//                         }
+//                         break;
+//                         }
+//                     default: {
+//                         // ignore
+//                         }
+//                 } // switch
+//                 break;
+//                 }
+//             default: {}
+//         }
+//     } // for
+// }
+
+//TODO preamble and ipv6 support is pending
+void cea_stream::core::build_runtime() {
+    for (auto &m : mutable_fields) {
+        switch (m.gspec.gen_type) {
+            case Fixed_Value: {
+                m.rt.value = m.gspec.nmr.value;
+                break;
+                }
+            case Increment: {
+                m.rt.value = m.gspec.nmr.start;
+                break;
+                }
+            case Decrement: {
+                m.rt.value = m.gspec.nmr.start;
+                break;
+                }
+            case Value_List: {
+                m.rt.patterns = m.gspec.nmr.values;
+                break;
+                }
+            case Random: {
+                // TODO
+                break;
+                }
+            default: {
+                // TODO add message
+                }
+        } // switch
     } // for
 }
 
@@ -1953,45 +2107,41 @@ void cea_stream::core::mutate() {
                             break;
                             }
                         case Value_List: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
-                            if (m->rt.idx == m->rt.patterns.size()-1) {
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
+                            if (m->rt.idx < m->rt.patterns.size()-1) {
+                                m->rt.idx++;
+                            } else {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.idx = 0;
                                 } else {
                                     m->mdata.is_mutable = false;
                                 }
-                            } else {
-                                m->rt.idx++;
                             }
                             break;
                             }
                         case Increment: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                            if (m->rt.count == m->gspec.nmr.count) {
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                            if (m->rt.count < m->gspec.nmr.count-1) {
+                                m->rt.value += m->gspec.nmr.step;
+                                m->rt.count++;
+                            } else {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
-                                } else {
-                                    m->mdata.is_mutable = false;
                                 }
-                            } else {
-                                m->rt.value += m->gspec.nmr.step;
-                                m->rt.count++;
                             }
                             break;
                             }
                         case Decrement: {
-                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-                            if (m->rt.count == m->gspec.nmr.count) {
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                            if (m->rt.count < m->gspec.nmr.count-1) {
+                                m->rt.value -= m->gspec.nmr.step;
+                                m->rt.count++;
+                            } else {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
-                                } else {
-                                    m->mdata.is_mutable = false;
                                 }
-                            } else {
-                                m->rt.value -= m->gspec.nmr.step;
-                                m->rt.count++;
                             }
                             break;
                             }
@@ -2233,7 +2383,7 @@ void cea_stream::core::convert_mac_to_uca(string address, unsigned char *op) {
     while(getline(check1, intermediate, ':')) {
         tokens.push_back(intermediate);
     }
-    for (uint32_t i=0; i<6; i++) { // TODO remove hardcoded value
+    for (uint32_t i=0; i<6; i++) {
         op[i]= convert_char_to_int(tokens[i]);
     }
 }
