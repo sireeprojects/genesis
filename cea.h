@@ -165,6 +165,7 @@ enum cea_gen_type {
     Increment,
     Decrement,
     Random,
+    Weighted_Distribution,
     Increment_Byte,
     Decrement_Byte,
     Increment_Word,
@@ -189,6 +190,8 @@ struct cea_field_genspec {
         uint64_t start;
         bool error;
         vector<uint64_t> values;
+        vector<pair<uint64_t, float>> distr;
+        string distr_name;
     } nmr;
     struct {
         string   value;
