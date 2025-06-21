@@ -31,7 +31,6 @@ int main() {
     mac_spec.str.repeat = true;
     mac->set(MAC_Dest_Addr, mac_spec);
 
-
     // Increment/Decrement
     // mac_spec.gen_type = Increment;
     // // mac_spec.gen_type = Decrement;
@@ -40,7 +39,6 @@ int main() {
     // mac_spec.str.step = 1;
     // mac_spec.str.repeat = true;
     // mac->set(MAC_Dest_Addr, mac_spec);
-    
 
     // cea_field_genspec len_spec;
     // len_spec.gen_type = Weighted_Distribution;

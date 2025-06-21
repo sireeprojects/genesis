@@ -21,6 +21,7 @@ Pending features
 - add support to define a stream in a single API
 - add support for avip style test case
 - predefined traffic mix for frame lengths
+- test 'seed'. Pass user seed to cea_testbench in test.cpp, pass to all stream
 
 Notes to improve performance
 -----------------------------
