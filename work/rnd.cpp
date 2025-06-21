@@ -36,10 +36,9 @@ int main() {
     }
 
     // UNIFORM Distribution
-    uniform_int_distribution<int>::param_type d2(2, 10);
-    rnd.udist.param(d2);
+    uniform_int_distribution<int>::param_type ud(2, 10);
+    rnd.udist.param(ud);
     cout << rnd.udist << endl;
-
     cout << string(30, '-') << endl;
     for (uint32_t i=0; i<10; i++)
         cout << rnd.udist(rnd.engine) << endl;
