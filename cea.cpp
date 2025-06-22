@@ -2077,7 +2077,13 @@ void cea_stream::core::mutate() {
                             break;
                             }
                         case Random: {
-                            // TODO after research
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                            m->rt.value = m->rnd.ud(m->rnd.engine);
+                            break;
+                            }
+                        case Random_In_Range: {
+                            cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                            m->rt.value = m->rnd.ud(m->rnd.engine);
                             break;
                             }
                         default: {}
