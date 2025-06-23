@@ -2046,6 +2046,8 @@ void cea_stream::core::mutate() {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
+                                } else {
+                                    m->mdata.is_mutable = false;
                                 }
                             }
                             break;
@@ -2059,6 +2061,8 @@ void cea_stream::core::mutate() {
                                 if (m->gspec.nmr.repeat) {
                                     m->rt.count = 0;
                                     m->rt.value = m->gspec.nmr.start;
+                                } else {
+                                    m->mdata.is_mutable = false;
                                 }
                             }
                             break;
@@ -2155,13 +2159,13 @@ void cea_stream::core::mutate() {
         memcpy(test_buffer, pf, 64);
         // memcpy(test_buffer, pf, ploffset+lenspec.nmr.value);
 
-        // for (auto m=begin(mut); m!=end(mut);) {
-        //     if (m->mdata.is_mutable == false) {
-        //         mut.erase(m);
-        //     } else {
-        //         m++;
-        //     }
-        // }
+        for (auto m=begin(mut); m!=end(mut);) {
+            if (m->mdata.is_mutable == false) {
+                mut.erase(m);
+            } else {
+                m++;
+            }
+        }
     } // num_txn
     cealog << "Time taken: " << stopwatch.elapsed_in_string() << endl;
 
