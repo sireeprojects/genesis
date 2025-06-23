@@ -53,6 +53,8 @@ using namespace chrono;
 
 #define CEA_PACKED __attribute__((packed))
 
+#define CEA_WEIGHTED_DISTR_RECYCLE_LIMIT 1000000
+
 // maximum supported frame size from MAC dest addr to MAC crc (16KB)
 #define CEA_MAX_FRAME_SIZE 16384
 
@@ -1648,7 +1650,7 @@ void cea_stream::core::build_payload_arrays() {
             // } else {
             //     rnd.engine.seed(rd());
             // }
-            uint32_t szidx=0;
+            // uint32_t szidx=0;
             for (uint32_t szidx=spec.nmr.min; szidx>spec.nmr.max; szidx++) {
                 vof_frame_sizes[szidx] = rnd.ud(rnd.engine);
                 vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
@@ -1657,6 +1659,16 @@ void cea_stream::core::build_payload_arrays() {
             break;
             }
         case Weighted_Distribution: { // TODO
+            nof_sizes = CEA_WEIGHTED_DISTR_RECYCLE_LIMIT;
+            vof_frame_sizes.resize(nof_sizes);
+            vof_computed_frame_sizes.resize(nof_sizes);
+            vof_payload_sizes.resize(nof_sizes);
+            // uint32_t szidx=0;
+            for (uint32_t szidx=0; szidx>nof_sizes; szidx++) {
+                vof_frame_sizes[szidx] = rnd.wd(rnd.engine);
+                vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
+                vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
+            }
             break;
             }
         default:{

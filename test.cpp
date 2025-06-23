@@ -52,8 +52,8 @@ int main() {
 
     stream->set(FRAME_Len, 64);
     // stream->set(STREAM_Burst_Size, 1000000); // 1M
-    stream->set(STREAM_Burst_Size, 10000000); // 10M
-    // stream->set(STREAM_Burst_Size, 100000000); // 100M
+    // stream->set(STREAM_Burst_Size, 10000000); // 10M
+    stream->set(STREAM_Burst_Size, 100000000); // 100M
     // stream->set(STREAM_Burst_Size, 1000000000); // 1B
 
     cea_field_genspec payload_spec;
