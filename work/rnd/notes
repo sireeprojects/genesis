@@ -24,10 +24,7 @@ int main()
     return 0;
 }
 
-
--------------------------------------------------
-
-
+-------------------------------------------------------------------------------
 #include <iostream>
 #include <random>
 
@@ -63,3 +60,93 @@ int main(void) {
 
 // uniform_int_distribution<unsigned long long>::param_type newParams(10, 50);
 // distribute.param(newParams);
+
+-------------------------------------------------------------------------------
+#include <iostream>
+#include <vector>
+using namespace std;
+
+void func( vector<pair<int, string>> y ) {
+    vector<pair<int, string>> x = y;
+    for (const auto& item : x) {
+        cout << item.first << ": " << item.second << endl;
+    }
+}
+
+int main() {
+    
+    // Creating a pair of int and string
+    pair<int, string> p1 = {1, "Geeks"};
+
+    vector<pair<int, string>> v1;
+//        = {
+//          {1, "One"},
+//          {2, "two"},
+//          {3, "three"},
+//          };
+
+    v1 = {
+                                   {1, "One"},
+                                   {2, "two"},
+                                   {3, "three"},
+                                   };
+
+    v1 = {};
+    func(v1);
+    func({{1, "One"},{2, "two"},{3, "three"}});
+    return 0;
+}
+
+-------------------------------------------------------------------------------
+#include <iostream>
+#include <random>
+#include <cstdint>
+#include <string>
+ 
+using namespace std;
+
+struct cea_field_random {
+    uint64_t seed;
+    mt19937 engine;
+    uniform_int_distribution<> udist;
+    discrete_distribution<> wdist;
+};
+
+int main() {
+    random_device rd;
+    cea_field_random rnd;
+    
+    rnd.seed = rd();
+    // rnd.seed = 12345;
+
+    cout << string(30, '-') << endl;
+    cout << "Seed: " << rnd.seed << endl;
+
+    rnd.engine.seed(rnd.seed);
+
+    // WEIGHTED Distribution
+    vector<double>weights = {1.1, 3.3, 0.5, 2.2};
+    discrete_distribution<>::param_type wd(weights.begin(), weights.end());
+    rnd.wdist.param(wd);
+    cout << string(30, '-') << endl;
+    uint32_t idx;
+    for (uint32_t i=0; i<10; i++) {
+        idx = rnd.wdist(rnd.engine);
+        cout << weights[idx] << endl;
+    }
+
+    // UNIFORM Distribution
+    uniform_int_distribution<int>::param_type d2(2, 10);
+    rnd.udist.param(d2);
+    cout << rnd.udist << endl;
+
+    cout << string(30, '-') << endl;
+    for (uint32_t i=0; i<10; i++)
+        cout << rnd.udist(rnd.engine) << endl;
+
+    return 0;
+}
+
+-------------------------------------------------------------------------------
+
+
