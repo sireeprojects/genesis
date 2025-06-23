@@ -1,0 +1,65 @@
+#include <iostream>
+#include <cstdint>
+using namespace std;
+
+bool isNumberInRange(uint32_t number, uint32_t lowerBound, uint32_t upperBound) {
+    return (number >= lowerBound && number <= upperBound);
+}
+
+int main()
+{
+    uint32_t size = 33;
+
+    if (isNumberInRange(size, 1, 8)) {
+        cout << "Unsigned char" << endl;
+    } else if (isNumberInRange(size, 9, 16)) {
+        cout << "Unsigned short" << endl;
+    } else if (isNumberInRange(size, 17, 32)) {
+        cout << "Unsigned int" << endl;
+    } else if (isNumberInRange(size, 33, 64)) {
+        cout << "Unsigned long " << endl;
+    }
+
+    cout << "Hello World!" << endl;
+    return 0;
+}
+
+
+-------------------------------------------------
+
+
+#include <iostream>
+#include <random>
+
+using namespace std;
+
+int main(void) {
+    random_device rd;
+    mt19937_64 engine(rd());
+    uniform_int_distribution<unsigned long long> distribute(0, numeric_limits<unsigned long long>::max());
+
+
+    uniform_int_distribution<unsigned long long>::param_type newParams(0, numeric_limits<unsigned char>::max());
+    distribute.param(newParams);
+
+    // for(int repetition=0; repetition<100000000; repetition++) {
+    //     distribute(engine);
+    // }
+
+    // for(int repetition=0; repetition<10; repetition++) {
+    //     cout << distribute(engine) << endl;
+    // }
+
+    cout << "Numeric Limits: long long: " << numeric_limits<long long>::max() << endl;
+    cout << "Numeric Limits: unsigned long long: " << numeric_limits<unsigned long long>::max() << endl;
+    cout << "Numeric Limits: short: " << numeric_limits<short>::max() << endl;
+    cout << "Numeric Limits: unsigned short: " << numeric_limits<unsigned short>::max() << endl;
+
+    cout << "Numeric Limits: int: " << numeric_limits<int>::max() << endl;
+    cout << "Numeric Limits: unsigned int: " << numeric_limits<unsigned int>::max() << endl;
+
+    return 0;
+}
+
+// uniform_int_distribution<unsigned long long>::param_type newParams(10, 50);
+// distribute.param(newParams);
