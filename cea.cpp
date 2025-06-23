@@ -155,6 +155,8 @@ struct cea_field_random {
     mt19937 engine;
     uniform_int_distribution<uint64_t> ud;
     discrete_distribution<uint64_t> wd;
+    vector<uint64_t> wd_lenghts;
+    vector<double> wd_weights;
 };
  
 struct cea_field_mutation_spec {
@@ -937,6 +939,7 @@ public:
 
     // principal frame
     unsigned char *pf;
+    unsigned char test_buffer[512];
 
     // random
     random_device rd;
@@ -1488,7 +1491,7 @@ void cea_stream::core::bootstrap_stream() {
     filter_mutable_fields();
     prepare_genspec();
     build_runtime();
-    print_stream();
+    // print_stream();
     build_payload_arrays();
     build_principal_frame();
 }
@@ -1585,6 +1588,7 @@ void cea_stream::core::build_payload_arrays() {
 
     // TODO check if this works
     cea_field_genspec spec = (get_field(stream_properties, FRAME_Len)).gspec;
+    cea_field_random rnd = (get_field(stream_properties, FRAME_Len)).rnd;
 
     nof_sizes = 0;
 
@@ -1632,12 +1636,21 @@ void cea_stream::core::build_payload_arrays() {
             vof_frame_sizes.resize(nof_sizes);
             vof_computed_frame_sizes.resize(nof_sizes);
             vof_payload_sizes.resize(nof_sizes);
-            random_device rd;
-            mt19937 gen(rd());
-            uniform_int_distribution<> distr(spec.nmr.max, spec.nmr.min);
+            // random_device rd;
+            // mt19937 gen(rd());
+            // uniform_int_distribution<> distr(spec.nmr.max, spec.nmr.min);
+            // vof_frame_sizes[szidx] = distr(rnd.engine);
+            //
+            // TODO check if the seed selection shud be done here on is it 
+            // already taken care in build_runtime
+            // if (spec.nmr.seed != 0) {
+            //     rnd.engine.seed(spec.nmr.seed);
+            // } else {
+            //     rnd.engine.seed(rd());
+            // }
             uint32_t szidx=0;
             for (uint32_t szidx=spec.nmr.min; szidx>spec.nmr.max; szidx++) {
-                vof_frame_sizes[szidx] = distr(gen);
+                vof_frame_sizes[szidx] = rnd.ud(rnd.engine);
                 vof_computed_frame_sizes[szidx] = vof_frame_sizes[szidx] + meta_size;
                 vof_payload_sizes[szidx] = vof_frame_sizes[szidx] - (hdr_size - meta_size) - crc_len;
             }
@@ -1926,6 +1939,24 @@ void cea_stream::core::build_runtime() {
                 m.rt.value = m.rnd.ud(m.rnd.engine);
                 break;
                 }
+            case Weighted_Distribution: { // TODO only for frame size mutation
+                if (m.gspec.nmr.seed != 0) {
+                    m.rnd.engine.seed(m.gspec.nmr.seed);
+                } else {
+                    m.rnd.engine.seed(rd());
+                }
+                for (auto item : m.gspec.nmr.distr) {
+                    m.rnd.wd_lenghts.push_back(item.first);
+                }
+                for (auto item : m.gspec.nmr.distr) {
+                    m.rnd.wd_weights.push_back(item.second);
+                }
+                discrete_distribution<uint64_t>::param_type
+                    param(m.rnd.wd_weights.begin(), m.rnd.wd_weights.end());
+                m.rnd.wd.param(param);
+                // generate lenght values in build_payload_arrays
+                break;
+                }
             default: {
                 // TODO add message
                 }
@@ -1964,6 +1995,11 @@ void cea_stream::core::mutate() {
     uint32_t num_txn = burst_spec.nmr.value;
 
     vector<cea_field_mutation_spec> mut = mutable_fields;
+
+    auto len_item = get_field(stream_properties, FRAME_Len);
+
+    cea_timer stopwatch;
+    stopwatch.start();
 
     for (uint64_t nof_frames=0; nof_frames<num_txn; nof_frames++) {
         for (auto m=begin(mut); m!=end(mut); m++) {
@@ -2093,179 +2129,31 @@ void cea_stream::core::mutate() {
                 default: {}
             }
         } // mutation loop
-        auto len_item = get_field(stream_properties, FRAME_Len);
+        // auto len_item = get_field(stream_properties, FRAME_Len);
         cea_field_genspec lenspec = len_item.gspec;
 
         uint32_t ploffset = hdr_len/8;
-        print_uchar_array_1n(pf, ploffset+14, "Mutated Frame");
+        // print_uchar_array_1n(pf, ploffset+14, "Mutated Frame");
+        // txpcap->write(pf, ploffset+lenspec.nmr.value); 
         // print_uchar_array_1n(pf, ploffset+32, "Mutated Frame");
         // print_uchar_array(pf, ploffset+lenspec.nmr.value, "Mutated Frame");
-        // TODO copy frame to transmit buffer    
-        txpcap->write(pf, ploffset+lenspec.nmr.value); 
+       
+        // TODO copy frame to transmit buffer
+        memcpy(test_buffer, pf, 64);
+        // memcpy(test_buffer, pf, ploffset+lenspec.nmr.value);
 
-        for (auto m=begin(mut); m!=end(mut);) {
-            if (m->mdata.is_mutable == false) {
-                mut.erase(m);
-            } else {
-                m++;
-            }
-        }
-    }
+        // for (auto m=begin(mut); m!=end(mut);) {
+        //     if (m->mdata.is_mutable == false) {
+        //         mut.erase(m);
+        //     } else {
+        //         m++;
+        //     }
+        // }
+    } // num_txn
+    cealog << "Time taken: " << stopwatch.elapsed_in_string() << endl;
+
 }
 
-// void cea_stream::core::mutate() {
-// 
-//     auto burst_spec = (get_field(stream_properties, STREAM_Burst_Size)).gspec;
-//     uint32_t num_txn = burst_spec.nmr.value;
-//     // cealog << "Number of frames: " << num_txn << endl;
-// 
-//     for (uint64_t nof_frames=0; nof_frames<num_txn; nof_frames++) {
-//         // cealog << "Mutables: " << mutable_fields.size() << endl;
-//         for (auto m=begin(mutable_fields); m!=end(mutable_fields);) {
-//             switch(m->defaults.type) {
-//                 case Integer: {
-//                     switch(m->gspec.gen_type) {
-//                         case Fixed_Value: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->gspec.nmr.value, m->defaults.len/8);
-//                             m->mdata.is_mutable = false;
-//                             mutable_fields.erase(m);
-//                             break;
-//                             }
-//                         case Value_List: {
-//                             cealog << "Inside: " << m->rt.idx << "  :" << hex << m->rt.patterns[m->rt.idx] << endl;
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
-//                             if (m->rt.idx == m->rt.patterns.size()-1) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.idx = 0;
-//                                 } else {
-//                                     mutable_fields.erase(m);
-//                                 }
-//                             } else {
-//                                 m->rt.idx++;
-//                             }
-//                             break;
-//                             }
-//                         case Increment: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
-//                             if (m->rt.count == m->gspec.nmr.count) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.count = 0;
-//                                     m->rt.value = m->gspec.nmr.start;
-//                                 } else {
-//                                     mutable_fields.erase(m);
-//                                 }
-//                             } else {
-//                                 // TODO check overflow ?
-//                                 m->rt.value += m->gspec.nmr.step;
-//                                 m->rt.count++;
-//                             }
-//                             break;
-//                             }
-//                         case Decrement: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
-//                             if (m->rt.count == m->gspec.nmr.count) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.count = 0;
-//                                     m->rt.value = m->gspec.nmr.start;
-//                                 } else {
-//                                     mutable_fields.erase(m);
-//                                 }
-//                             } else {
-//                                 // TODO check underflow ?
-//                                 m->rt.value -= m->gspec.nmr.step;
-//                                 m->rt.count++;
-//                             }
-//                             break;
-//                             }
-//                         case Random: {
-//                             // TODO after research
-//                             break;
-//                             }
-//                         default: {}
-//                     }
-//                     break;
-//                     } // Integer
-//                 // TODO add support for preamble and ipv6
-//                 case Pattern_MAC:
-//                 case Pattern_IPv4: {
-//                     switch(m->gspec.gen_type) {
-//                         case Fixed_Value: {
-//                             cealog << "Mutating: " << cea_trim(m->defaults.name) << string(30, '-') << endl;
-//                             cealog << "Offset:    " << dec << m->mdata.offset/8 << endl;
-//                             cealog << "value:     " << hex << m->rt.value << endl;
-//                             cealog << "field len: " << dec << m->defaults.len/8 << endl;
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
-//                             m->mdata.is_mutable = false;
-//                             mutable_fields.erase(m); // m++;
-//                             break;
-//                             }
-//                         case Value_List: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
-//                             if (m->rt.idx == m->rt.patterns.size()-1) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.idx = 0;
-//                                 } else {
-//                                     mutable_fields.erase(m); // m++;
-//                                 }
-//                             } else {
-//                                 m->rt.idx++;
-//                             }
-//                             break;
-//                             }
-//                         case Increment: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-//                             if (m->rt.count == m->gspec.nmr.count) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.count = 0;
-//                                     m->rt.value = m->gspec.nmr.start;
-//                                 } else {
-//                                     mutable_fields.erase(m); // m++;
-//                                 }
-//                             } else {
-//                                 // TODO check overflow
-//                                 m->rt.value += m->gspec.nmr.step;
-//                                 m->rt.count++;
-//                             }
-//                             break;
-//                             }
-//                         case Decrement: {
-//                             cea_memcpy_ntw_byte_order(pf+m->mdata.offset, (char*)&m->rt.value, m->defaults.len/8);
-//                             if (m->rt.count == m->gspec.nmr.count) {
-//                                 if (m->gspec.nmr.repeat) {
-//                                     m->rt.count = 0;
-//                                     m->rt.value = m->gspec.nmr.start;
-//                                 } else {
-//                                     mutable_fields.erase(m); // m++;
-//                                 }
-//                             } else {
-//                                 // TODO check underflow
-//                                 m->rt.value -= m->gspec.nmr.step;
-//                                 m->rt.count++;
-//                             }
-//                             break;
-//                             }
-//                         case Random: {
-//                             // TODO after research
-//                             break;
-//                             }
-//                         default: {}
-//                     }
-//                     break;
-//                     }
-//                 default: {}
-//             }
-//         }
-//     auto len_item = get_field(stream_properties, FRAME_Len);
-//     cea_field_genspec lenspec = len_item.gspec;
-// 
-//     uint32_t ploffset = hdr_len/8;
-//         print_uchar_array_1n(pf, ploffset+32, "Mutated Frame");
-//         // print_uchar_array(pf, ploffset+lenspec.nmr.value, "Mutated Frame");
-//     // TODO copy frame to transmit buffer    
-//     txpcap->write(pf, ploffset+lenspec.nmr.value); 
-//     }
-// }
- 
 void cea_stream::core::init_stream_properties() {
     stream_properties.clear();
     vector<cea_field_id> prop_ids =  header_to_field_map[PROPERTIES];

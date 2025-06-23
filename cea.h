@@ -191,7 +191,7 @@ struct cea_field_genspec {
         uint64_t start;
         bool error;
         vector<uint64_t> values;
-        vector<pair<uint64_t, float>> distr;
+        vector<pair<uint64_t, double>> distr;
         string distr_name;
     } nmr;
     struct {
