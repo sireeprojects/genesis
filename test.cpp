@@ -16,30 +16,30 @@ int main() {
     cea_header *ipv4 = new cea_header(IPv4);
     cea_header *tcp =  new cea_header(TCP);
     
-//    cea_field_genspec mac_spec;
-//
-//    // mac_spec.gen_type = Fixed_Value;
-//    // mac_spec.str.value = "aa:bb:cc:dd:ee:ff";
-//    // mac->set(MAC_Dest_Addr, mac_spec);
-//    
-//    mac_spec.gen_type = Value_List;
-//    mac_spec.str.values = {
-//        "11:22:33:44:55:66",
-//        "aa:bb:cc:dd:ee:ff",
-//        "23:34:45:56:67:78"
-//    };
-//    mac_spec.str.repeat = true;
-//    mac->set(MAC_Dest_Addr, mac_spec);
-//    mac->set(MAC_Src_Addr, mac_spec);
+    cea_field_genspec mac_spec;
 
-    // Increment/Decrement
-    // mac_spec.gen_type = Increment;
-    // // mac_spec.gen_type = Decrement;
-    // mac_spec.str.start = "11:22:33:44:55:00";
-    // mac_spec.str.count = 20;
-    // mac_spec.str.step = 1;
+    // mac_spec.gen_type = Fixed_Value;
+    // mac_spec.str.value = "aa:bb:cc:dd:ee:ff";
+    // mac->set(MAC_Dest_Addr, mac_spec);
+    
+    // mac_spec.gen_type = Value_List;
+    // mac_spec.str.values = {
+    //     "11:22:33:44:55:66",
+    //     "aa:bb:cc:dd:ee:ff",
+    //     "23:34:45:56:67:78"
+    // };
     // mac_spec.str.repeat = true;
     // mac->set(MAC_Dest_Addr, mac_spec);
+    // mac->set(MAC_Src_Addr, mac_spec);
+
+    // Increment/Decrement
+    mac_spec.gen_type = Increment;
+    // mac_spec.gen_type = Decrement;
+    mac_spec.str.start = "11:22:33:44:55:00";
+    mac_spec.str.count = 20;
+    mac_spec.str.step = 1;
+    mac_spec.str.repeat = true;
+    mac->set(MAC_Dest_Addr, mac_spec);
 
     // cea_field_genspec len_spec;
     // len_spec.gen_type = Weighted_Distribution;
@@ -52,8 +52,9 @@ int main() {
 
     stream->set(FRAME_Len, 64);
     // stream->set(STREAM_Burst_Size, 1000000); // 1M
-    // stream->set(STREAM_Burst_Size, 10000000); // 10M
-    stream->set(STREAM_Burst_Size, 100000000); // 100M
+    stream->set(STREAM_Burst_Size, 10000000); // 10M
+    // stream->set(STREAM_Burst_Size, 100000000); // 100M
+    // stream->set(STREAM_Burst_Size, 1000000000); // 1B
 
     cea_field_genspec payload_spec;
     payload_spec.gen_type = Increment_Byte;

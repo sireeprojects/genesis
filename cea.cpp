@@ -1997,6 +1997,7 @@ void cea_stream::core::mutate() {
     vector<cea_field_mutation_spec> mut = mutable_fields;
 
     auto len_item = get_field(stream_properties, FRAME_Len);
+    cea_field_genspec lenspec = len_item.gspec;
 
     cea_timer stopwatch;
     stopwatch.start();
@@ -2130,7 +2131,7 @@ void cea_stream::core::mutate() {
             }
         } // mutation loop
         // auto len_item = get_field(stream_properties, FRAME_Len);
-        cea_field_genspec lenspec = len_item.gspec;
+        // cea_field_genspec lenspec = len_item.gspec;
 
         uint32_t ploffset = hdr_len/8;
         // print_uchar_array_1n(pf, ploffset+14, "Mutated Frame");
