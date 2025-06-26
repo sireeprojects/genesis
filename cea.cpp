@@ -2609,6 +2609,33 @@ void cea_udf::core::set(cea_field_genspec spec) {
 
 gsf_is_buf(DataQ)
 
+#define PACKED __attribute__((__packed__))
+
+struct PACKED tx_metadata {
+    uint64_t tx_disable_crc;
+    uint32_t len : 32;
+    uint8_t is_dummy;
+    char pad_centre[2];
+    uint8_t start_stream_ch : 8;
+    uint32_t ipg : 32;
+    char pad_last[44];
+};
+
+struct PACKED rx_metadata {
+    uint32_t len : 32;
+    uint32_t pad_centre : 32;
+    uint32_t ipg : 32;
+    uint64_t rx_tstamp : 64;
+    char pad_init[64 - 21];
+    uint8_t id;
+};
+
+// Element type identifier
+uint8_t FRAME_ELEM = 0;
+uint8_t META_ELEM = 1;
+uint8_t FRAG_ELEM = 2;
+uint8_t EOS_ELEM  = 4;
+
 int cea_controller::do_mutate(int n, cea_port *p) {
     return p->impl->current_stream->impl->mutate_enqueue(n);
 }
