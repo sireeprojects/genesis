@@ -169,6 +169,11 @@ struct cea_field_mutation_spec {
     cea_field_random rnd;
 };
 
+typedef enum  {
+    NEW_FRAME,
+    TRANSMIT
+} mutation_states;
+
 vector<unsigned char>def_pre_pattern    = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x5d};
 vector<unsigned char>def_dstmac_pattern = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 vector<unsigned char>def_srcmac_pattern = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -811,6 +816,22 @@ cea_field_mutation_spec get_field(vector<cea_field_mutation_spec> tbl, cea_field
     return (*result);
 }
 
+// CONTROLLER
+//------------------
+// Controller class
+//------------------
+class cea_controller {
+public:
+    cea_controller(){}
+    cea_port* gports[256];
+    uint32_t port_cntr = 0;
+    int do_mutate(int n, cea_port *p);
+};
+
+// Global controller instance for the current workstation
+cea_controller controller;
+
+
 // STREAMH
 //-------------
 // Stream Core
@@ -945,6 +966,22 @@ public:
 
     // random
     random_device rd;
+
+    // GSFM //
+    void prepare_for_mutation();
+    void mutate_next_frame();
+    int mutate_enqueue(uint32_t space);
+    vector<cea_field_mutation_spec> mut;
+    cea_field_genspec lenspec;
+
+    uint32_t num_txns;
+    uint32_t num_txns_transmitted;
+    uint32_t offset;
+    uint32_t num_elems;
+    uint32_t num_elems_transmitted;
+    bool txdone;
+    bool stream_done;
+    mutation_states state;
 };
 
 // FIELDH
@@ -2345,7 +2382,8 @@ void cea_port::core::worker() {
     for (it = streamq.begin(); it != streamq.end(); it++) {
         current_stream = *it;
         current_stream->impl->bootstrap_stream();
-        current_stream->impl->mutate();
+        current_stream->impl->prepare_for_mutation();
+        // current_stream->impl->mutate();
     }
 }
 
@@ -2427,6 +2465,8 @@ void cea_testbench::exec_cmd(cea_stream *stream, cea_port *port) {
 
 void cea_testbench::core::add_port(cea_port *port) {
     ports.push_back(port);
+    controller.gports[controller.port_cntr] = port;
+    controller.port_cntr++;
 }
 
 void cea_testbench::core::add_stream(cea_stream *stream, cea_port *port) {
@@ -2553,6 +2593,220 @@ void cea_udf::set(cea_field_genspec spec) {
 
 void cea_udf::core::set(cea_field_genspec spec) {
     field.gspec = spec;
+}
+
+// GSFM //
+#define gsf_is_buf_int(hd)                                      \
+    extern "C" int  hd ## _fill   (int,int);                    \
+    extern "C" void hd ## _put    (unsigned *); \
+    extern "C" void hd ## _zyackf (int);                        \
+    extern "C" void hd ##  _zyprefetch(int n, int proxy_id){    \
+        int eos;                                                \
+        eos = hd ## _fill(n, proxy_id);                         \
+        hd ## _zyackf(eos);                                     \
+    }
+#define gsf_is_buf(hd) gsf_is_buf_int(hd)
+
+gsf_is_buf(DataQ)
+
+int cea_controller::do_mutate(int n, cea_port *p) {
+    return p->impl->current_stream->impl->mutate_enqueue(n);
+}
+
+int DataQ_fill(int n, int proxy_id) {
+    return controller.do_mutate(n, controller.gports[proxy_id]);
+}
+
+void cea_stream::core::prepare_for_mutation() {
+    num_txns = ((get_field(stream_properties, STREAM_Burst_Size)).gspec).nmr.value;
+    mut = mutable_fields;
+    lenspec = (get_field(stream_properties, FRAME_Len)).gspec;
+
+    num_txns_transmitted = 0;
+    offset = 0;
+    txdone = true;
+    num_elems = 0;
+    num_elems_transmitted = 0;
+    stream_done = false;
+    state = NEW_FRAME;
+}
+
+int cea_stream::core::mutate_enqueue(uint32_t space) {
+    if (stream_done) return 1;
+
+    uint32_t space_avail = space;
+
+    while (space_avail > 0) {
+        cealog << "State: " << ((state==0) ? "NEW FRAME" : "TRANSMIT")  << endl;
+        switch (state) {
+            case NEW_FRAME:
+                if (txdone) {
+                    mutate_next_frame();
+                    cealog << "Frame Size: " << lenspec.nmr.value << endl;
+                    num_elems = ceil( (double)(lenspec.nmr.value)/64); // IFWIDTH=64B
+                    cealog << "Num Elems: " << num_elems << endl;
+                    state = TRANSMIT;
+                    num_elems_transmitted = 0;
+                    offset = 0;
+                    txdone = false;
+                } else {
+                    state = TRANSMIT;
+                }
+                break;
+
+            case TRANSMIT:
+                DataQ_put((unsigned int*)pf+offset); // TODO Check
+                num_elems_transmitted++;
+                offset += 64;
+                space_avail--;
+                if (num_elems_transmitted == num_elems) {
+                    cealog << "Transmitting: " << num_elems_transmitted << endl;
+                    txdone = true;
+                    num_txns_transmitted++;
+                    if (num_txns_transmitted == num_txns) {
+                        stream_done = true;
+                        return 1;
+                    }
+                    state = NEW_FRAME;
+                }
+                break;
+            } //switch
+    }
+    return 0;
+}
+
+void cea_stream::core::mutate_next_frame() {
+    for (auto m=begin(mut); m!=end(mut); m++) {
+        switch(m->defaults.type) {
+            case Integer: {
+                switch(m->gspec.gen_type) {
+                    case Fixed_Value: { // TESTED
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->gspec.nmr.value, m->defaults.len/8);
+                        m->mdata.is_mutable = false;
+                        break;
+                        }
+                    case Value_List: { // TESTED
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
+                        if (m->rt.idx < m->rt.patterns.size()-1) {
+                            m->rt.idx++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.idx = 0;
+                            } else {
+                                m->mdata.is_mutable = false;
+                            }
+                        }
+                        break;
+                        }
+                    case Increment: { // TESTED
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count < m->gspec.nmr.count-1) {
+                            m->rt.value += m->gspec.nmr.step;
+                            m->rt.count++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->gspec.nmr.start;
+                            } else {
+                                m->mdata.is_mutable = false;
+                            }
+                        }
+                        break;
+                        }
+                    case Decrement: { // TESTED
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count < m->gspec.nmr.count-1) {
+                            m->rt.value -= m->gspec.nmr.step;
+                            m->rt.count++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->gspec.nmr.start;
+                            } else {
+                                m->mdata.is_mutable = false;
+                            }
+                        }
+                        break;
+                        }
+                    case Random: { // TODO testing
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        m->rt.value = m->rnd.ud(m->rnd.engine);
+                        break;
+                        }
+                    case Random_In_Range: { // TODO testing
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        m->rt.value = m->rnd.ud(m->rnd.engine);
+                        break;
+                        }
+                    default: {}
+                }
+                break;
+                } // Integer
+            // TODO add support for preamble and ipv6
+            case Pattern_MAC:
+            case Pattern_IPv4: {
+                switch(m->gspec.gen_type) {
+                    case Fixed_Value: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        m->mdata.is_mutable = false;
+                        break;
+                        }
+                    case Value_List: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.patterns[m->rt.idx], m->defaults.len/8);
+                        if (m->rt.idx < m->rt.patterns.size()-1) {
+                            m->rt.idx++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.idx = 0;
+                            } else {
+                                m->mdata.is_mutable = false;
+                            }
+                        }
+                        break;
+                        }
+                    case Increment: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count < m->gspec.nmr.count-1) {
+                            m->rt.value += m->gspec.nmr.step;
+                            m->rt.count++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->gspec.nmr.start;
+                            }
+                        }
+                        break;
+                        }
+                    case Decrement: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        if (m->rt.count < m->gspec.nmr.count-1) {
+                            m->rt.value -= m->gspec.nmr.step;
+                            m->rt.count++;
+                        } else {
+                            if (m->gspec.nmr.repeat) {
+                                m->rt.count = 0;
+                                m->rt.value = m->gspec.nmr.start;
+                            }
+                        }
+                        break;
+                        }
+                    case Random: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        m->rt.value = m->rnd.ud(m->rnd.engine);
+                        break;
+                        }
+                    case Random_In_Range: {
+                        cea_memcpy_ntw_byte_order(pf+m->mdata.offset/8, (char*)&m->rt.value, m->defaults.len/8);
+                        m->rt.value = m->rnd.ud(m->rnd.engine);
+                        break;
+                        }
+                    default: {}
+                }
+                break;
+                }
+            default: {}
+        }
+    } // mutation loop
 }
 
 } // namespace

@@ -235,6 +235,7 @@ public:
 private:
     class core;
     unique_ptr<core> impl;
+    friend class cea_controller;
 };
 
 //------------------------------------------------------------------------------
@@ -252,6 +253,7 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_testbench;
+    friend class cea_controller;
 };
 
 //------------------------------------------------------------------------------
@@ -277,6 +279,7 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_port;
+    friend class cea_controller;
 };
 
 //------------------------------------------------------------------------------
@@ -294,6 +297,7 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
+    friend class cea_controller;
 };
 
 //------------------------------------------------------------------------------
@@ -311,6 +315,7 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
+    friend class cea_controller;
 };
 
 //------------------------------------------------------------------------------
@@ -326,6 +331,7 @@ private:
     class core;
     unique_ptr<core> impl;
     friend class cea_stream;
+    friend class cea_controller;
 };
 
 } // namespace 
