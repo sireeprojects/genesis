@@ -2609,6 +2609,12 @@ void cea_udf::core::set(cea_field_genspec spec) {
 
 gsf_is_buf(DataQ)
 
+extern "C" void DataQ_put (unsigned *) {
+}
+
+extern "C" void DataQ_zyackf (int) {
+}
+
 #define PACKED __attribute__((__packed__))
 
 struct PACKED tx_metadata {

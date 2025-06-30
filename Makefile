@@ -13,11 +13,11 @@ else
 LIBPARAMS +=
 endif
 
-test:
+sim:lib
 	@g++ test.cpp -O3 -o sim.x -lcea -L${PWD} ${LIBPARAMS}
 	@./sim.x
 
-sim:lib
+test:
 	@g++ test.cpp -O3 -o sim.x -lcea -L${PWD} ${LIBPARAMS}
 	@./sim.x
 
