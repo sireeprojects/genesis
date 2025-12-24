@@ -1,6 +1,21 @@
+#include <thread>
+#include <sstream>
+#include <iomanip>
+#include "cea_field.h"
+#include "cea_header.h"
+#include "cea_stream.h"
 #include "cea_port.h"
 
 namespace cea {
+
+#define CEA_MSG(msg) { \
+    stringstream s; \
+    s << msg; cealog << "(" << msg_prefix << "|" << setw(8) << left \
+    << string(__FUNCTION__) << ")" << ": " <<  s.str() \
+    << endl; \
+}
+
+uint32_t port_id = 0;
 
 class cea_port::core {
 public:
