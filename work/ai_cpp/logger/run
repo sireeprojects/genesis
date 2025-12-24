@@ -1,0 +1,10 @@
+# Build the .so
+g++ -fPIC -c Logger.cpp -o Logger.o -pthread
+g++ -shared -o liblogger.so Logger.o -pthread
+
+# Build the App
+# IMPORTANT: Put main.cpp BEFORE -llogger
+g++ main.cpp -L. -llogger -o my_app -pthread
+
+# Run
+./my_app
