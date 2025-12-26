@@ -1,0 +1,31 @@
+#  rm -rf project
+#  
+#  mkdir project
+#  cd project
+#  
+#  mkdir include
+#  touch include/cea.h
+#  touch include/cea_field.h
+#  touch include/cea_header.h
+#  touch include/cea_port.h
+#  touch include/cea_stream.h
+#  touch include/cea_testbench.h
+#  touch include/cea_udf.h
+#  
+#  mkdir src
+#  touch src/cea_field.cpp     ; echo '#include "cea_field.h"'     >  src/cea_field.cpp           
+#  touch src/cea_header.cpp    ; echo '#include "cea_header.h"'    >  src/cea_header.cpp           
+#  touch src/cea_port.cpp      ; echo '#include "cea_port.h"'      >  src/cea_port.cpp           
+#  touch src/cea_stream.cpp    ; echo '#include "cea_stream.h"'    >  src/cea_stream.cpp           
+#  touch src/cea_testbench.cpp ; echo '#include "cea_testbench.h"' >  src/cea_testbench.cpp           
+#  touch src/cea_udf.cpp       ; echo '#include "cea_udf.h"'       >  src/cea_udf.cpp           
+#  
+#  mkdir private;
+#  touch private/common.h
+#  
+#  touch test.cpp; echo '#include "cea.h"' > test.cpp
+#  touch Makefile; chmod 777 Makefile
+#  
+#  echo '#include "cea_udf.h"\n#include "cea_field.h" \n#include "cea_header.h"\n#include "cea_stream.h"\n#include "cea_port.h"\n#include "cea_testbench.h"' > include/cea.h
+#  
+#  cd ..
