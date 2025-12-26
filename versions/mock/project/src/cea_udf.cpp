@@ -5,28 +5,24 @@ namespace cea {
 
 class cea_udf::core {
 public:
-    // ctor
     core();
-
-    // dtor
     ~core();
-
-    // Define a complete spec for the generation of a field
     void set(cea_field_genspec spec);
-
-    // A table of field structs that corresponds to the field identifiers
-    // required by this field
     cea_field_mutation_spec field;
-
-    // prefixture to field messages
     string field_name;
     string msg_prefix;
 };
 
 cea_udf::core::core() {
+    // TODO: Implement
+}
+
+void cea_udf::core::set(cea_field_genspec spec) {
+    // TODO: Implement
 }
 
 cea_udf::core::~core() {
+    // TODO: Implement
 }
 
 cea_udf::cea_udf() {
@@ -40,6 +36,5 @@ cea_udf::~cea_udf() {
 void cea_udf::set(cea_field_genspec spec) {
     // TODO: Implement
 }
-
 
 }

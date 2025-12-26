@@ -19,15 +19,49 @@ public:
 };
 
 cea_testbench::core::core() {
+    // TODO: Implement
+}
+
+void cea_testbench::core::add_port(cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::add_stream(cea_stream *stream, cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::add_cmd(cea_stream *stream, cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::exec_cmd(cea_stream *stream, cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::start(cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::stop(cea_port *port) {
+    // TODO: Implement
+}
+
+void cea_testbench::core::pause(cea_port *port) {
+    // TODO: Implement
 }
 
 cea_testbench::core::~core() {
+    // TODO: Implement
 }
 
+// CEA TESTBENCH BASE IMPLEMENTATION
+
 cea_testbench::cea_testbench() {
+    // TODO: Implement
 }
 
 cea_testbench::~cea_testbench() {
+    // TODO: Implement
 }
 
 void cea_testbench::add_port(cea_port *port) {
