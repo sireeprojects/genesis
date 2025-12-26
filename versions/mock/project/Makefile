@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -Wall -std=c++17 -Iinclude -Iprivate -fPIC
+CXXFLAGS := -Wall -std=c++17 -Iinclude -Iprivate -fPIC -shared
 DEPFLAGS := -MMD -MP
 
 # Output names
