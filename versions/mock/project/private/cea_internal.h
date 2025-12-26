@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <random>
 
 using namespace std;
 
@@ -15,7 +16,6 @@ enum cea_stream_feature_id {
     PCAP_Record_Tx_Enable,
     PCAP_Record_Rx_Enable
 };
-
 
 enum cea_header_type {
     MAC,
@@ -195,5 +195,57 @@ struct cea_field_genspec {
     } str;
 };
 
+enum cea_stream_add_type {
+    Header,
+    Field
+};
+
+struct cea_field_runtime {
+    uint64_t value;
+    vector<uint64_t> patterns;
+    uint32_t count;
+    uint32_t idx;
+};
+
+enum cea_field_type {
+    Integer,
+    Pattern_PRE,
+    Pattern_MAC,
+    Pattern_IPv4,
+    Pattern_IPv6
+};
+
+struct cea_field_spec {
+    uint32_t merge;
+    cea_field_id id;
+    uint32_t len;
+    bool is_protolist;
+    bool is_auto;
+    string name;
+    uint64_t value;
+    vector <unsigned char> pattern;
+    cea_field_type type;
+};
+
+struct cea_field_mutation_data {
+    bool is_mutable;
+    uint32_t offset;
+};
+
+struct cea_field_random {
+    mt19937 engine;
+    uniform_int_distribution<uint64_t> ud;
+    discrete_distribution<uint64_t> wd;
+    vector<uint64_t> wd_lenghts;
+    vector<double> wd_weights;
+};
+
+struct cea_field_mutation_spec {
+    cea_field_spec defaults;
+    cea_field_genspec gspec;
+    cea_field_runtime rt;
+    cea_field_mutation_data mdata;
+    cea_field_random rnd;
+};
 
 }
